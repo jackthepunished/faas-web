@@ -1,53 +1,27 @@
-import { useEffect, useRef, useState } from 'react';
+import { useRef } from 'react';
 import { DitherGlow } from '../dither-glow';
+import { GLSL_PRELUDE, useShaderCanvas } from './use-shader-canvas';
 
 /**
- * WebGL "pixel beams" background.
+ * Vertical shafts of light drifting across a chunky pixel grid.
  *
- * Vertical shafts of light drifting across a chunky pixel grid. Each beam
- * carries its own vertical gradient (bright at the base, dissolving upward)
- * and the whole field is run through a colour ramp and quantized with an
- * ordered Bayer dither, so the result reads as stepped pixel columns rather
- * than a smooth glow.
+ * Each beam carries its own vertical gradient (bright at the base, dissolved
+ * by the top), and the field runs through a four-stop colour ramp quantized
+ * by the ordered Bayer dither, so the gradient steps rather than blends.
  *
- * Falls back to the CSS DitherGlow when WebGL or shader compilation fails.
+ * Falls back to the CSS DitherGlow when WebGL or compilation fails.
  */
 
-const VERT = `
-attribute vec2 a_pos;
-void main() {
-  gl_Position = vec4(a_pos, 0.0, 1.0);
-}
-`;
+const FRAG = `${GLSL_PRELUDE}
 
-const FRAG = `
-// Hashes fold values into the hundreds before fract(); mediump (10-bit
-// mantissa, ±16384 guaranteed) shows visible artifacts there on mobile GPUs.
-#ifdef GL_FRAGMENT_PRECISION_HIGH
-precision highp float;
-#else
-precision mediump float;
-#endif
+uniform float u_intensity;
 
-uniform vec2  u_res;
-uniform float u_time;
-uniform vec2  u_pointer;      // pixels; far offscreen when absent
-uniform float u_intensity;    // per-instance dimmer
-
-const float BEAMS = 9.0;
-const float CELLS = 58.0;     // horizontal pixel cells
-const float LEVELS = 6.0;     // colour quantization steps
+const float CELLS = 58.0;   // horizontal pixel cells
+const float LEVELS = 6.0;   // colour quantization steps
 
 float hash11(float n) {
   return fract(sin(n * 12.9898) * 43758.5453);
 }
-
-// Ordered Bayer thresholds from the 2x2 base pattern. Each level is
-// periodic, so the caller wraps to the 8x8 tile before squaring — a raw
-// fragment coordinate would overflow mediump here.
-float bayer2(vec2 a) { a = floor(a); return fract(a.x * 0.5 + a.y * a.y * 0.75); }
-float bayer4(vec2 a) { return bayer2(a * 0.5) * 0.25 + bayer2(a); }
-float bayer8(vec2 a) { return bayer4(a * 0.5) * 0.25 + bayer2(a); }
 
 // Deep -> mid blue -> brand sky -> hot core. Piecewise so the ramp has a
 // definite shoulder instead of washing out to a single tint.
@@ -131,22 +105,6 @@ void main() {
 }
 `;
 
-function compile(gl: WebGLRenderingContext, type: number, src: string): WebGLShader | null {
-  const shader = gl.createShader(type);
-  if (!shader) return null;
-  gl.shaderSource(shader, src);
-  gl.compileShader(shader);
-  if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
-    console.warn('[pixel-beams] shader compile failed:', gl.getShaderInfoLog(shader));
-    gl.deleteShader(shader);
-    return null;
-  }
-  return shader;
-}
-
-/** Internal render scale — below 1 for cost and for chunkier pixel cells. */
-const RENDER_SCALE = 0.55;
-
 export function PixelBeams({
   className = '',
   intensity = 1,
@@ -155,184 +113,16 @@ export function PixelBeams({
   /** Scales output alpha. Dim this where copy sits directly on the layer. */
   intensity?: number;
 }) {
-  const hostRef = useRef<HTMLDivElement>(null);
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const [supported, setSupported] = useState(true);
-
-  // Read through a ref so tuning intensity never tears down the GL context.
   const intensityRef = useRef(intensity);
   intensityRef.current = intensity;
 
-  useEffect(() => {
-    const host = hostRef.current;
-    const canvas = canvasRef.current;
-    if (!host || !canvas) return;
-
-    const gl = (canvas.getContext('webgl', {
-      alpha: true,
-      antialias: false,
-      depth: false,
-      stencil: false,
-      powerPreference: 'low-power',
-    }) ||
-      canvas.getContext('experimental-webgl')) as WebGLRenderingContext | null;
-
-    if (!gl) {
-      setSupported(false);
-      return;
-    }
-
-    const vs = compile(gl, gl.VERTEX_SHADER, VERT);
-    const fs = compile(gl, gl.FRAGMENT_SHADER, FRAG);
-    if (!vs || !fs) {
-      setSupported(false);
-      return;
-    }
-
-    const program = gl.createProgram();
-    if (!program) {
-      setSupported(false);
-      return;
-    }
-    gl.attachShader(program, vs);
-    gl.attachShader(program, fs);
-    gl.linkProgram(program);
-    if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
-      console.warn('[pixel-beams] link failed:', gl.getProgramInfoLog(program));
-      setSupported(false);
-      return;
-    }
-    gl.useProgram(program);
-
-    // One oversized triangle covers the clip volume — cheaper than a quad
-    // and free of the diagonal seam two triangles can show.
-    const buffer = gl.createBuffer();
-    gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
-    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 3, -1, -1, 3]), gl.STATIC_DRAW);
-    const aPos = gl.getAttribLocation(program, 'a_pos');
-    gl.enableVertexAttribArray(aPos);
-    gl.vertexAttribPointer(aPos, 2, gl.FLOAT, false, 0, 0);
-
-    const uRes = gl.getUniformLocation(program, 'u_res');
-    const uTime = gl.getUniformLocation(program, 'u_time');
-    const uPointer = gl.getUniformLocation(program, 'u_pointer');
-    const uIntensity = gl.getUniformLocation(program, 'u_intensity');
-
-    const pointer = { x: -9999, y: -9999 };
-    let raf = 0;
-    let running = false;
-    let start = performance.now();
-    let onscreen = true;
-    let pageVisible = document.visibilityState === 'visible';
-    const reduced = window.matchMedia('(prefers-reduced-motion: reduce)');
-
-    const resize = () => {
-      const w = Math.max(1, Math.round(host.clientWidth * RENDER_SCALE));
-      const h = Math.max(1, Math.round(host.clientHeight * RENDER_SCALE));
-      if (canvas.width === w && canvas.height === h) return;
-      canvas.width = w;
-      canvas.height = h;
-      gl.viewport(0, 0, w, h);
-    };
-
-    const draw = (elapsedMs: number) => {
-      gl.uniform2f(uRes, canvas.width, canvas.height);
-      gl.uniform1f(uTime, elapsedMs / 1000);
-      gl.uniform2f(uPointer, pointer.x * RENDER_SCALE, pointer.y * RENDER_SCALE);
-      gl.uniform1f(uIntensity, intensityRef.current);
-      gl.clearColor(0, 0, 0, 0);
-      gl.clear(gl.COLOR_BUFFER_BIT);
-      gl.drawArrays(gl.TRIANGLES, 0, 3);
-    };
-
-    const tick = (now: number) => {
-      if (!running) return;
-      draw(now - start);
-      raf = requestAnimationFrame(tick);
-    };
-
-    const stop = () => {
-      running = false;
-      if (raf) cancelAnimationFrame(raf);
-      raf = 0;
-    };
-
-    const sync = () => {
-      if (reduced.matches) {
-        stop();
-        resize();
-        draw(0); // one static frame
-        return;
-      }
-      if (onscreen && pageVisible) {
-        if (!running) {
-          running = true;
-          start = performance.now() - 1;
-          raf = requestAnimationFrame(tick);
-        }
-      } else {
-        stop();
-      }
-    };
-
-    resize();
-    const ro = new ResizeObserver(() => {
-      resize();
-      if (!running) draw(0);
-    });
-    ro.observe(host);
-
-    const io = new IntersectionObserver(([entry]) => {
-      onscreen = entry.isIntersecting;
-      sync();
-    });
-    io.observe(host);
-
-    const onVisibility = () => {
-      pageVisible = document.visibilityState === 'visible';
-      sync();
-    };
-    document.addEventListener('visibilitychange', onVisibility);
-    reduced.addEventListener('change', sync);
-
-    const onPointerMove = (e: PointerEvent) => {
-      const rect = host.getBoundingClientRect();
-      // GL's origin is bottom-left; the DOM's is top-left.
-      pointer.x = e.clientX - rect.left;
-      pointer.y = rect.height - (e.clientY - rect.top);
-    };
-    const onPointerLeave = () => {
-      pointer.x = -9999;
-      pointer.y = -9999;
-    };
-    host.addEventListener('pointermove', onPointerMove);
-    host.addEventListener('pointerleave', onPointerLeave);
-
-    // A lost context cannot be drawn to; stop instead of spewing GL errors.
-    const onLost = (e: Event) => {
-      e.preventDefault();
-      stop();
-    };
-    canvas.addEventListener('webglcontextlost', onLost);
-
-    sync();
-
-    return () => {
-      stop();
-      ro.disconnect();
-      io.disconnect();
-      document.removeEventListener('visibilitychange', onVisibility);
-      reduced.removeEventListener('change', sync);
-      host.removeEventListener('pointermove', onPointerMove);
-      host.removeEventListener('pointerleave', onPointerLeave);
-      canvas.removeEventListener('webglcontextlost', onLost);
-      gl.deleteBuffer(buffer);
-      gl.deleteProgram(program);
-      gl.deleteShader(vs);
-      gl.deleteShader(fs);
-      gl.getExtension('WEBGL_lose_context')?.loseContext();
-    };
-  }, []);
+  const { hostRef, canvasRef, supported } = useShaderCanvas({
+    frag: FRAG,
+    label: 'pixel-beams',
+    renderScale: 0.55,
+    uniformNames: ['u_intensity'],
+    onFrame: (gl, u) => gl.uniform1f(u.u_intensity, intensityRef.current),
+  });
 
   if (!supported) return <DitherGlow className={className || 'inset-0'} />;
 

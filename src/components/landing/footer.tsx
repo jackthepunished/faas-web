@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { ArrowRight, ArrowUpRight, Check, Copy, Wind } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Reveal } from './reveal';
-import { PixelBeams } from './shaders/pixel-beams';
+import { DitherFade } from './shaders/dither-fade';
 
 const INSTALL_COMMAND = 'brew install gregale';
 
@@ -116,20 +116,18 @@ export function Footer() {
       {/* Closing CTA — contained panel so the conversion moment has edges */}
       <section className="relative px-4 pb-16 pt-20 sm:px-6 sm:pt-24">
         <div className="relative mx-auto max-w-4xl overflow-hidden rounded-2xl border border-border bg-gradient-to-b from-card to-background px-6 py-14 text-center sm:px-12 sm:py-16">
-          {/* Beams fill the panel and are clipped by its rounded overflow.
-              Dimmer than the pricing instance, because the copy sits directly
-              on this layer rather than on cards. */}
-          <PixelBeams className="inset-0" intensity={0.5} />
+          {/* Dots rise from the lower edge and dissolve upward, clipped by
+              the panel's rounded overflow. */}
+          <DitherFade className="inset-0" intensity={0.9} />
 
-          {/* Centre scrim: darkens the bed under the copy so contrast never
-              depends on where a beam happens to be, while the beams stay
-              visible around the panel's edges. */}
+          {/* Scrim over the copy block only — the dissolve stays visible along
+              the bottom and edges, but never decides the text's contrast. */}
           <div
             aria-hidden
             className="pointer-events-none absolute inset-0"
             style={{
               background:
-                'radial-gradient(58% 52% at 50% 52%, rgba(9,9,9,0.94), rgba(9,9,9,0.62) 62%, rgba(9,9,9,0.12) 100%)',
+                'radial-gradient(64% 46% at 50% 44%, rgba(9,9,9,0.92), rgba(9,9,9,0.55) 66%, transparent 100%)',
             }}
           />
 
