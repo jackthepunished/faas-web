@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { ArrowRight, ArrowUpRight, Check, Copy, Wind } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Reveal } from './reveal';
+import { TextReveal } from './text-reveal';
 import { DitherFade } from './shaders/dither-fade';
 
 const INSTALL_COMMAND = 'brew install gregale';
@@ -143,13 +144,25 @@ export function Footer() {
             }}
           />
 
-          <Reveal>
+          <Reveal y={12}>
             <p className="label-mono relative text-brand">Get started</p>
+          </Reveal>
 
-            <h2 className="relative mt-5 text-balance text-4xl leading-[1.08] sm:text-5xl">
-              Ship your first function in <span className="text-brand">minutes</span>.
-            </h2>
+          {/* The heading animates per word, so it sits outside the block
+              Reveal — nesting the two would fight over the same transform. */}
+          <TextReveal
+            as="h2"
+            className="relative mt-5 text-4xl leading-[1.08] sm:text-5xl"
+            delay={0.1}
+            segments={[
+              { text: 'Ship your first function in' },
+              { text: 'minutes.', className: 'text-brand' },
+            ]}
+          />
 
+          {/* Everything below the headline arrives together, once the words
+              have landed. */}
+          <Reveal delay={0.45}>
             <p className="relative mx-auto mt-4 max-w-md text-balance text-muted-foreground">
               One command from repository to running microVM. Scale-to-zero means idle costs
               nothing.

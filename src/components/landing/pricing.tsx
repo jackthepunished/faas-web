@@ -1,6 +1,7 @@
 import { motion } from 'framer-motion';
 import { ArrowRight } from 'lucide-react';
 import { EASE, Reveal } from './reveal';
+import { TextReveal } from './text-reveal';
 import { PixelBeams } from './shaders/pixel-beams';
 
 const METERS = [
@@ -13,16 +14,22 @@ export function Pricing() {
   return (
     <section id="pricing" className="relative scroll-mt-24 overflow-hidden border-t border-border">
       <div className="relative mx-auto max-w-6xl px-4 py-24 sm:px-6">
-        <Reveal>
+        <Reveal y={12}>
           <p className="label-mono mb-5 text-brand">Pricing</p>
-          <h2 className="max-w-3xl text-balance text-3xl leading-[1.15] sm:text-4xl">
-            You only pay for what you use.{' '}
-            <span className="text-muted-foreground">
-              Pricing tied to real compute — the milliseconds, storage, and bandwidth your
-              functions actually consume. Scale-to-zero means idle costs nothing.
-            </span>
-          </h2>
         </Reveal>
+
+        <TextReveal
+          as="h2"
+          className="max-w-3xl text-3xl leading-[1.15] sm:text-4xl"
+          delay={0.12}
+          segments={[
+            { text: 'You only pay for what you use.' },
+            {
+              text: 'Pricing tied to real compute — the milliseconds, storage, and bandwidth your functions actually consume. Scale-to-zero means idle costs nothing.',
+              className: 'text-muted-foreground',
+            },
+          ]}
+        />
 
         {/* The shader needs room the cards do not cover, so it extends well
             above and below the row. Cards stay translucent with a blur, which
