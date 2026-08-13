@@ -10,6 +10,7 @@ import {
   Zap,
 } from 'lucide-react';
 import { EASE, Reveal } from './reveal';
+import { TextReveal } from './text-reveal';
 import { FlowLines } from './shapes/flow-lines';
 
 const COMPONENTS = [
@@ -38,16 +39,25 @@ export function ComponentsGrid() {
       </div>
 
       <div className="relative mx-auto max-w-6xl px-4 py-24 sm:px-6">
-        <Reveal>
+        <Reveal y={12}>
           <p className="label-mono mb-5 text-brand">Components</p>
-          <h2 className="max-w-3xl text-balance text-3xl leading-[1.15] sm:text-4xl">
-            Every building block your product needs.{' '}
-            <span className="text-muted-foreground">
-              Components find and connect to each other automatically — no glue code, no hand-wired
-              networking.
-            </span>
-          </h2>
         </Reveal>
+
+        {/* text-balance is dropped here: it needs a single text node to
+            measure, and the reveal splits the line into per-word spans.
+            max-w does the line-length work instead. */}
+        <TextReveal
+          as="h2"
+          className="max-w-3xl text-3xl leading-[1.15] sm:text-4xl"
+          delay={0.12}
+          segments={[
+            { text: 'Every building block your product needs.' },
+            {
+              text: 'Components find and connect to each other automatically — no glue code, no hand-wired networking.',
+              className: 'text-muted-foreground',
+            },
+          ]}
+        />
 
         <div className="mt-12 grid grid-cols-2 gap-3 lg:grid-cols-4">
           {COMPONENTS.map(({ icon: Icon, name, desc, color, border }, i) => (
