@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
-import { createFileRoute, Link } from '@tanstack/react-router';
-import { Plus, Search } from 'lucide-react';
+import { createFileRoute, Link, useNavigate } from '@tanstack/react-router';
+import { ArrowDown, ArrowUp, Plus, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { EmptyState, PageHeader, StateBadge } from '@/components/dashboard/primitives';
 import {
@@ -25,21 +25,61 @@ const STATE_FILTERS: { key: RunState | 'all'; label: string }[] = [
   { key: 'deploying', label: 'Deploying' },
 ];
 
+type SortKey =
+  | 'name'
+  | 'state'
+  | 'runtime'
+  | 'invocations24h'
+  | 'avgDurationMs'
+  | 'errorRatePct'
+  | 'lastDeployedAt';
+
+const COLUMNS: { key: SortKey; label: string; numeric: boolean }[] = [
+  { key: 'name', label: 'Function', numeric: false },
+  { key: 'state', label: 'State', numeric: false },
+  { key: 'runtime', label: 'Runtime', numeric: false },
+  { key: 'invocations24h', label: 'Invocations 24h', numeric: true },
+  { key: 'avgDurationMs', label: 'Avg duration', numeric: true },
+  { key: 'errorRatePct', label: 'Errors', numeric: true },
+  { key: 'lastDeployedAt', label: 'Deployed', numeric: true },
+];
+
 function FunctionsPage() {
   const [query, setQuery] = useState('');
   const [state, setState] = useState<RunState | 'all'>('all');
   const [projectId, setProjectId] = useState<string>('all');
+  const [sort, setSort] = useState<{ key: SortKey; dir: 'asc' | 'desc' }>({
+    key: 'invocations24h',
+    dir: 'desc',
+  });
   const { functions } = useData();
+  const navigate = useNavigate();
 
   const rows = useMemo(() => {
     const q = query.trim().toLowerCase();
-    return functions.filter((fn) => {
+    const filtered = functions.filter((fn) => {
       if (state !== 'all' && fn.state !== state) return false;
       if (projectId !== 'all' && fn.projectId !== projectId) return false;
       if (q && !fn.name.includes(q) && !fn.runtime.includes(q)) return false;
       return true;
     });
-  }, [functions, query, state, projectId]);
+
+    const factor = sort.dir === 'asc' ? 1 : -1;
+    return [...filtered].sort((a, b) => {
+      const av = a[sort.key];
+      const bv = b[sort.key];
+      if (typeof av === 'number' && typeof bv === 'number') return (av - bv) * factor;
+      return String(av).localeCompare(String(bv)) * factor;
+    });
+  }, [functions, query, state, projectId, sort]);
+
+  // Text columns read naturally A→Z first; numbers most-interesting first.
+  const toggleSort = (key: SortKey, numeric: boolean) =>
+    setSort((prev) =>
+      prev.key === key
+        ? { key, dir: prev.dir === 'asc' ? 'desc' : 'asc' }
+        : { key, dir: numeric ? 'desc' : 'asc' }
+    );
 
   return (
     <div className="flex flex-col gap-6">
@@ -112,26 +152,60 @@ function FunctionsPage() {
         <div className="overflow-hidden rounded-xl border border-border bg-card">
           <div className="overflow-x-auto">
             <table className="w-full min-w-[820px] text-sm">
-              <thead>
+              <thead className="sticky top-14 z-10 bg-card">
                 <tr className="border-b border-border text-left">
-                  {['Function', 'State', 'Runtime', 'Invocations 24h', 'Avg duration', 'Errors', 'Deployed'].map(
-                    (h, i) => (
+                  {COLUMNS.map((col) => {
+                    const isSorted = sort.key === col.key;
+                    return (
                       <th
-                        key={h}
-                        className={cn(
-                          'label-mono px-4 py-3 font-medium text-muted-foreground',
-                          i >= 3 && 'text-right'
-                        )}
+                        key={col.key}
+                        scope="col"
+                        aria-sort={
+                          isSorted
+                            ? sort.dir === 'asc'
+                              ? 'ascending'
+                              : 'descending'
+                            : 'none'
+                        }
+                        className={cn('px-4 py-3', col.numeric && 'text-right')}
                       >
-                        {h}
+                        <button
+                          type="button"
+                          onClick={() => toggleSort(col.key, col.numeric)}
+                          className={cn(
+                            'label-mono inline-flex items-center gap-1 transition-colors hover:text-foreground',
+                            col.numeric && 'flex-row-reverse',
+                            isSorted ? 'text-foreground' : 'text-muted-foreground'
+                          )}
+                        >
+                          {col.label}
+                          {isSorted &&
+                            (sort.dir === 'asc' ? (
+                              <ArrowUp className="h-3 w-3" />
+                            ) : (
+                              <ArrowDown className="h-3 w-3" />
+                            ))}
+                        </button>
                       </th>
-                    )
-                  )}
+                    );
+                  })}
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
                 {rows.map((fn) => (
-                  <tr key={fn.id} className="group transition-colors hover:bg-muted/40">
+                  // The whole row is a click target for convenience; the name
+                  // link remains the keyboard-navigable element, so the row
+                  // itself is deliberately not a tab stop.
+                  <tr
+                    key={fn.id}
+                    onClick={() =>
+                      navigate({
+                        to: '/dashboard/functions/$functionId',
+                        params: { functionId: fn.id },
+                      })
+                    }
+                    className="group cursor-pointer transition-colors hover:bg-muted/40"
+                  >
                     <td className="px-4 py-3">
                       <Link
                         to="/dashboard/functions/$functionId"

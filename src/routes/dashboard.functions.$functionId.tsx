@@ -27,16 +27,24 @@ import { useData } from '@/lib/store';
 import { useToast } from '@/components/ui/toast';
 import { cn } from '@/lib/utils';
 
-export const Route = createFileRoute('/dashboard/functions/$functionId')({
-  component: FunctionDetailPage,
-});
-
 const TABS = ['Metrics', 'Deployments', 'Logs', 'Configuration'] as const;
 type Tab = (typeof TABS)[number];
 
+export const Route = createFileRoute('/dashboard/functions/$functionId')({
+  // Tab lives in the URL, so a refresh or a shared link lands on the same one.
+  // Optional, so links elsewhere need not pass it and the default tab leaves
+  // no query string behind.
+  validateSearch: (search: Record<string, unknown>): { tab?: Tab } =>
+    TABS.includes(search.tab as Tab) ? { tab: search.tab as Tab } : {},
+  component: FunctionDetailPage,
+});
+
 function FunctionDetailPage() {
   const { functionId } = useParams({ from: '/dashboard/functions/$functionId' });
-  const [tab, setTab] = useState<Tab>('Metrics');
+  const { tab = 'Metrics' } = Route.useSearch();
+  const navigate = Route.useNavigate();
+  // Replace rather than push, so tab switching does not fill the back stack.
+  const setTab = (next: Tab) => navigate({ search: { tab: next }, replace: true });
   const [range, setRange] = useState<RangeKey>('24h');
   const { getFunction, deploymentsFor, redeploy } = useData();
   const { toast } = useToast();
@@ -110,7 +118,7 @@ function FunctionDetailPage() {
       </a>
 
       {/* Tabs */}
-      <div className="flex gap-1 border-b border-border">
+      <div role="tablist" aria-label="Function detail" className="flex gap-1 border-b border-border">
         {TABS.map((t) => (
           <button
             key={t}

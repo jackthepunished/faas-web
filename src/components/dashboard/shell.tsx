@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useNavigate } from '@tanstack/react-router';
 import {
   ChevronsLeft,
@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '@/lib/auth';
 import { useToast } from '@/components/ui/toast';
+import { CommandPalette } from './command-palette';
 import { cn } from '@/lib/utils';
 
 const NAV = [
@@ -35,8 +36,8 @@ function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
           to={to}
           activeOptions={{ exact }}
           onClick={onNavigate}
-          className="flex items-center gap-2.5 rounded-md px-2.5 py-2 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-          activeProps={{ className: 'bg-muted !text-foreground' }}
+          className="flex items-center gap-2.5 rounded-md px-2.5 py-2 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
+          activeProps={{ className: 'bg-muted !text-foreground', 'aria-current': 'page' }}
         >
           <Icon className="h-4 w-4 shrink-0" />
           {label}
@@ -86,9 +87,33 @@ function SidebarBody({ onNavigate }: { onNavigate?: () => void }) {
 
 export function DashboardShell({ children }: { children: React.ReactNode }) {
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [paletteOpen, setPaletteOpen] = useState(false);
   const { user, signOut } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
+
+  // ⌘K / Ctrl+K anywhere in the dashboard; Escape closes the mobile drawer.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key.toLowerCase() === 'k' && (e.metaKey || e.ctrlKey)) {
+        e.preventDefault();
+        setPaletteOpen((v) => !v);
+      }
+      if (e.key === 'Escape') setMobileOpen(false);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
+
+  // The drawer overlays the page, so the page beneath must not scroll.
+  useEffect(() => {
+    if (!mobileOpen) return;
+    const previous = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = previous;
+    };
+  }, [mobileOpen]);
 
   const handleSignOut = () => {
     signOut();
@@ -161,14 +186,18 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
             <Menu className="h-4 w-4" />
           </button>
 
-          <label className="relative flex max-w-sm flex-1 items-center">
-            <Search className="pointer-events-none absolute left-3 h-3.5 w-3.5 text-muted-foreground" />
-            <input
-              type="search"
-              placeholder="Search functions, deployments, logs…"
-              className="h-9 w-full rounded-md border border-border bg-card pl-9 pr-3 text-sm outline-none transition-colors placeholder:text-muted-foreground focus:border-brand/50"
-            />
-          </label>
+          {/* Opens the palette rather than pretending to be a live field. */}
+          <button
+            type="button"
+            onClick={() => setPaletteOpen(true)}
+            className="flex h-9 max-w-sm flex-1 items-center gap-2.5 rounded-md border border-border bg-card px-3 text-sm text-muted-foreground transition-colors hover:border-border-secondary hover:text-foreground"
+          >
+            <Search className="h-3.5 w-3.5 shrink-0" />
+            <span className="truncate">Search or jump to…</span>
+            <kbd className="label-mono ml-auto hidden shrink-0 rounded border border-border px-1.5 py-0.5 sm:block">
+              ⌘K
+            </kbd>
+          </button>
 
           <div className="ml-auto flex items-center gap-2">
             <Link
@@ -197,10 +226,12 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
           </div>
         </header>
 
-        <main className={cn('px-4 py-8 sm:px-6 lg:px-8')}>
+        <main id="main" className={cn('px-4 py-8 sm:px-6 lg:px-8')}>
           <div className="mx-auto max-w-7xl">{children}</div>
         </main>
       </div>
+
+      <CommandPalette open={paletteOpen} onOpenChange={setPaletteOpen} />
     </div>
   );
 }
