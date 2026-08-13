@@ -100,14 +100,17 @@ export const HeroContent = ({}: HeroContentProps) => {
 
       <motion.div
         {...reveal(0.24)}
-        className="pointer-events-auto flex w-full flex-col gap-3 ipad:max-w-87.5 ipad:pt-8 desktop-sm:pt-7 mx-auto ipad:flex-row"
+        /* Buttons size to their own labels on tablet and up. The previous
+           350px cap split two unequal labels down the middle, so the longer
+           one wrapped and the pair stopped matching. */
+        className="pointer-events-auto mx-auto flex w-full flex-col items-stretch gap-3 pt-6 ipad:w-auto ipad:flex-row ipad:items-center ipad:pt-8 desktop-sm:pt-7"
       >
         <Button
           asChild
           variant="cta"
-          className="h-12 w-full gap-2.5 rounded-xl text-[16px] ipad:h-12 ipad:text-[17px]"
+          className="h-12 w-full gap-2.5 whitespace-nowrap rounded-xl px-6 text-[16px] ipad:w-auto ipad:text-[17px]"
         >
-          <Link to="/signup" aria-label="Start deploying">
+          <Link to="/signup">
             Start deploying
             <ArrowIcon />
           </Link>
@@ -115,11 +118,9 @@ export const HeroContent = ({}: HeroContentProps) => {
         <Button
           asChild
           variant="outline"
-          className="h-12 w-full rounded-xl border-white/25 bg-white/5 text-[16px] text-white hover:bg-white/10 ipad:h-12 ipad:text-[17px]"
+          className="h-12 w-full whitespace-nowrap rounded-xl border-white/25 bg-white/5 px-6 text-[16px] font-medium text-white hover:bg-white/10 ipad:w-auto ipad:text-[17px]"
         >
-          <a href="#deploy" aria-label="Explore the platform">
-            Explore the platform
-          </a>
+          <a href="#deploy">Explore the platform</a>
         </Button>
       </motion.div>
     </div>
