@@ -86,22 +86,26 @@ void main() {
     float dx = abs(cell.x - x);
     dx = min(dx, 1.0 - dx);
 
-    float width = 0.010 + wSeed * 0.052;
+    // Wide enough to span several cells — narrower than a cell just aliases
+    // down to a single flickering column.
+    float width = 0.030 + wSeed * 0.070;
     float core = smoothstep(width, 0.0, dx);
-    float halo = smoothstep(width * 3.4, 0.0, dx) * 0.30;
+    float halo = smoothstep(width * 3.0, 0.0, dx) * 0.45;
 
     // Each beam is a gradient: bright at the base, gone by the top.
-    float rise = smoothstep(1.05, 0.06, cell.y);
+    float rise = smoothstep(1.15, 0.0, cell.y);
     // Slow breathing, out of phase per beam.
-    float pulse = 0.62 + 0.38 * sin(u_time * (0.5 + wSeed * 0.7) + fi * 2.1);
+    float pulse = 0.66 + 0.34 * sin(u_time * (0.5 + wSeed * 0.7) + fi * 2.1);
 
-    energy += (core + halo) * rise * pulse;
+    // Brightest beam wins. Summing and then dividing by the beam count
+    // crushes the signal, since only one or two overlap any given pixel.
+    energy = max(energy, (core + halo) * rise * pulse);
   }
-  energy /= BEAMS * 0.42;
+  energy = clamp(energy, 0.0, 1.0);
 
   // Cursor lifts the beams it passes over.
   float pd = distance(frag, u_pointer) / max(min(u_res.x, u_res.y), 1.0);
-  energy += exp(-pd * pd * 10.0) * 0.30;
+  energy += exp(-pd * pd * 10.0) * 0.35;
 
   // Horizontal scanlines on the cell grid keep the pixel read explicit.
   float scan = 0.90 + 0.10 * step(0.5, fract(cell.y * grid.y * 0.5));
@@ -121,7 +125,7 @@ void main() {
   vec3 col = ramp(stepped);
 
   // Alpha ceiling protects card text contrast.
-  float alpha = stepped * 0.62;
+  float alpha = stepped * 0.88;
   gl_FragColor = vec4(col * alpha, alpha);   // premultiplied
 }
 `;

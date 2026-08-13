@@ -24,11 +24,11 @@ export function Pricing() {
           </h2>
         </Reveal>
 
-        {/* The shader sits behind the grid; cards stay translucent so it reads
-            through them, with a heavy blur so no high-frequency dither ever
-            lands under the text. */}
+        {/* The shader needs room the cards do not cover, so it extends well
+            above and below the row. Cards stay translucent with a blur, which
+            averages the beams down before they reach the text. */}
         <div className="relative mt-12">
-          <PixelBeams className="-inset-x-8 -inset-y-12" />
+          <PixelBeams className="-inset-x-10 -top-24 -bottom-28" />
 
           <div className="relative grid gap-3 sm:grid-cols-3">
           {METERS.map((meter, i) => (
@@ -38,7 +38,7 @@ export function Pricing() {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true, margin: '-60px' }}
               transition={{ duration: 0.6, delay: i * 0.08, ease: EASE }}
-              className="rounded-lg border border-border bg-card/75 p-6 backdrop-blur-xl"
+              className="rounded-lg border border-border bg-card/80 p-6 backdrop-blur-lg"
             >
               <p className="label-mono text-muted-foreground">{meter.label}</p>
               <p className="mt-3 font-mono text-2xl font-medium tracking-tight">{meter.value}</p>
