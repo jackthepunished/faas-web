@@ -103,6 +103,21 @@ function CopyCommand() {
 export function Footer() {
   return (
     <footer className="relative overflow-hidden border-t border-border">
+      {/* Dissolve across the whole footer, clipped by its overflow. Densest
+          low, behind the wordmark, thinning upward toward the CTA. */}
+      <DitherFade className="inset-0" intensity={0.85} />
+
+      {/* Readability scrim: heaviest over the CTA and link bands, lifting
+          toward the base so the dissolve stays plainly visible there. */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0"
+        style={{
+          background:
+            'linear-gradient(to bottom, rgba(9,9,9,0.82) 0%, rgba(9,9,9,0.70) 42%, rgba(9,9,9,0.34) 72%, rgba(9,9,9,0.05) 100%)',
+        }}
+      />
+
       {/* Hairline that brightens toward the center, separating the footer from the page. */}
       <div
         aria-hidden
@@ -115,22 +130,9 @@ export function Footer() {
 
       {/* Closing CTA — contained panel so the conversion moment has edges */}
       <section className="relative px-4 pb-16 pt-20 sm:px-6 sm:pt-24">
-        <div className="relative mx-auto max-w-4xl overflow-hidden rounded-2xl border border-border bg-gradient-to-b from-card to-background px-6 py-14 text-center sm:px-12 sm:py-16">
-          {/* Dots rise from the lower edge and dissolve upward, clipped by
-              the panel's rounded overflow. */}
-          <DitherFade className="inset-0" intensity={0.9} />
-
-          {/* Scrim over the copy block only — the dissolve stays visible along
-              the bottom and edges, but never decides the text's contrast. */}
-          <div
-            aria-hidden
-            className="pointer-events-none absolute inset-0"
-            style={{
-              background:
-                'radial-gradient(64% 46% at 50% 44%, rgba(9,9,9,0.92), rgba(9,9,9,0.55) 66%, transparent 100%)',
-            }}
-          />
-
+        {/* Translucent with a heavy blur, so the footer-wide dissolve reads
+            through the panel as a soft glow rather than as dots under text. */}
+        <div className="relative mx-auto max-w-4xl overflow-hidden rounded-2xl border border-border bg-card/55 px-6 py-14 text-center backdrop-blur-2xl sm:px-12 sm:py-16">
           {/* Lit top edge, brightest at center */}
           <div
             aria-hidden

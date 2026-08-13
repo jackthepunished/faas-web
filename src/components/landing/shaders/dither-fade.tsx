@@ -57,11 +57,11 @@ void main() {
 
   float t = u_time * 0.05;
 
-  // Source sits just below the panel, so the visible part is a wide arc
-  // glowing along the bottom and dissolving upward.
-  vec2 c = uv - vec2(0.5, -0.04);
-  c.x *= u_res.x / max(u_res.y, 1.0) * 0.42;   // flatten into a broad arc
-  float radial = 1.0 - smoothstep(0.06, 0.62, length(c));
+  // Broad glow anchored low: densest behind the wordmark near the base,
+  // dissolving upward past the links and thinning out by the top.
+  vec2 c = uv - vec2(0.5, 0.06);
+  c.x *= u_res.x / max(u_res.y, 1.0) * 0.34;   // flatten into a wide arc
+  float radial = 1.0 - smoothstep(0.04, 0.70, length(c));
 
   // Slow noise so the dissolve boundary breathes instead of sitting still.
   float n = fbm(uv * 2.6 + vec2(t * 0.6, -t));
