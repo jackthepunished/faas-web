@@ -1,14 +1,9 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { createFileRoute } from '@tanstack/react-router';
 import { Pause, Play, Search } from 'lucide-react';
 import { EmptyState, LevelTag, PageHeader } from '@/components/dashboard/primitives';
-import {
-  FUNCTIONS,
-  LOGS,
-  formatClock,
-  getFunction,
-  type LogLevel,
-} from '@/lib/mock-data';
+import { LOGS, formatClock, type LogEntry, type LogLevel } from '@/lib/mock-data';
+import { useData } from '@/lib/store';
 import { cn } from '@/lib/utils';
 
 export const Route = createFileRoute('/dashboard/logs')({
@@ -23,21 +18,62 @@ const LEVELS: { key: LogLevel | 'all'; label: string }[] = [
   { key: 'debug', label: 'Debug' },
 ];
 
+const STREAM_MESSAGES: [LogLevel, string][] = [
+  ['info', 'request completed'],
+  ['info', 'snapshot restored from warm pool'],
+  ['info', 'cache hit for object key'],
+  ['debug', 'vsock channel opened'],
+  ['warn', 'cold start exceeded target budget'],
+  ['error', 'upstream timeout after 30s'],
+];
+
 function LogsPage() {
   const [query, setQuery] = useState('');
   const [level, setLevel] = useState<LogLevel | 'all'>('all');
   const [functionId, setFunctionId] = useState('all');
   const [live, setLive] = useState(true);
+  const { functions } = useData();
+
+  // Entries that arrived while the stream was running, newest first.
+  const [streamed, setStreamed] = useState<LogEntry[]>([]);
+  const counter = useRef(0);
+
+  useEffect(() => {
+    if (!live) return;
+    const id = setInterval(() => {
+      const fn = functions[Math.floor(Math.random() * functions.length)];
+      if (!fn) return;
+      const [lvl, message] = STREAM_MESSAGES[Math.floor(Math.random() * STREAM_MESSAGES.length)];
+      const entry: LogEntry = {
+        id: `live_${counter.current++}`,
+        ts: Date.now(),
+        level: lvl,
+        functionId: fn.id,
+        requestId: Math.floor(Math.random() * 0xffffffffff)
+          .toString(16)
+          .padStart(12, '0')
+          .slice(0, 12),
+        message,
+        durationMs: Math.round(4 + Math.random() * 900),
+        statusCode: lvl === 'error' ? 500 : lvl === 'warn' ? 429 : 200,
+      };
+      // Cap the buffer so a long session cannot grow without bound.
+      setStreamed((prev) => [entry, ...prev].slice(0, 200));
+    }, 1400);
+    return () => clearInterval(id);
+  }, [live, functions]);
 
   const rows = useMemo(() => {
     const q = query.trim().toLowerCase();
-    return LOGS.filter((log) => {
-      if (level !== 'all' && log.level !== level) return false;
-      if (functionId !== 'all' && log.functionId !== functionId) return false;
-      if (q && !log.message.toLowerCase().includes(q) && !log.requestId.includes(q)) return false;
-      return true;
-    }).slice(0, 120);
-  }, [query, level, functionId]);
+    return [...streamed, ...LOGS]
+      .filter((log) => {
+        if (level !== 'all' && log.level !== level) return false;
+        if (functionId !== 'all' && log.functionId !== functionId) return false;
+        if (q && !log.message.toLowerCase().includes(q) && !log.requestId.includes(q)) return false;
+        return true;
+      })
+      .slice(0, 120);
+  }, [streamed, query, level, functionId]);
 
   const errorCount = rows.filter((l) => l.level === 'error').length;
 
@@ -101,7 +137,7 @@ function LogsPage() {
           className="h-9 rounded-md border border-border bg-card px-2.5 text-sm outline-none focus:border-brand/50"
         >
           <option value="all">All functions</option>
-          {FUNCTIONS.map((fn) => (
+          {functions.map((fn) => (
             <option key={fn.id} value={fn.id}>
               {fn.name}
             </option>
@@ -123,7 +159,7 @@ function LogsPage() {
           <div className="max-h-[62vh] overflow-y-auto">
             <ul className="flex flex-col divide-y divide-border/60 font-mono text-xs">
               {rows.map((log) => {
-                const fn = getFunction(log.functionId);
+                const fn = functions.find((f) => f.id === log.functionId);
                 return (
                   <li
                     key={log.id}

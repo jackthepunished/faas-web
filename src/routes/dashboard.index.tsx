@@ -11,18 +11,15 @@ import {
   StateBadge,
 } from '@/components/dashboard/primitives';
 import {
-  DEPLOYMENTS,
-  FUNCTIONS,
   PROJECTS,
   RANGES,
   buildSeries,
   formatCompact,
   formatMs,
   formatRelative,
-  functionsForProject,
-  getFunction,
   type RangeKey,
 } from '@/lib/mock-data';
+import { useData } from '@/lib/store';
 
 export const Route = createFileRoute('/dashboard/')({
   component: OverviewPage,
@@ -39,6 +36,7 @@ function deltaOf(values: number[]): number {
 function OverviewPage() {
   const [range, setRange] = useState<RangeKey>('24h');
   const series = useMemo(() => buildSeries(range), [range]);
+  const { functions, deployments, functionsForProject, getFunction } = useData();
 
   const invocations = series.map((s) => s.invocations);
   const errors = series.map((s) => s.errors);
@@ -48,7 +46,10 @@ function OverviewPage() {
   const avgP50 = series.reduce((a, s) => a + s.p50, 0) / series.length;
   const gbSeconds = series.reduce((a, s) => a + s.gbSeconds, 0);
 
-  const recentDeployments = DEPLOYMENTS.slice(0, 6);
+  const recentDeployments = deployments.slice(0, 6);
+  const busiest = [...functions].sort((a, b) => b.invocations24h - a.invocations24h).slice(0, 5);
+  // A just-created function has no traffic, so guard the bar denominator.
+  const busiestMax = Math.max(1, busiest[0]?.invocations24h ?? 1);
 
   return (
     <div className="flex flex-col gap-8">
@@ -192,11 +193,8 @@ function OverviewPage() {
 
       <Panel title="Busiest functions" description="By invocations in the last 24 hours">
         <ul className="flex flex-col divide-y divide-border">
-          {[...FUNCTIONS]
-            .sort((a, b) => b.invocations24h - a.invocations24h)
-            .slice(0, 5)
-            .map((fn) => {
-              const share = fn.invocations24h / FUNCTIONS[0].invocations24h;
+          {busiest.map((fn) => {
+              const share = fn.invocations24h / busiestMax;
               return (
                 <li key={fn.id} className="py-3 first:pt-0 last:pb-0">
                   <Link

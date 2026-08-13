@@ -1,18 +1,35 @@
 import { useState } from 'react';
-import { createFileRoute } from '@tanstack/react-router';
-import { Check, Copy, Eye, EyeOff } from 'lucide-react';
+import { createFileRoute, useNavigate } from '@tanstack/react-router';
+import { AlertTriangle, Check, Copy, Eye, EyeOff, Loader2, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { useToast } from '@/components/ui/toast';
 import { PageHeader, Panel } from '@/components/dashboard/primitives';
 import { NOW, formatRelative } from '@/lib/mock-data';
+import { useAuth } from '@/lib/auth';
 
 export const Route = createFileRoute('/dashboard/settings')({
   component: SettingsPage,
 });
 
-const API_KEYS = [
+interface ApiKey {
+  id: string;
+  label: string;
+  value: string;
+  createdAt: number;
+}
+
+const INITIAL_KEYS: ApiKey[] = [
   { id: 'key_prod', label: 'Production', value: 'grg_live_7f2a91c4e8b34d05a6f1', createdAt: NOW - 86_400_000 * 86 },
   { id: 'key_ci', label: 'CI pipeline', value: 'grg_live_2c8d40fa19be7c63d902', createdAt: NOW - 86_400_000 * 23 },
 ];
+
+/** 20 hex chars, matching the shape of the seeded keys. */
+function generateKey(): string {
+  const bytes = new Uint8Array(10);
+  crypto.getRandomValues(bytes);
+  const hex = Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('');
+  return `grg_live_${hex}`;
+}
 
 const TOGGLES = [
   {
@@ -35,7 +52,7 @@ const TOGGLES = [
   },
 ];
 
-function KeyRow({ apiKey }: { apiKey: (typeof API_KEYS)[number] }) {
+function KeyRow({ apiKey, onRevoke }: { apiKey: ApiKey; onRevoke: (id: string) => void }) {
   const [revealed, setRevealed] = useState(false);
   const [copied, setCopied] = useState(false);
 
@@ -80,14 +97,131 @@ function KeyRow({ apiKey }: { apiKey: (typeof API_KEYS)[number] }) {
           <Copy className="h-3.5 w-3.5" />
         )}
       </button>
+      <button
+        type="button"
+        onClick={() => onRevoke(apiKey.id)}
+        aria-label={`Revoke ${apiKey.label} key`}
+        className="rounded-md border border-border p-1.5 text-muted-foreground transition-colors hover:border-[color:var(--status-critical)] hover:text-[color:var(--status-critical)]"
+      >
+        <Trash2 className="h-3.5 w-3.5" />
+      </button>
     </li>
   );
 }
 
+/** Type-to-confirm dialog for the irreversible action. */
+function DeleteWorkspaceDialog({
+  workspace,
+  onCancel,
+  onConfirm,
+}: {
+  workspace: string;
+  onCancel: () => void;
+  onConfirm: () => void;
+}) {
+  const [typed, setTyped] = useState('');
+  const matches = typed === workspace;
+
+  return (
+    <div className="fixed inset-0 z-[90] flex items-center justify-center p-4">
+      <button
+        aria-label="Cancel"
+        onClick={onCancel}
+        className="absolute inset-0 bg-black/70 backdrop-blur-sm"
+      />
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="delete-title"
+        className="relative w-full max-w-md rounded-xl border border-border bg-popover p-6 shadow-2xl"
+      >
+        <span
+          className="flex h-9 w-9 items-center justify-center rounded-full"
+          style={{ background: 'color-mix(in oklab, var(--status-critical) 18%, transparent)' }}
+        >
+          <AlertTriangle className="h-4 w-4" style={{ color: 'var(--status-critical)' }} />
+        </span>
+
+        <h2 id="delete-title" className="mt-4 text-lg font-semibold tracking-tight">
+          Delete this workspace?
+        </h2>
+        <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+          This destroys every function, snapshot, and volume in{' '}
+          <span className="font-mono text-foreground">{workspace}</span>. It cannot be undone.
+        </p>
+
+        <label className="mt-5 block">
+          <span className="text-xs text-muted-foreground">
+            Type <span className="font-mono text-foreground">{workspace}</span> to confirm
+          </span>
+          <input
+            autoFocus
+            value={typed}
+            onChange={(e) => setTyped(e.target.value)}
+            className="mt-2 h-10 w-full rounded-lg border border-border bg-background px-3 font-mono text-sm outline-none focus:border-[color:var(--status-critical)]"
+          />
+        </label>
+
+        <div className="mt-6 flex justify-end gap-2">
+          <Button variant="ghost" size="sm" onClick={onCancel}>
+            Cancel
+          </Button>
+          <Button variant="destructive" size="sm" disabled={!matches} onClick={onConfirm}>
+            Delete workspace
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function SettingsPage() {
+  const { toast } = useToast();
+  const { signOut } = useAuth();
+  const navigate = useNavigate();
+
   const [toggles, setToggles] = useState(() =>
     Object.fromEntries(TOGGLES.map((t) => [t.id, t.on]))
   );
+  const [workspace, setWorkspace] = useState('acme-corp');
+  const [region, setRegion] = useState('fra-metal-1');
+  const [keys, setKeys] = useState<ApiKey[]>(INITIAL_KEYS);
+  const [saving, setSaving] = useState(false);
+  const [showDelete, setShowDelete] = useState(false);
+
+  const handleSave = async () => {
+    setSaving(true);
+    await new Promise((r) => setTimeout(r, 700));
+    setSaving(false);
+    toast({ kind: 'success', title: 'Settings saved', description: `${workspace} · ${region}` });
+  };
+
+  const handleCreateKey = () => {
+    const created: ApiKey = {
+      id: `key_${Date.now()}`,
+      label: `Key ${keys.length + 1}`,
+      value: generateKey(),
+      createdAt: Date.now(),
+    };
+    setKeys((prev) => [...prev, created]);
+    toast({
+      kind: 'success',
+      title: 'API key created',
+      description: 'Copy it now — this is the only time it is shown in full.',
+    });
+  };
+
+  const handleRevoke = (id: string) => {
+    setKeys((prev) => prev.filter((k) => k.id !== id));
+    toast({ kind: 'info', title: 'Key revoked' });
+  };
+
+  const handleDelete = () => {
+    setShowDelete(false);
+    signOut();
+    toast({ kind: 'info', title: 'Workspace deleted', description: 'You have been signed out.' });
+    navigate({ to: '/' });
+  };
 
   return (
     <div className="flex flex-col gap-6">
@@ -98,14 +232,16 @@ function SettingsPage() {
           <label className="flex flex-col gap-1.5">
             <span className="label-mono text-muted-foreground">Workspace name</span>
             <input
-              defaultValue="acme-corp"
+              value={workspace}
+              onChange={(e) => setWorkspace(e.target.value)}
               className="h-9 rounded-md border border-border bg-background px-3 text-sm outline-none focus:border-brand/50"
             />
           </label>
           <label className="flex flex-col gap-1.5">
             <span className="label-mono text-muted-foreground">Default region</span>
             <select
-              defaultValue="fra-metal-1"
+              value={region}
+              onChange={(e) => setRegion(e.target.value)}
               className="h-9 rounded-md border border-border bg-background px-3 text-sm outline-none focus:border-brand/50"
             >
               <option value="fra-metal-1">fra-metal-1</option>
@@ -115,7 +251,10 @@ function SettingsPage() {
           </label>
         </div>
         <div className="mt-5 flex justify-end">
-          <Button size="sm">Save changes</Button>
+          <Button size="sm" disabled={saving} onClick={handleSave} className="gap-1.5">
+            {saving && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+            {saving ? 'Saving…' : 'Save changes'}
+          </Button>
         </div>
       </Panel>
 
@@ -152,14 +291,14 @@ function SettingsPage() {
         title="API keys"
         description="Used by the CLI and the deployment API"
         actions={
-          <Button variant="outline" size="sm">
+          <Button variant="outline" size="sm" onClick={handleCreateKey}>
             Create key
           </Button>
         }
       >
         <ul className="flex flex-col divide-y divide-border">
-          {API_KEYS.map((k) => (
-            <KeyRow key={k.id} apiKey={k} />
+          {keys.map((k) => (
+            <KeyRow key={k.id} apiKey={k} onRevoke={handleRevoke} />
           ))}
         </ul>
       </Panel>
@@ -172,11 +311,19 @@ function SettingsPage() {
               Permanently destroys every function, snapshot, and volume. This cannot be undone.
             </p>
           </div>
-          <Button variant="destructive" size="sm">
+          <Button variant="destructive" size="sm" onClick={() => setShowDelete(true)}>
             Delete workspace
           </Button>
         </div>
       </Panel>
+
+      {showDelete && (
+        <DeleteWorkspaceDialog
+          workspace={workspace}
+          onCancel={() => setShowDelete(false)}
+          onConfirm={handleDelete}
+        />
+      )}
     </div>
   );
 }

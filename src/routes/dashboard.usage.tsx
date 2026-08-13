@@ -3,6 +3,7 @@ import { createFileRoute } from '@tanstack/react-router';
 import { Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { UsageBars } from '@/components/dashboard/charts';
+import { useToast } from '@/components/ui/toast';
 import { PageHeader, Panel, RangeSelector, StatTile } from '@/components/dashboard/primitives';
 import {
   RANGES,
@@ -18,14 +19,48 @@ export const Route = createFileRoute('/dashboard/usage')({
   component: UsagePage,
 });
 
+/** RFC 4180 quoting — fields containing a comma, quote, or newline get wrapped. */
+function csvCell(value: string | number): string {
+  const s = String(value);
+  return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+}
+
 function UsagePage() {
   const [range, setRange] = useState<RangeKey>('30d');
   const series = useMemo(() => buildSeries(range), [range]);
   const usage = useMemo(() => buildUsage(), []);
+  const { toast } = useToast();
 
   const totalCost = usage.reduce((a, l) => a + l.cost, 0);
   const gbSeconds = series.reduce((a, s) => a + s.gbSeconds, 0);
   const invocations = series.reduce((a, s) => a + s.invocations, 0);
+
+  const exportCsv = () => {
+    const rows = [
+      ['line_item', 'quantity', 'unit', 'included', 'billable', 'unit_price_usd', 'cost_usd'],
+      ...usage.map((l) => [
+        l.label,
+        l.quantity,
+        l.unit,
+        l.included,
+        Math.max(0, l.quantity - l.included),
+        l.unitPrice,
+        l.cost.toFixed(2),
+      ]),
+      [],
+      ['total_usd', totalCost.toFixed(2)],
+    ];
+
+    const csv = rows.map((r) => r.map(csvCell).join(',')).join('\n');
+    const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8;' }));
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `gregale-usage-${range}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+
+    toast({ kind: 'success', title: 'Export ready', description: `gregale-usage-${range}.csv` });
+  };
 
   return (
     <div className="flex flex-col gap-6">
@@ -33,7 +68,7 @@ function UsagePage() {
         title="Usage & billing"
         description="Metered against real compute. Idle functions cost nothing."
         actions={
-          <Button variant="outline" size="sm" className="gap-1.5">
+          <Button variant="outline" size="sm" className="gap-1.5" onClick={exportCsv}>
             <Download className="h-3.5 w-3.5" />
             Export CSV
           </Button>

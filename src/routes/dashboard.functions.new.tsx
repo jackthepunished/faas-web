@@ -7,6 +7,7 @@ import { useToast } from '@/components/ui/toast';
 import { BuildLog } from '@/components/dashboard/build-log';
 import { PageHeader, Panel } from '@/components/dashboard/primitives';
 import { PROJECTS, type Runtime } from '@/lib/mock-data';
+import { useData } from '@/lib/store';
 import { cn } from '@/lib/utils';
 
 export const Route = createFileRoute('/dashboard/functions/new')({
@@ -35,7 +36,9 @@ const REGIONS = ['fra-metal-1', 'iad-metal-1', 'sin-metal-1'];
 function NewFunctionPage() {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { addFunction } = useData();
 
+  const [createdId, setCreatedId] = useState<string | null>(null);
   const [step, setStep] = useState(0);
   const [source, setSource] = useState('git');
   const [repo, setRepo] = useState('acme-corp/checkout-service');
@@ -65,6 +68,16 @@ function NewFunctionPage() {
 
         <BuildLog
           onComplete={() => {
+            // The function only enters the workspace once the build lands.
+            const created = addFunction({
+              name,
+              projectId,
+              runtime,
+              memoryMb,
+              region,
+              source: source === 'git' ? repo : source,
+            });
+            setCreatedId(created.id);
             setDeployed(true);
             toast({
               kind: 'success',
@@ -95,9 +108,16 @@ function NewFunctionPage() {
                 variant="cta"
                 size="sm"
                 className="gap-1.5 rounded-md"
-                onClick={() => navigate({ to: '/dashboard' })}
+                onClick={() =>
+                  createdId
+                    ? navigate({
+                        to: '/dashboard/functions/$functionId',
+                        params: { functionId: createdId },
+                      })
+                    : navigate({ to: '/dashboard' })
+                }
               >
-                View metrics
+                View function
                 <ArrowRight className="h-3.5 w-3.5" />
               </Button>
             </div>

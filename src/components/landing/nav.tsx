@@ -5,9 +5,10 @@ import { Wind } from 'lucide-react';
 import { EASE } from './reveal';
 
 const LINKS = [
-  { label: 'Deploy', href: '#deploy' },
-  { label: 'Docs', href: '#docs' },
-  { label: 'Pricing', href: '#pricing' },
+  { label: 'Platform', href: '#deploy', external: false },
+  { label: 'Pricing', href: '#pricing', external: false },
+  // No docs site yet — the source repository is the honest destination.
+  { label: 'Source', href: 'https://github.com/poyrazK/faas', external: true },
 ];
 
 export function Nav() {
@@ -48,6 +49,7 @@ export function Nav() {
             <a
               key={link.label}
               href={link.href}
+              {...(link.external ? { target: '_blank', rel: 'noreferrer' } : {})}
               className="rounded-full px-3.5 py-1.5 text-[13px] text-muted-foreground transition-colors duration-200 hover:bg-white/5 hover:text-foreground"
             >
               {link.label}

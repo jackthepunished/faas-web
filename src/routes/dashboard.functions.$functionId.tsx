@@ -16,15 +16,15 @@ import {
   LOGS,
   RANGES,
   buildSeries,
-  deploymentsForFunction,
   formatClock,
   formatCompact,
   formatMs,
   formatRelative,
-  getFunction,
   getProject,
   type RangeKey,
 } from '@/lib/mock-data';
+import { useData } from '@/lib/store';
+import { useToast } from '@/components/ui/toast';
 import { cn } from '@/lib/utils';
 
 export const Route = createFileRoute('/dashboard/functions/$functionId')({
@@ -38,6 +38,8 @@ function FunctionDetailPage() {
   const { functionId } = useParams({ from: '/dashboard/functions/$functionId' });
   const [tab, setTab] = useState<Tab>('Metrics');
   const [range, setRange] = useState<RangeKey>('24h');
+  const { getFunction, deploymentsFor, redeploy } = useData();
+  const { toast } = useToast();
 
   const fn = getFunction(functionId);
   const seedOffset = useMemo(
@@ -56,7 +58,8 @@ function FunctionDetailPage() {
   }
 
   const project = getProject(fn.projectId);
-  const deployments = deploymentsForFunction(fn.id);
+  const deployments = deploymentsFor(fn.id);
+  const isDeploying = fn.state === 'deploying';
   const logs = LOGS.filter((l) => l.functionId === fn.id).slice(0, 40);
   const totalInvocations = series.reduce((a, s) => a + s.invocations, 0);
   const coldStarts = series.reduce((a, s) => a + s.coldStarts, 0);
@@ -77,9 +80,22 @@ function FunctionDetailPage() {
         actions={
           <>
             <StateBadge state={fn.state} />
-            <Button variant="outline" size="sm" className="gap-1.5">
-              <RotateCw className="h-3.5 w-3.5" />
-              Redeploy
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-1.5"
+              disabled={isDeploying}
+              onClick={() => {
+                redeploy(fn.id);
+                toast({
+                  kind: 'info',
+                  title: 'Redeploy started',
+                  description: `Rebuilding ${fn.name} and recapturing its snapshot.`,
+                });
+              }}
+            >
+              <RotateCw className={cn('h-3.5 w-3.5', isDeploying && 'animate-spin')} />
+              {isDeploying ? 'Deploying…' : 'Redeploy'}
             </Button>
           </>
         }

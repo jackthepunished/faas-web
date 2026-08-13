@@ -25,7 +25,7 @@ const COMPONENTS = [
 
 export function ComponentsGrid() {
   return (
-    <section className="relative overflow-hidden border-t border-border">
+    <section id="deploy" className="relative scroll-mt-24 overflow-hidden border-t border-border">
       {/* Flow Lines: streamlines echo components finding routes to each other. */}
       <div
         className="pointer-events-none absolute inset-0"

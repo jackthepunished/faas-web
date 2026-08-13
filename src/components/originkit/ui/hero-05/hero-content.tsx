@@ -4,7 +4,9 @@
 "use client";
 
 import { motion, useReducedMotion } from "motion/react";
-import { Button } from "@/components/originkit/ui/hero-05/button";
+import { Link } from "@tanstack/react-router";
+// The site-wide button, so the hero's primary action matches the closing CTA.
+import { Button } from "@/components/ui/button";
 
 /** Public asset URLs — use a function so preview rewriters stay stable. */
 function asset(file: string) {
@@ -14,10 +16,7 @@ function asset(file: string) {
 /** ease-out-cubic */
 const EASE_OUT = [0.215, 0.61, 0.355, 1] as const;
 
-type HeroContentProps = {
-  onGetStarted: () => void;
-  onLaunchDemo: () => void;
-};
+type HeroContentProps = Record<string, never>;
 
 const ArrowIcon = () => (
   <span
@@ -42,10 +41,7 @@ const ArrowIcon = () => (
   </span>
 );
 
-export const HeroContent = ({
-  onGetStarted,
-  onLaunchDemo,
-}: HeroContentProps) => {
+export const HeroContent = ({}: HeroContentProps) => {
   const reduceMotion = useReducedMotion();
 
   const reveal = (delay: number) =>
@@ -107,19 +103,23 @@ export const HeroContent = ({
         className="pointer-events-auto flex w-full flex-col gap-3 ipad:max-w-87.5 ipad:pt-8 desktop-sm:pt-7 mx-auto ipad:flex-row"
       >
         <Button
-          variant="primary"
-          aria-label="Start deploying"
-          onClick={onGetStarted}
-          icon={<ArrowIcon />}
+          asChild
+          variant="cta"
+          className="h-12 w-full gap-2.5 rounded-xl text-[16px] ipad:h-12 ipad:text-[17px]"
         >
-          Start deploying
+          <Link to="/signup" aria-label="Start deploying">
+            Start deploying
+            <ArrowIcon />
+          </Link>
         </Button>
         <Button
-          variant="secondary"
-          aria-label="Read the docs"
-          onClick={onLaunchDemo}
+          asChild
+          variant="outline"
+          className="h-12 w-full rounded-xl border-white/25 bg-white/5 text-[16px] text-white hover:bg-white/10 ipad:h-12 ipad:text-[17px]"
         >
-          Read the docs
+          <a href="#deploy" aria-label="Explore the platform">
+            Explore the platform
+          </a>
         </Button>
       </motion.div>
     </div>

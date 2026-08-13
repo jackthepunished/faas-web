@@ -11,7 +11,7 @@ const METERS = [
 
 export function Pricing() {
   return (
-    <section id="pricing" className="relative overflow-hidden border-t border-border">
+    <section id="pricing" className="relative scroll-mt-24 overflow-hidden border-t border-border">
       {/* Iso Cubes: scattered wireframe units — one cube per unit of metered compute. */}
       <div
         className="pointer-events-none absolute inset-0"

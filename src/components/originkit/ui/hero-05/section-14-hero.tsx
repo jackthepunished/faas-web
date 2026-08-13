@@ -9,14 +9,6 @@ import { PulseStage } from "@/components/originkit/ui/hero-05/pulse-stage";
 import { DashboardCard } from "@/components/landing/dashboard-preview";
 
 export const Section14Hero = () => {
-  const handleGetStarted = () => {
-    window.location.hash = "";
-  };
-
-  const handleLaunchDemo = () => {
-    window.location.hash = "";
-  };
-
   return (
     <section
       aria-label="Gregale serverless platform hero"
@@ -28,10 +20,7 @@ export const Section14Hero = () => {
         {/* Site nav is the fixed floating capsule (landing/nav.tsx); the kit's
             in-flow navbar is unused, so the top padding clears the fixed nav. */}
         <div className="flex w-full flex-col items-center gap-8 px-4 pt-28 desktop-sm:pt-[160px]">
-          <HeroContent
-            onGetStarted={handleGetStarted}
-            onLaunchDemo={handleLaunchDemo}
-          />
+          <HeroContent />
 
           <div className="mt-[31px] mb-[34px] w-full ">
             <PulseStage>

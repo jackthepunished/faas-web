@@ -4,13 +4,13 @@ import { Plus, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { EmptyState, PageHeader, StateBadge } from '@/components/dashboard/primitives';
 import {
-  FUNCTIONS,
   PROJECTS,
   formatCompact,
   formatMs,
   formatRelative,
   type RunState,
 } from '@/lib/mock-data';
+import { useData } from '@/lib/store';
 import { cn } from '@/lib/utils';
 
 export const Route = createFileRoute('/dashboard/functions/')({
@@ -29,16 +29,17 @@ function FunctionsPage() {
   const [query, setQuery] = useState('');
   const [state, setState] = useState<RunState | 'all'>('all');
   const [projectId, setProjectId] = useState<string>('all');
+  const { functions } = useData();
 
   const rows = useMemo(() => {
     const q = query.trim().toLowerCase();
-    return FUNCTIONS.filter((fn) => {
+    return functions.filter((fn) => {
       if (state !== 'all' && fn.state !== state) return false;
       if (projectId !== 'all' && fn.projectId !== projectId) return false;
       if (q && !fn.name.includes(q) && !fn.runtime.includes(q)) return false;
       return true;
     });
-  }, [query, state, projectId]);
+  }, [functions, query, state, projectId]);
 
   return (
     <div className="flex flex-col gap-6">
@@ -101,7 +102,7 @@ function FunctionsPage() {
         </select>
 
         <span className="ml-auto text-xs text-muted-foreground [font-variant-numeric:tabular-nums]">
-          {rows.length} of {FUNCTIONS.length}
+          {rows.length} of {functions.length}
         </span>
       </div>
 
