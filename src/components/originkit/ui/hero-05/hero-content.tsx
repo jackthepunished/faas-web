@@ -4,7 +4,7 @@
 "use client";
 
 import { motion, useReducedMotion } from "motion/react";
-import { Link } from "@tanstack/react-router";
+import { SweepLink } from "@/components/sweep-link";
 // The site-wide button, so the hero's primary action matches the closing CTA.
 import { Button } from "@/components/ui/button";
 
@@ -110,10 +110,10 @@ export const HeroContent = ({}: HeroContentProps) => {
           variant="cta"
           className="h-12 w-full gap-2.5 whitespace-nowrap rounded-xl px-6 text-[16px] ipad:w-auto ipad:text-[17px]"
         >
-          <Link to="/signup">
+          <SweepLink to="/signup">
             Start deploying
             <ArrowIcon />
-          </Link>
+          </SweepLink>
         </Button>
         <Button
           asChild

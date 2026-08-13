@@ -1,4 +1,5 @@
 import { createRootRoute, Link, Outlet } from '@tanstack/react-router';
+import { GlimmProvider } from 'glimm/react';
 import { AuthProvider } from '@/lib/auth';
 import { DataProvider } from '@/lib/store';
 import { ToastProvider } from '@/components/ui/toast';
@@ -12,9 +13,22 @@ function RootLayout() {
   return (
     <AuthProvider>
       <DataProvider>
-        <ToastProvider>
-          <Outlet />
-        </ToastProvider>
+        {/* Tuned for a near-black page: azure sits closest to the brand hue,
+            and brightness is pulled down so the iridescent band does not
+            blow out to white against the dark surface. */}
+        <GlimmProvider
+          palette="azure"
+          brightness={0.72}
+          sweepMs={950}
+          outroMs={620}
+          easing="easeInOutCubic"
+          waveAmount={0.6}
+          swellAmount={0.6}
+        >
+          <ToastProvider>
+            <Outlet />
+          </ToastProvider>
+        </GlimmProvider>
       </DataProvider>
     </AuthProvider>
   );

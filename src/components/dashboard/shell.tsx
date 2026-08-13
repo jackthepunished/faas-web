@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Link, useNavigate, useRouterState } from '@tanstack/react-router';
+import { Link, useRouterState } from '@tanstack/react-router';
 import {
   ChevronDown,
   ChevronRight,
@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { useData } from '@/lib/store';
 import { useAuth } from '@/lib/auth';
+import { useSweepNavigate } from '@/components/sweep-link';
 import { useToast } from '@/components/ui/toast';
 import { CommandPalette } from './command-palette';
 import { NAV_GROUPS, SECTION_LABELS } from './nav-config';
@@ -229,7 +230,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
     });
   const { signOut } = useAuth();
   const { toast } = useToast();
-  const navigate = useNavigate();
+  const sweepNavigate = useSweepNavigate();
 
   // ⌘K / Ctrl+K anywhere in the dashboard; Escape closes the mobile drawer.
   useEffect(() => {
@@ -257,7 +258,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
   const handleSignOut = () => {
     signOut();
     toast({ kind: 'info', title: 'Signed out' });
-    navigate({ to: '/login' });
+    sweepNavigate('/login');
   };
 
   return (

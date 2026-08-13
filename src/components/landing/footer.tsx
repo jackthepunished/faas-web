@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { ArrowRight, ArrowUpRight, Check, Copy, Wind } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { SweepLink } from '@/components/sweep-link';
 import { Reveal } from './reveal';
 import { TextReveal } from './text-reveal';
 import { DitherFade } from './shaders/dither-fade';
@@ -169,9 +170,11 @@ export function Footer() {
             </p>
 
             <div className="relative mt-9 flex flex-col items-center justify-center gap-3 sm:flex-row">
-              <Button variant="cta" size="lg" className="group h-11 gap-2 rounded-full px-7">
-                Start deploying
-                <ArrowRight className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-0.5" />
+              <Button asChild variant="cta" size="lg" className="group h-11 gap-2 rounded-full px-7">
+                <SweepLink to="/signup">
+                  Start deploying
+                  <ArrowRight className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-0.5" />
+                </SweepLink>
               </Button>
               <CopyCommand />
             </div>

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Link } from '@tanstack/react-router';
 import { ArrowUpRight, Menu, Wind, X } from 'lucide-react';
+import { SweepLink } from '@/components/sweep-link';
 import { EASE } from './reveal';
 
 const LINKS = [
@@ -77,18 +78,18 @@ export function Nav() {
         </nav>
 
         <div className="flex items-center gap-2 lg:justify-self-end">
-          <Link
+          <SweepLink
             to="/login"
             className="hidden px-3 py-1.5 text-sm text-muted-foreground transition-colors duration-200 hover:text-foreground sm:block"
           >
             Sign in
-          </Link>
-          <Link
+          </SweepLink>
+          <SweepLink
             to="/signup"
             className="rounded-full bg-primary px-4 py-1.5 text-sm font-medium text-primary-foreground transition-opacity duration-200 hover:opacity-90"
           >
             Get started
-          </Link>
+          </SweepLink>
 
           <button
             type="button"
@@ -126,13 +127,13 @@ export function Nav() {
                   {link.external && <ArrowUpRight className="h-3.5 w-3.5" />}
                 </a>
               ))}
-              <Link
+              <SweepLink
                 to="/login"
                 onClick={() => setMenuOpen(false)}
                 className="py-3.5 text-sm text-muted-foreground transition-colors hover:text-foreground sm:hidden"
               >
                 Sign in
-              </Link>
+              </SweepLink>
             </nav>
           </motion.div>
         )}

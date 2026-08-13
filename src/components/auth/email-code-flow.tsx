@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Link, useNavigate } from '@tanstack/react-router';
+import { Link } from '@tanstack/react-router';
+import { useSweepNavigate } from '@/components/sweep-link';
 import { AlertCircle, ArrowLeft, ArrowRight, Loader2, MailCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/toast';
@@ -45,7 +46,7 @@ function SsoButton({ label, onClick }: { label: string; onClick: () => void }) {
 
 export function EmailCodeFlow({ mode }: { mode: 'signin' | 'signup' }) {
   const copy = COPY[mode];
-  const navigate = useNavigate();
+  const sweepNavigate = useSweepNavigate();
   const { toast } = useToast();
   const { requestCode, verifyCode } = useAuth();
 
@@ -91,7 +92,8 @@ export function EmailCodeFlow({ mode }: { mode: 'signin' | 'signup' }) {
     try {
       const user = await verifyCode(email, value);
       toast({ kind: 'success', title: `Welcome, ${user.name.split(' ')[0]}` });
-      navigate({ to: hasOnboarded() ? '/dashboard' : '/onboarding' });
+      // Sweep the hand-off from auth into the product.
+      sweepNavigate(hasOnboarded() ? '/dashboard' : '/onboarding');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Something went wrong.');
       setCode('');

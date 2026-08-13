@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { createFileRoute, redirect, useNavigate } from '@tanstack/react-router';
+import { createFileRoute, redirect } from '@tanstack/react-router';
+import { useSweepNavigate } from '@/components/sweep-link';
 import { ArrowLeft, ArrowRight, Check, PartyPopper, Wind } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/toast';
@@ -69,7 +70,7 @@ function StepRail({ current }: { current: number }) {
 }
 
 function OnboardingPage() {
-  const navigate = useNavigate();
+  const sweepNavigate = useSweepNavigate();
   const { toast } = useToast();
   const { user } = useAuth();
 
@@ -85,7 +86,8 @@ function OnboardingPage() {
   const finish = () => {
     markOnboarded();
     toast({ kind: 'success', title: 'Workspace ready', description: `${workspace} · ${region}` });
-    navigate({ to: '/dashboard' });
+    // The biggest context switch in the product — setup handing off to the app.
+    sweepNavigate('/dashboard');
   };
 
   // The field answers the flow: quiet while the user is deciding, energetic
