@@ -2,17 +2,15 @@ import { useEffect, useRef, useState } from 'react';
 import { DitherGlow } from '../dither-glow';
 
 /**
- * WebGL background for the pricing card grid.
+ * WebGL "pixel beams" background.
  *
- * A domain-warped fBm field in the brand hue, quantized through an ordered
- * Bayer dither so it lands in the same visual family as the CSS DitherGlow
- * used elsewhere on the site — the shader just gives it motion and depth the
- * CSS version cannot do.
+ * Vertical shafts of light drifting across a chunky pixel grid. Each beam
+ * carries its own vertical gradient (bright at the base, dissolving upward)
+ * and the whole field is run through a colour ramp and quantized with an
+ * ordered Bayer dither, so the result reads as stepped pixel columns rather
+ * than a smooth glow.
  *
- * Renders at a fraction of device resolution: the output is deliberately
- * low-frequency, the dither reads better with chunkier cells, and it keeps a
- * five-octave-per-sample shader cheap. Falls back to the CSS effect when WebGL
- * is unavailable.
+ * Falls back to the CSS DitherGlow when WebGL or shader compilation fails.
  */
 
 const VERT = `
@@ -23,9 +21,8 @@ void main() {
 `;
 
 const FRAG = `
-// The hash folds values into the high hundreds before fract(), which mediump
-// (10-bit mantissa, ±16384 guaranteed range) cannot hold without visible
-// artifacts on mobile GPUs. Ask for highp where the hardware advertises it.
+// Hashes fold values into the hundreds before fract(); mediump (10-bit
+// mantissa, ±16384 guaranteed) shows visible artifacts there on mobile GPUs.
 #ifdef GL_FRAGMENT_PRECISION_HIGH
 precision highp float;
 #else
@@ -34,87 +31,98 @@ precision mediump float;
 
 uniform vec2  u_res;
 uniform float u_time;
-uniform vec2  u_pointer;   // pixels; far offscreen when absent
+uniform vec2  u_pointer;      // pixels; far offscreen when absent
 
-float hash21(vec2 p) {
-  p = fract(p * vec2(123.34, 456.21));
-  p += dot(p, p + 45.32);
-  return fract(p.x * p.y);
+const float BEAMS = 9.0;
+const float CELLS = 58.0;     // horizontal pixel cells
+const float LEVELS = 6.0;     // colour quantization steps
+
+float hash11(float n) {
+  return fract(sin(n * 12.9898) * 43758.5453);
 }
 
-float vnoise(vec2 p) {
-  vec2 i = floor(p);
-  vec2 f = fract(p);
-  vec2 u = f * f * (3.0 - 2.0 * f);          // smoothstep interpolant
-  float a = hash21(i);
-  float b = hash21(i + vec2(1.0, 0.0));
-  float c = hash21(i + vec2(0.0, 1.0));
-  float d = hash21(i + vec2(1.0, 1.0));
-  return mix(mix(a, b, u.x), mix(c, d, u.x), u.y);
-}
-
-float fbm(vec2 p) {
-  float v = 0.0;
-  float amp = 0.5;
-  for (int i = 0; i < 4; i++) {
-    v += amp * vnoise(p);
-    p = p * 2.02 + 17.3;                      // rotate-ish to hide tiling
-    amp *= 0.5;
-  }
-  return v;
-}
-
-// Ordered Bayer thresholds, built by recursion from the 2x2 base pattern.
-// Each level is periodic, so callers wrap the coordinate to the 8x8 tile
-// first — squaring a raw fragment coordinate here would overflow mediump.
+// Ordered Bayer thresholds from the 2x2 base pattern. Each level is
+// periodic, so the caller wraps to the 8x8 tile before squaring — a raw
+// fragment coordinate would overflow mediump here.
 float bayer2(vec2 a) { a = floor(a); return fract(a.x * 0.5 + a.y * a.y * 0.75); }
 float bayer4(vec2 a) { return bayer2(a * 0.5) * 0.25 + bayer2(a); }
 float bayer8(vec2 a) { return bayer4(a * 0.5) * 0.25 + bayer2(a); }
 
+// Deep -> mid blue -> brand sky -> hot core. Piecewise so the ramp has a
+// definite shoulder instead of washing out to a single tint.
+vec3 ramp(float x) {
+  vec3 c0 = vec3(0.035, 0.047, 0.094);
+  vec3 c1 = vec3(0.145, 0.290, 0.640);
+  vec3 c2 = vec3(0.408, 0.588, 0.949);
+  vec3 c3 = vec3(0.780, 0.867, 1.000);
+  vec3 col = mix(c0, c1, smoothstep(0.00, 0.38, x));
+  col = mix(col, c2, smoothstep(0.34, 0.72, x));
+  col = mix(col, c3, smoothstep(0.70, 1.00, x));
+  return col;
+}
+
 void main() {
   vec2 frag = gl_FragCoord.xy;
   vec2 uv = frag / u_res;
-  float aspect = u_res.x / max(u_res.y, 1.0);
-  vec2 p = vec2(uv.x * aspect, uv.y);
 
-  float t = u_time * 0.045;                   // slow — this is ambience
+  // Snap to a chunky grid so everything below resolves as pixel blocks.
+  vec2 grid = vec2(CELLS, max(floor(CELLS * u_res.y / max(u_res.x, 1.0)), 6.0));
+  vec2 cell = (floor(uv * grid) + 0.5) / grid;
 
-  // Two rounds of domain warping give the field its drifting, folded look.
-  vec2 q = vec2(
-    fbm(p * 2.2 + vec2(0.0, t)),
-    fbm(p * 2.2 + vec2(5.2, -t))
-  );
-  vec2 r = vec2(
-    fbm(p * 2.6 + 3.4 * q + vec2(1.7, 9.2) + t * 0.6),
-    fbm(p * 2.6 + 3.4 * q + vec2(8.3, 2.8) - t * 0.5)
-  );
-  float f = fbm(p * 2.4 + 3.0 * r);
+  float t = u_time * 0.16;
 
-  // Pointer bloom, normalised by the short edge so it stays round.
+  float energy = 0.0;
+  for (int i = 0; i < 9; i++) {
+    float fi = float(i);
+    float seed = hash11(fi * 3.17 + 1.0);
+    float wSeed = hash11(fi * 7.31 + 5.0);
+    float pSeed = hash11(fi * 11.7 + 9.0);
+
+    // Alternate travel direction so the field never reads as one slide.
+    float dir = mix(-1.0, 1.0, step(0.5, pSeed));
+    float x = fract(seed + t * (0.05 + seed * 0.11) * dir);
+
+    // Wrapped horizontal distance to this beam's centre.
+    float dx = abs(cell.x - x);
+    dx = min(dx, 1.0 - dx);
+
+    float width = 0.010 + wSeed * 0.052;
+    float core = smoothstep(width, 0.0, dx);
+    float halo = smoothstep(width * 3.4, 0.0, dx) * 0.30;
+
+    // Each beam is a gradient: bright at the base, gone by the top.
+    float rise = smoothstep(1.05, 0.06, cell.y);
+    // Slow breathing, out of phase per beam.
+    float pulse = 0.62 + 0.38 * sin(u_time * (0.5 + wSeed * 0.7) + fi * 2.1);
+
+    energy += (core + halo) * rise * pulse;
+  }
+  energy /= BEAMS * 0.42;
+
+  // Cursor lifts the beams it passes over.
   float pd = distance(frag, u_pointer) / max(min(u_res.x, u_res.y), 1.0);
-  float bloom = exp(-pd * pd * 14.0);
+  energy += exp(-pd * pd * 10.0) * 0.30;
 
-  float energy = smoothstep(0.25, 0.95, f) + bloom * 0.35;
+  // Horizontal scanlines on the cell grid keep the pixel read explicit.
+  float scan = 0.90 + 0.10 * step(0.5, fract(cell.y * grid.y * 0.5));
+  energy *= scan;
 
-  // Fade to nothing at the edges so the layer never collides with the border.
+  // Dissolve at the edges so the layer never fights the section border.
   float edge =
-      smoothstep(0.0, 0.26, uv.x) * smoothstep(1.0, 0.74, uv.x)
-    * smoothstep(0.0, 0.28, uv.y) * smoothstep(1.0, 0.72, uv.y);
-  energy *= edge;
+      smoothstep(0.0, 0.16, uv.x) * smoothstep(1.0, 0.84, uv.x)
+    * smoothstep(0.0, 0.10, uv.y) * smoothstep(1.0, 0.88, uv.y);
+  energy = clamp(energy, 0.0, 1.0) * edge;
 
-  // Quantize through the dither matrix — this is what makes it read as
-  // stepped dots rather than a smooth gradient.
-  float threshold = bayer8(mod(frag, 8.0));   // exact: the matrix has period 8
-  float levels = 5.0;
-  float stepped = clamp(floor(energy * levels + threshold) / levels, 0.0, 1.0);
+  // Quantize through the dither matrix — this is what makes the gradient
+  // step rather than blend.
+  float threshold = bayer8(mod(frag, 8.0));
+  float stepped = clamp(floor(energy * LEVELS + threshold) / LEVELS, 0.0, 1.0);
 
-  vec3 deep  = vec3(0.043, 0.055, 0.086);
-  vec3 brand = vec3(0.659, 0.776, 0.996);     // #a8c6fe
-  vec3 col = mix(deep, brand, stepped);
+  vec3 col = ramp(stepped);
 
-  // Ceiling on alpha keeps card text contrast intact.
-  float alpha = stepped * 0.46;
-  gl_FragColor = vec4(col * alpha, alpha);    // premultiplied
+  // Alpha ceiling protects card text contrast.
+  float alpha = stepped * 0.62;
+  gl_FragColor = vec4(col * alpha, alpha);   // premultiplied
 }
 `;
 
@@ -124,17 +132,17 @@ function compile(gl: WebGLRenderingContext, type: number, src: string): WebGLSha
   gl.shaderSource(shader, src);
   gl.compileShader(shader);
   if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
-    console.warn('[pricing-field] shader compile failed:', gl.getShaderInfoLog(shader));
+    console.warn('[pixel-beams] shader compile failed:', gl.getShaderInfoLog(shader));
     gl.deleteShader(shader);
     return null;
   }
   return shader;
 }
 
-/** Internal render scale — below 1 for cost and for chunkier dither cells. */
+/** Internal render scale — below 1 for cost and for chunkier pixel cells. */
 const RENDER_SCALE = 0.55;
 
-export function PricingField({ className = '' }: { className?: string }) {
+export function PixelBeams({ className = '' }: { className?: string }) {
   const hostRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [supported, setSupported] = useState(true);
@@ -174,14 +182,14 @@ export function PricingField({ className = '' }: { className?: string }) {
     gl.attachShader(program, fs);
     gl.linkProgram(program);
     if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
-      console.warn('[pricing-field] link failed:', gl.getProgramInfoLog(program));
+      console.warn('[pixel-beams] link failed:', gl.getProgramInfoLog(program));
       setSupported(false);
       return;
     }
     gl.useProgram(program);
 
     // One oversized triangle covers the clip volume — cheaper than a quad
-    // and avoids the diagonal seam two triangles can produce.
+    // and free of the diagonal seam two triangles can show.
     const buffer = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 3, -1, -1, 3]), gl.STATIC_DRAW);
@@ -271,7 +279,7 @@ export function PricingField({ className = '' }: { className?: string }) {
 
     const onPointerMove = (e: PointerEvent) => {
       const rect = host.getBoundingClientRect();
-      // GL origin is bottom-left; the DOM's is top-left.
+      // GL's origin is bottom-left; the DOM's is top-left.
       pointer.x = e.clientX - rect.left;
       pointer.y = rect.height - (e.clientY - rect.top);
     };
@@ -282,7 +290,7 @@ export function PricingField({ className = '' }: { className?: string }) {
     host.addEventListener('pointermove', onPointerMove);
     host.addEventListener('pointerleave', onPointerLeave);
 
-    // A lost context cannot be drawn to; stop rather than spew GL errors.
+    // A lost context cannot be drawn to; stop instead of spewing GL errors.
     const onLost = (e: Event) => {
       e.preventDefault();
       stop();

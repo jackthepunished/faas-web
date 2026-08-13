@@ -1,7 +1,7 @@
 import { motion } from 'framer-motion';
 import { ArrowRight } from 'lucide-react';
 import { EASE, Reveal } from './reveal';
-import { PricingField } from './shaders/pricing-field';
+import { PixelBeams } from './shaders/pixel-beams';
 
 const METERS = [
   { label: 'Compute', value: '$0.000012', unit: 'per GB-second' },
@@ -28,7 +28,7 @@ export function Pricing() {
             through them, with a heavy blur so no high-frequency dither ever
             lands under the text. */}
         <div className="relative mt-12">
-          <PricingField className="-inset-x-8 -inset-y-10" />
+          <PixelBeams className="-inset-x-8 -inset-y-12" />
 
           <div className="relative grid gap-3 sm:grid-cols-3">
           {METERS.map((meter, i) => (
