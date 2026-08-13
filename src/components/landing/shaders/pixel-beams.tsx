@@ -32,6 +32,7 @@ precision mediump float;
 uniform vec2  u_res;
 uniform float u_time;
 uniform vec2  u_pointer;      // pixels; far offscreen when absent
+uniform float u_intensity;    // per-instance dimmer
 
 const float BEAMS = 9.0;
 const float CELLS = 58.0;     // horizontal pixel cells
@@ -124,8 +125,8 @@ void main() {
 
   vec3 col = ramp(stepped);
 
-  // Alpha ceiling protects card text contrast.
-  float alpha = stepped * 0.88;
+  // Alpha ceiling protects text contrast; instances over copy dim further.
+  float alpha = stepped * 0.88 * u_intensity;
   gl_FragColor = vec4(col * alpha, alpha);   // premultiplied
 }
 `;
@@ -146,10 +147,21 @@ function compile(gl: WebGLRenderingContext, type: number, src: string): WebGLSha
 /** Internal render scale — below 1 for cost and for chunkier pixel cells. */
 const RENDER_SCALE = 0.55;
 
-export function PixelBeams({ className = '' }: { className?: string }) {
+export function PixelBeams({
+  className = '',
+  intensity = 1,
+}: {
+  className?: string;
+  /** Scales output alpha. Dim this where copy sits directly on the layer. */
+  intensity?: number;
+}) {
   const hostRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [supported, setSupported] = useState(true);
+
+  // Read through a ref so tuning intensity never tears down the GL context.
+  const intensityRef = useRef(intensity);
+  intensityRef.current = intensity;
 
   useEffect(() => {
     const host = hostRef.current;
@@ -204,6 +216,7 @@ export function PixelBeams({ className = '' }: { className?: string }) {
     const uRes = gl.getUniformLocation(program, 'u_res');
     const uTime = gl.getUniformLocation(program, 'u_time');
     const uPointer = gl.getUniformLocation(program, 'u_pointer');
+    const uIntensity = gl.getUniformLocation(program, 'u_intensity');
 
     const pointer = { x: -9999, y: -9999 };
     let raf = 0;
@@ -226,6 +239,7 @@ export function PixelBeams({ className = '' }: { className?: string }) {
       gl.uniform2f(uRes, canvas.width, canvas.height);
       gl.uniform1f(uTime, elapsedMs / 1000);
       gl.uniform2f(uPointer, pointer.x * RENDER_SCALE, pointer.y * RENDER_SCALE);
+      gl.uniform1f(uIntensity, intensityRef.current);
       gl.clearColor(0, 0, 0, 0);
       gl.clear(gl.COLOR_BUFFER_BIT);
       gl.drawArrays(gl.TRIANGLES, 0, 3);

@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { ArrowRight, ArrowUpRight, Check, Copy, Wind } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { DitherGlow } from './dither-glow';
 import { Reveal } from './reveal';
+import { PixelBeams } from './shaders/pixel-beams';
 
 const INSTALL_COMMAND = 'brew install gregale';
 
@@ -116,6 +116,23 @@ export function Footer() {
       {/* Closing CTA — contained panel so the conversion moment has edges */}
       <section className="relative px-4 pb-16 pt-20 sm:px-6 sm:pt-24">
         <div className="relative mx-auto max-w-4xl overflow-hidden rounded-2xl border border-border bg-gradient-to-b from-card to-background px-6 py-14 text-center sm:px-12 sm:py-16">
+          {/* Beams fill the panel and are clipped by its rounded overflow.
+              Dimmer than the pricing instance, because the copy sits directly
+              on this layer rather than on cards. */}
+          <PixelBeams className="inset-0" intensity={0.5} />
+
+          {/* Centre scrim: darkens the bed under the copy so contrast never
+              depends on where a beam happens to be, while the beams stay
+              visible around the panel's edges. */}
+          <div
+            aria-hidden
+            className="pointer-events-none absolute inset-0"
+            style={{
+              background:
+                'radial-gradient(58% 52% at 50% 52%, rgba(9,9,9,0.94), rgba(9,9,9,0.62) 62%, rgba(9,9,9,0.12) 100%)',
+            }}
+          />
+
           {/* Lit top edge, brightest at center */}
           <div
             aria-hidden
@@ -125,7 +142,6 @@ export function Footer() {
                 'linear-gradient(to right, transparent, rgba(168,198,254,0.55) 50%, transparent)',
             }}
           />
-          <DitherGlow className="-inset-x-6 -top-10 bottom-0" />
 
           <Reveal>
             <p className="label-mono relative text-brand">Get started</p>
