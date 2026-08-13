@@ -5,6 +5,7 @@ import { ArrowLeft, ArrowRight, Check, PartyPopper, Wind } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/toast';
 import { BuildLog } from '@/components/dashboard/build-log';
+import { PixelBeams } from '@/components/landing/shaders/pixel-beams';
 import { markOnboarded, readSession, useAuth } from '@/lib/auth';
 import { cn } from '@/lib/utils';
 
@@ -87,9 +88,26 @@ function OnboardingPage() {
     navigate({ to: '/dashboard' });
   };
 
+  // The field answers the flow: quiet while the user is deciding, energetic
+  // while the build runs, settled once it lands.
+  const beamIntensity = deployed ? 0.55 : deploying ? 0.95 : 0.22;
+
   return (
-    <div className="min-h-screen bg-background text-foreground">
-      <header className="flex items-center justify-between border-b border-border px-5 py-4 sm:px-8">
+    <div className="relative min-h-screen overflow-hidden bg-background text-foreground">
+      <PixelBeams className="inset-0" intensity={beamIntensity} />
+
+      {/* Darkens the centre column the content occupies, leaving the beams
+          legible down both margins. */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0"
+        style={{
+          background:
+            'linear-gradient(to right, rgba(9,9,9,0.28) 0%, rgba(9,9,9,0.91) 26%, rgba(9,9,9,0.91) 74%, rgba(9,9,9,0.28) 100%)',
+        }}
+      />
+
+      <header className="relative flex items-center justify-between border-b border-border px-5 py-4 sm:px-8">
         <span className="flex items-center gap-2.5">
           <span className="flex h-7 w-7 items-center justify-center rounded-full border border-white/10 bg-gradient-to-b from-white/10 to-transparent">
             <Wind className="h-3.5 w-3.5 text-brand" />
@@ -99,7 +117,7 @@ function OnboardingPage() {
         <span className="text-xs text-muted-foreground">{user?.email}</span>
       </header>
 
-      <div className="mx-auto max-w-2xl px-5 py-10 sm:py-16">
+      <div className="relative mx-auto max-w-2xl px-5 py-10 sm:py-16">
         <StepRail current={deployed ? STEPS.length : step} />
 
         <div className="mt-10">

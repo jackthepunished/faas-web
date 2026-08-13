@@ -113,15 +113,21 @@ export function PixelBeams({
   /** Scales output alpha. Dim this where copy sits directly on the layer. */
   intensity?: number;
 }) {
-  const intensityRef = useRef(intensity);
-  intensityRef.current = intensity;
+  const targetRef = useRef(intensity);
+  targetRef.current = intensity;
+  // Eased separately from the target so callers can flip intensity on a state
+  // change and have the field glide rather than jump.
+  const currentRef = useRef(intensity);
 
   const { hostRef, canvasRef, supported } = useShaderCanvas({
     frag: FRAG,
     label: 'pixel-beams',
     renderScale: 0.55,
     uniformNames: ['u_intensity'],
-    onFrame: (gl, u) => gl.uniform1f(u.u_intensity, intensityRef.current),
+    onFrame: (gl, u) => {
+      currentRef.current += (targetRef.current - currentRef.current) * 0.045;
+      gl.uniform1f(u.u_intensity, currentRef.current);
+    },
   });
 
   if (!supported) return <DitherGlow className={className || 'inset-0'} />;
