@@ -66,7 +66,7 @@ function UsagePage() {
     <div className="flex flex-col gap-6">
       <PageHeader
         title="Usage & billing"
-        description="Metered against real compute. Idle functions cost nothing."
+        description="Metered against real compute. Idle workflows cost nothing."
         actions={
           <Button variant="outline" size="sm" className="gap-1.5" onClick={exportCsv}>
             <Download className="h-3.5 w-3.5" />

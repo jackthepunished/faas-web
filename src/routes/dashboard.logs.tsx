@@ -30,9 +30,9 @@ const STREAM_MESSAGES: [LogLevel, string][] = [
 function LogsPage() {
   const [query, setQuery] = useState('');
   const [level, setLevel] = useState<LogLevel | 'all'>('all');
-  const [functionId, setFunctionId] = useState('all');
+  const [workflowId, setFunctionId] = useState('all');
   const [live, setLive] = useState(true);
-  const { functions } = useData();
+  const { workflows } = useData();
 
   // Entries that arrived while the stream was running, newest first.
   const [streamed, setStreamed] = useState<LogEntry[]>([]);
@@ -41,14 +41,14 @@ function LogsPage() {
   useEffect(() => {
     if (!live) return;
     const id = setInterval(() => {
-      const fn = functions[Math.floor(Math.random() * functions.length)];
+      const fn = workflows[Math.floor(Math.random() * workflows.length)];
       if (!fn) return;
       const [lvl, message] = STREAM_MESSAGES[Math.floor(Math.random() * STREAM_MESSAGES.length)];
       const entry: LogEntry = {
         id: `live_${counter.current++}`,
         ts: Date.now(),
         level: lvl,
-        functionId: fn.id,
+        workflowId: fn.id,
         requestId: Math.floor(Math.random() * 0xffffffffff)
           .toString(16)
           .padStart(12, '0')
@@ -61,19 +61,19 @@ function LogsPage() {
       setStreamed((prev) => [entry, ...prev].slice(0, 200));
     }, 1400);
     return () => clearInterval(id);
-  }, [live, functions]);
+  }, [live, workflows]);
 
   const rows = useMemo(() => {
     const q = query.trim().toLowerCase();
     return [...streamed, ...LOGS]
       .filter((log) => {
         if (level !== 'all' && log.level !== level) return false;
-        if (functionId !== 'all' && log.functionId !== functionId) return false;
+        if (workflowId !== 'all' && log.workflowId !== workflowId) return false;
         if (q && !log.message.toLowerCase().includes(q) && !log.requestId.includes(q)) return false;
         return true;
       })
       .slice(0, 120);
-  }, [streamed, query, level, functionId]);
+  }, [streamed, query, level, workflowId]);
 
   const errorCount = rows.filter((l) => l.level === 'error').length;
 
@@ -131,13 +131,13 @@ function LogsPage() {
         </div>
 
         <select
-          value={functionId}
+          value={workflowId}
           onChange={(e) => setFunctionId(e.target.value)}
           aria-label="Filter by function"
           className="h-9 rounded-md border border-border bg-card px-2.5 text-sm outline-none focus:border-brand/50"
         >
-          <option value="all">All functions</option>
-          {functions.map((fn) => (
+          <option value="all">All workflows</option>
+          {workflows.map((fn) => (
             <option key={fn.id} value={fn.id}>
               {fn.name}
             </option>
@@ -159,7 +159,7 @@ function LogsPage() {
           <div className="max-h-[62vh] overflow-y-auto">
             <ul className="flex flex-col divide-y divide-border/60 font-mono text-xs">
               {rows.map((log) => {
-                const fn = functions.find((f) => f.id === log.functionId);
+                const fn = workflows.find((f) => f.id === log.workflowId);
                 return (
                   <li
                     key={log.id}

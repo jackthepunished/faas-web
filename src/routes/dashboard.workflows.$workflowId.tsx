@@ -30,7 +30,7 @@ import { cn } from '@/lib/utils';
 const TABS = ['Metrics', 'Deployments', 'Logs', 'Configuration'] as const;
 type Tab = (typeof TABS)[number];
 
-export const Route = createFileRoute('/dashboard/functions/$functionId')({
+export const Route = createFileRoute('/dashboard/workflows/$workflowId')({
   // Tab lives in the URL, so a refresh or a shared link lands on the same one.
   // Optional, so links elsewhere need not pass it and the default tab leaves
   // no query string behind.
@@ -40,19 +40,19 @@ export const Route = createFileRoute('/dashboard/functions/$functionId')({
 });
 
 function FunctionDetailPage() {
-  const { functionId } = useParams({ from: '/dashboard/functions/$functionId' });
+  const { workflowId } = useParams({ from: '/dashboard/workflows/$workflowId' });
   const { tab = 'Metrics' } = Route.useSearch();
   const navigate = Route.useNavigate();
   // Replace rather than push, so tab switching does not fill the back stack.
   const setTab = (next: Tab) => navigate({ search: { tab: next }, replace: true });
   const [range, setRange] = useState<RangeKey>('24h');
-  const { getFunction, deploymentsFor, redeploy } = useData();
+  const { getWorkflow, deploymentsFor, redeploy } = useData();
   const { toast } = useToast();
 
-  const fn = getFunction(functionId);
+  const fn = getWorkflow(workflowId);
   const seedOffset = useMemo(
-    () => functionId.split('').reduce((a, c) => a + c.charCodeAt(0), 0),
-    [functionId]
+    () => workflowId.split('').reduce((a, c) => a + c.charCodeAt(0), 0),
+    [workflowId]
   );
   const series = useMemo(() => buildSeries(range, seedOffset, 0.12), [range, seedOffset]);
 
@@ -68,18 +68,18 @@ function FunctionDetailPage() {
   const project = getProject(fn.projectId);
   const deployments = deploymentsFor(fn.id);
   const isDeploying = fn.state === 'deploying';
-  const logs = LOGS.filter((l) => l.functionId === fn.id).slice(0, 40);
+  const logs = LOGS.filter((l) => l.workflowId === fn.id).slice(0, 40);
   const totalInvocations = series.reduce((a, s) => a + s.invocations, 0);
   const coldStarts = series.reduce((a, s) => a + s.coldStarts, 0);
 
   return (
     <div className="flex flex-col gap-6">
       <Link
-        to="/dashboard/functions"
+        to="/dashboard/workflows"
         className="inline-flex w-fit items-center gap-1.5 text-xs text-muted-foreground transition-colors hover:text-foreground"
       >
         <ArrowLeft className="h-3 w-3" />
-        All functions
+        All workflows
       </Link>
 
       <PageHeader

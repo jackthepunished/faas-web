@@ -1,15 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from '@tanstack/react-router';
-import {
-  CornerDownLeft,
-  FileText,
-  GitBranch,
-  LayoutDashboard,
-  Plus,
-  Search,
-  Settings,
-  SlidersHorizontal,
-} from 'lucide-react';
+import { CornerDownLeft, GitBranch, Plus, Search } from 'lucide-react';
+import { NAV_ITEMS } from './nav-config';
 import { useData } from '@/lib/store';
 import { formatCompact } from '@/lib/mock-data';
 import { cn } from '@/lib/utils';
@@ -36,7 +28,7 @@ export function CommandPalette({
   onOpenChange: (open: boolean) => void;
 }) {
   const navigate = useNavigate();
-  const { functions } = useData();
+  const { workflows } = useData();
   const [query, setQuery] = useState('');
   const [active, setActive] = useState(0);
 
@@ -53,36 +45,40 @@ export function CommandPalette({
     };
 
     return [
-      { id: 'nav-overview', label: 'Overview', group: 'Go to', icon: LayoutDashboard, run: go('/dashboard') },
-      { id: 'nav-functions', label: 'Functions', group: 'Go to', icon: GitBranch, run: go('/dashboard/functions') },
-      { id: 'nav-logs', label: 'Logs', group: 'Go to', icon: FileText, run: go('/dashboard/logs') },
-      { id: 'nav-usage', label: 'Usage & billing', group: 'Go to', icon: SlidersHorizontal, run: go('/dashboard/usage') },
-      { id: 'nav-settings', label: 'Settings', group: 'Go to', icon: Settings, run: go('/dashboard/settings') },
+      // Driven by the nav config, so a new page becomes reachable by ⌘K the
+      // moment it appears in the sidebar.
+      ...NAV_ITEMS.map((item) => ({
+        id: `nav-${item.to}`,
+        label: item.label,
+        group: 'Go to',
+        icon: item.icon,
+        run: go(item.to),
+      })),
       {
         id: 'act-new',
-        label: 'Deploy a new function',
+        label: 'Deploy a new workflow',
         group: 'Actions',
         icon: Plus,
-        run: go('/dashboard/functions/new'),
+        run: go('/dashboard/workflows/new'),
       },
-      ...functions.map((fn) => ({
+      ...workflows.map((fn) => ({
         id: fn.id,
         label: fn.name,
-        group: 'Functions',
+        group: 'Workflows',
         hint: `${formatCompact(fn.invocations24h)} calls · ${fn.runtime}`,
         icon: GitBranch,
         run: () => {
           close();
           navigate({
-            to: '/dashboard/functions/$functionId',
-            params: { functionId: fn.id },
+            to: '/dashboard/workflows/$workflowId',
+            params: { workflowId: fn.id },
           });
         },
       })),
     ];
     // `close` and `navigate` are stable enough for this list's lifetime.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [functions, navigate]);
+  }, [workflows, navigate]);
 
   const results = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -165,7 +161,7 @@ export function CommandPalette({
             ref={inputRef}
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search functions, jump to a page, run an action…"
+            placeholder="Search workflows, jump to a page, run an action…"
             aria-label="Search commands"
             aria-activedescendant={results[active] ? `cmd-${results[active].id}` : undefined}
             className="h-12 flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"

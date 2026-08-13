@@ -10,7 +10,7 @@ import { PROJECTS, type Runtime } from '@/lib/mock-data';
 import { useData } from '@/lib/store';
 import { cn } from '@/lib/utils';
 
-export const Route = createFileRoute('/dashboard/functions/new')({
+export const Route = createFileRoute('/dashboard/workflows/new')({
   component: NewFunctionPage,
 });
 
@@ -36,7 +36,7 @@ const REGIONS = ['fra-metal-1', 'iad-metal-1', 'sin-metal-1'];
 function NewFunctionPage() {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { addFunction } = useData();
+  const { addWorkflow } = useData();
 
   const [createdId, setCreatedId] = useState<string | null>(null);
   const [step, setStep] = useState(0);
@@ -69,7 +69,7 @@ function NewFunctionPage() {
         <BuildLog
           onComplete={() => {
             // The function only enters the workspace once the build lands.
-            const created = addFunction({
+            const created = addWorkflow({
               name,
               projectId,
               runtime,
@@ -101,8 +101,8 @@ function NewFunctionPage() {
               https://{name}.gregale.run
             </a>
             <div className="flex gap-2">
-              <Button variant="outline" size="sm" onClick={() => navigate({ to: '/dashboard/functions' })}>
-                All functions
+              <Button variant="outline" size="sm" onClick={() => navigate({ to: '/dashboard/workflows' })}>
+                All workflows
               </Button>
               <Button
                 variant="cta"
@@ -111,8 +111,8 @@ function NewFunctionPage() {
                 onClick={() =>
                   createdId
                     ? navigate({
-                        to: '/dashboard/functions/$functionId',
-                        params: { functionId: createdId },
+                        to: '/dashboard/workflows/$workflowId',
+                        params: { workflowId: createdId },
                       })
                     : navigate({ to: '/dashboard' })
                 }
@@ -130,11 +130,11 @@ function NewFunctionPage() {
   return (
     <div className="mx-auto flex max-w-2xl flex-col gap-6">
       <Link
-        to="/dashboard/functions"
+        to="/dashboard/workflows"
         className="inline-flex w-fit items-center gap-1.5 text-xs text-muted-foreground transition-colors hover:text-foreground"
       >
         <ArrowLeft className="h-3 w-3" />
-        All functions
+        All workflows
       </Link>
 
       <PageHeader title="New function" description="Deploy a function to bare metal." />

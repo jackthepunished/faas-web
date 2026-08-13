@@ -32,7 +32,7 @@ export interface Project {
   createdAt: number;
 }
 
-export interface FunctionRecord {
+export interface Workflow {
   id: string;
   projectId: string;
   name: string;
@@ -51,7 +51,7 @@ export interface FunctionRecord {
 
 export interface Deployment {
   id: string;
-  functionId: string;
+  workflowId: string;
   version: string;
   state: 'succeeded' | 'failed' | 'building';
   commit: string;
@@ -67,7 +67,7 @@ export interface LogEntry {
   id: string;
   ts: number;
   level: LogLevel;
-  functionId: string;
+  workflowId: string;
   requestId: string;
   message: string;
   durationMs: number;
@@ -106,7 +106,7 @@ export const PROJECTS: Project[] = [
   },
 ];
 
-const FUNCTION_SEED: {
+const WORKFLOW_SEED: {
   name: string;
   projectId: string;
   runtime: Runtime;
@@ -127,9 +127,9 @@ const FUNCTION_SEED: {
 
 const REGIONS = ['fra-metal-1', 'iad-metal-1', 'sin-metal-1'];
 
-export const FUNCTIONS: FunctionRecord[] = (() => {
+export const WORKFLOWS: Workflow[] = (() => {
   const rand = mulberry32(1337);
-  return FUNCTION_SEED.map((seed, i) => {
+  return WORKFLOW_SEED.map((seed, i) => {
     const invocations24h = Math.round(2_000 + rand() * 480_000);
     const errorRatePct =
       seed.state === 'error' ? 4.2 + rand() * 3 : Number((rand() * 0.6).toFixed(2));
@@ -152,12 +152,12 @@ export const FUNCTIONS: FunctionRecord[] = (() => {
   });
 })();
 
-export function functionsForProject(projectId: string) {
-  return FUNCTIONS.filter((fn) => fn.projectId === projectId);
+export function workflowsForProject(projectId: string) {
+  return WORKFLOWS.filter((fn) => fn.projectId === projectId);
 }
 
-export function getFunction(id: string) {
-  return FUNCTIONS.find((fn) => fn.id === id);
+export function getWorkflow(id: string) {
+  return WORKFLOWS.find((fn) => fn.id === id);
 }
 
 export function getProject(id: string) {
@@ -182,13 +182,13 @@ const AUTHORS = ['e.cintas', 'k.poyraz', 'm.aydin', 'dependabot'];
 export const DEPLOYMENTS: Deployment[] = (() => {
   const rand = mulberry32(90210);
   const out: Deployment[] = [];
-  FUNCTIONS.forEach((fn) => {
+  WORKFLOWS.forEach((fn) => {
     const count = 3 + Math.floor(rand() * 4);
     for (let i = 0; i < count; i++) {
       const failed = rand() < 0.12;
       out.push({
         id: `dep_${fn.id}_${i}`,
-        functionId: fn.id,
+        workflowId: fn.id,
         version: `v0.${8 + (i % 3)}.${count - i}`,
         state: fn.state === 'deploying' && i === 0 ? 'building' : failed ? 'failed' : 'succeeded',
         commit: Math.floor(rand() * 0xfffffff)
@@ -205,8 +205,8 @@ export const DEPLOYMENTS: Deployment[] = (() => {
   return out.sort((a, b) => b.createdAt - a.createdAt);
 })();
 
-export function deploymentsForFunction(functionId: string) {
-  return DEPLOYMENTS.filter((d) => d.functionId === functionId);
+export function deploymentsForWorkflow(workflowId: string) {
+  return DEPLOYMENTS.filter((d) => d.workflowId === workflowId);
 }
 
 const LOG_MESSAGES: Record<LogLevel, string[]> = {
@@ -233,7 +233,7 @@ export const LOGS: LogEntry[] = (() => {
   const rand = mulberry32(5150);
   const out: LogEntry[] = [];
   for (let i = 0; i < 240; i++) {
-    const fn = FUNCTIONS[Math.floor(rand() * FUNCTIONS.length)];
+    const fn = WORKFLOWS[Math.floor(rand() * WORKFLOWS.length)];
     const roll = rand();
     const level: LogLevel =
       roll > 0.93 ? 'error' : roll > 0.82 ? 'warn' : roll > 0.24 ? 'info' : 'debug';
@@ -242,7 +242,7 @@ export const LOGS: LogEntry[] = (() => {
       id: `log_${i}`,
       ts: NOW - Math.round(rand() * 6 * HOUR),
       level,
-      functionId: fn.id,
+      workflowId: fn.id,
       requestId: Math.floor(rand() * 0xffffffffff)
         .toString(16)
         .padStart(12, '0')

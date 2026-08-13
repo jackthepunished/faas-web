@@ -13,7 +13,7 @@ import {
 import { useData } from '@/lib/store';
 import { cn } from '@/lib/utils';
 
-export const Route = createFileRoute('/dashboard/functions/')({
+export const Route = createFileRoute('/dashboard/workflows/')({
   component: FunctionsPage,
 });
 
@@ -52,12 +52,12 @@ function FunctionsPage() {
     key: 'invocations24h',
     dir: 'desc',
   });
-  const { functions } = useData();
+  const { workflows } = useData();
   const navigate = useNavigate();
 
   const rows = useMemo(() => {
     const q = query.trim().toLowerCase();
-    const filtered = functions.filter((fn) => {
+    const filtered = workflows.filter((fn) => {
       if (state !== 'all' && fn.state !== state) return false;
       if (projectId !== 'all' && fn.projectId !== projectId) return false;
       if (q && !fn.name.includes(q) && !fn.runtime.includes(q)) return false;
@@ -71,7 +71,7 @@ function FunctionsPage() {
       if (typeof av === 'number' && typeof bv === 'number') return (av - bv) * factor;
       return String(av).localeCompare(String(bv)) * factor;
     });
-  }, [functions, query, state, projectId, sort]);
+  }, [workflows, query, state, projectId, sort]);
 
   // Text columns read naturally A→Z first; numbers most-interesting first.
   const toggleSort = (key: SortKey, numeric: boolean) =>
@@ -88,7 +88,7 @@ function FunctionsPage() {
         description="Every deployed function across this workspace."
         actions={
           <Button asChild size="sm" className="gap-1.5">
-            <Link to="/dashboard/functions/new">
+            <Link to="/dashboard/workflows/new">
               <Plus className="h-3.5 w-3.5" />
               New function
             </Link>
@@ -142,12 +142,12 @@ function FunctionsPage() {
         </select>
 
         <span className="ml-auto text-xs text-muted-foreground [font-variant-numeric:tabular-nums]">
-          {rows.length} of {functions.length}
+          {rows.length} of {workflows.length}
         </span>
       </div>
 
       {rows.length === 0 ? (
-        <EmptyState message="No functions match these filters." />
+        <EmptyState message="No workflows match these filters." />
       ) : (
         <div className="overflow-hidden rounded-xl border border-border bg-card">
           <div className="overflow-x-auto">
@@ -200,16 +200,16 @@ function FunctionsPage() {
                     key={fn.id}
                     onClick={() =>
                       navigate({
-                        to: '/dashboard/functions/$functionId',
-                        params: { functionId: fn.id },
+                        to: '/dashboard/workflows/$workflowId',
+                        params: { workflowId: fn.id },
                       })
                     }
                     className="group cursor-pointer transition-colors hover:bg-muted/40"
                   >
                     <td className="px-4 py-3">
                       <Link
-                        to="/dashboard/functions/$functionId"
-                        params={{ functionId: fn.id }}
+                        to="/dashboard/workflows/$workflowId"
+                        params={{ workflowId: fn.id }}
                         className="font-mono group-hover:text-brand"
                       >
                         {fn.name}

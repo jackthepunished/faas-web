@@ -1,10 +1,10 @@
 import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from 'react';
 import {
   DEPLOYMENTS,
-  FUNCTIONS,
+  WORKFLOWS,
   NOW,
   type Deployment,
-  type FunctionRecord,
+  type Workflow,
   type Runtime,
 } from './mock-data';
 
@@ -17,7 +17,7 @@ import {
  * the consuming components stay as they are.
  */
 
-export interface NewFunctionInput {
+export interface NewWorkflowInput {
   name: string;
   projectId: string;
   runtime: Runtime;
@@ -27,12 +27,12 @@ export interface NewFunctionInput {
 }
 
 interface DataValue {
-  functions: FunctionRecord[];
+  workflows: Workflow[];
   deployments: Deployment[];
-  getFunction: (id: string) => FunctionRecord | undefined;
+  getWorkflow: (id: string) => Workflow | undefined;
   deploymentsFor: (id: string) => Deployment[];
-  functionsForProject: (projectId: string) => FunctionRecord[];
-  addFunction: (input: NewFunctionInput) => FunctionRecord;
+  workflowsForProject: (projectId: string) => Workflow[];
+  addWorkflow: (input: NewWorkflowInput) => Workflow;
   /** Flips the function to `deploying`, then back to `running` when it lands. */
   redeploy: (id: string) => void;
 }
@@ -45,12 +45,12 @@ function bumpPatch(version: string): string {
 }
 
 export function DataProvider({ children }: { children: ReactNode }) {
-  const [functions, setFunctions] = useState<FunctionRecord[]>(FUNCTIONS);
+  const [workflows, setFunctions] = useState<Workflow[]>(WORKFLOWS);
   const [deployments, setDeployments] = useState<Deployment[]>(DEPLOYMENTS);
 
-  const addFunction = useCallback((input: NewFunctionInput) => {
+  const addWorkflow = useCallback((input: NewWorkflowInput) => {
     const id = `fn_${input.name.replace(/-/g, '_')}_${Math.abs(hash(input.name))}`;
-    const created: FunctionRecord = {
+    const created: Workflow = {
       id,
       projectId: input.projectId,
       name: input.name,
@@ -70,7 +70,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
 
     const deployment: Deployment = {
       id: `dep_${id}_0`,
-      functionId: id,
+      workflowId: id,
       version: 'v0.1.0',
       state: 'succeeded',
       commit: Math.abs(hash(input.name + input.region))
@@ -107,12 +107,12 @@ export function DataProvider({ children }: { children: ReactNode }) {
         )
       );
       setDeployments((prev) => {
-        const fn = functions.find((f) => f.id === id);
+        const fn = workflows.find((f) => f.id === id);
         if (!fn) return prev;
         return [
           {
             id: `dep_${id}_${prev.length}`,
-            functionId: id,
+            workflowId: id,
             version: bumpPatch(fn.version),
             state: 'succeeded' as const,
             commit: Math.abs(hash(id + prev.length))
@@ -128,19 +128,19 @@ export function DataProvider({ children }: { children: ReactNode }) {
         ];
       });
     }, 8200);
-  }, [functions]);
+  }, [workflows]);
 
   const value = useMemo<DataValue>(
     () => ({
-      functions,
+      workflows,
       deployments,
-      getFunction: (id) => functions.find((f) => f.id === id),
-      deploymentsFor: (id) => deployments.filter((d) => d.functionId === id),
-      functionsForProject: (projectId) => functions.filter((f) => f.projectId === projectId),
-      addFunction,
+      getWorkflow: (id) => workflows.find((f) => f.id === id),
+      deploymentsFor: (id) => deployments.filter((d) => d.workflowId === id),
+      workflowsForProject: (projectId) => workflows.filter((f) => f.projectId === projectId),
+      addWorkflow,
       redeploy,
     }),
-    [functions, deployments, addFunction, redeploy]
+    [workflows, deployments, addWorkflow, redeploy]
   );
 
   return <DataContext.Provider value={value}>{children}</DataContext.Provider>;

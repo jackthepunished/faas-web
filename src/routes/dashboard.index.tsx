@@ -36,7 +36,7 @@ function deltaOf(values: number[]): number {
 function OverviewPage() {
   const [range, setRange] = useState<RangeKey>('24h');
   const series = useMemo(() => buildSeries(range), [range]);
-  const { functions, deployments, functionsForProject, getFunction } = useData();
+  const { workflows, deployments, workflowsForProject, getWorkflow } = useData();
 
   const invocations = series.map((s) => s.invocations);
   const errors = series.map((s) => s.errors);
@@ -47,7 +47,7 @@ function OverviewPage() {
   const gbSeconds = series.reduce((a, s) => a + s.gbSeconds, 0);
 
   const recentDeployments = deployments.slice(0, 6);
-  const busiest = [...functions].sort((a, b) => b.invocations24h - a.invocations24h).slice(0, 5);
+  const busiest = [...workflows].sort((a, b) => b.invocations24h - a.invocations24h).slice(0, 5);
   // A just-created function has no traffic, so guard the bar denominator.
   const busiestMax = Math.max(1, busiest[0]?.invocations24h ?? 1);
 
@@ -64,7 +64,7 @@ function OverviewPage() {
               options={RANGES.map((r) => ({ key: r.key, label: r.key }))}
             />
             <Button asChild size="sm" className="gap-1.5">
-              <Link to="/dashboard/functions/new">
+              <Link to="/dashboard/workflows/new">
                 <Plus className="h-3.5 w-3.5" />
                 New function
               </Link>
@@ -126,7 +126,7 @@ function OverviewPage() {
         <Panel title="Projects" description={`${PROJECTS.length} projects`}>
           <ul className="flex flex-col gap-2">
             {PROJECTS.map((project) => {
-              const fns = functionsForProject(project.id);
+              const fns = workflowsForProject(project.id);
               const unhealthy = fns.filter((f) => f.state === 'error').length;
               return (
                 <li key={project.id}>
@@ -134,7 +134,7 @@ function OverviewPage() {
                     <div className="min-w-0">
                       <p className="font-mono text-sm">{project.name}</p>
                       <p className="mt-1 truncate text-xs text-muted-foreground">
-                        {fns.length} functions ·{' '}
+                        {fns.length} workflows ·{' '}
                         {unhealthy > 0 ? `${unhealthy} failing` : 'all healthy'}
                       </p>
                     </div>
@@ -150,17 +150,17 @@ function OverviewPage() {
           title="Recent deployments"
           actions={
             <Link
-              to="/dashboard/functions"
+              to="/dashboard/workflows"
               className="inline-flex items-center gap-1 text-xs text-brand hover:text-brand-hover"
             >
-              All functions
+              All workflows
               <ArrowUpRight className="h-3 w-3" />
             </Link>
           }
         >
           <ul className="flex flex-col divide-y divide-border">
             {recentDeployments.map((dep) => {
-              const fn = getFunction(dep.functionId);
+              const fn = getWorkflow(dep.workflowId);
               return (
                 <li key={dep.id} className="flex items-center gap-3 py-3 first:pt-0 last:pb-0">
                   <span
@@ -191,15 +191,15 @@ function OverviewPage() {
         </Panel>
       </div>
 
-      <Panel title="Busiest functions" description="By invocations in the last 24 hours">
+      <Panel title="Busiest workflows" description="By invocations in the last 24 hours">
         <ul className="flex flex-col divide-y divide-border">
           {busiest.map((fn) => {
               const share = fn.invocations24h / busiestMax;
               return (
                 <li key={fn.id} className="py-3 first:pt-0 last:pb-0">
                   <Link
-                    to="/dashboard/functions/$functionId"
-                    params={{ functionId: fn.id }}
+                    to="/dashboard/workflows/$workflowId"
+                    params={{ workflowId: fn.id }}
                     className="group flex items-center gap-4"
                   >
                     <span className="w-40 shrink-0 truncate font-mono text-sm group-hover:text-brand">
