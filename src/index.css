@@ -1,0 +1,264 @@
+/* IBM Plex type system — see index.html for the font loads. */
+@import 'tailwindcss';
+@import "./originkit-section-themes.css";
+@import "./originkit-section-theme.css";
+@import 'tw-animate-css';
+
+@custom-variant dark (&:is(.dark *));
+
+:root {
+  --background: #090909;
+  --foreground: #ffffff;
+  --card: #0d0d0d;
+  --card-foreground: #ffffff;
+  --popover: #0d0d0d;
+  --popover-foreground: #ffffff;
+  --primary: #ffffff;
+  --primary-foreground: #000000;
+  --secondary: #1c1c1c;
+  --secondary-foreground: #ffffff;
+  --muted: #1c1c1c;
+  --muted-foreground: #bababa;
+  --accent: #1c1c1c;
+  --accent-foreground: #ffffff;
+  --destructive: #ef4444;
+  --destructive-foreground: #ffffff;
+  --border: #2b2b2b;
+  --border-secondary: #3b3b3b;
+  --input: #2b2b2b;
+  --ring: #a8c6fe;
+  --radius: 0.5rem;
+
+  /* Brand + category accents (mirroring the reference palette) */
+  --brand: #a8c6fe;
+  --brand-hover: #c4d8fe;
+  --brand-muted: #a8c6fe4d;
+  --cat-compute: #f7a040;
+  --cat-network: #ef7892;
+  --cat-security: #5cd49a;
+  --cat-storage: #7ea7ff;
+
+  /* --- Chart tokens --------------------------------------------------------
+     Validated against the dark chart surface (#0d0d0d) with the dataviz
+     validator. The marketing accents above are decorative and sit outside the
+     lightness band for data marks, so charts use their own steps.
+     categorical: 3 slots, all checks pass (worst adjacent CVD ΔE 9.4)
+     ordinal:     single-hue blue ramp for ordered magnitude (latency
+                  percentiles), mapped bright→dark for the dark surface. */
+  --chart-1: #3987e5;
+  --chart-2: #d95926;
+  --chart-3: #199e70;
+  --chart-ord-1: #9ec5f4;
+  --chart-ord-2: #5598e7;
+  --chart-ord-3: #256abf;
+  --chart-grid: #232323;
+  --chart-axis: #383835;
+  --chart-muted: #898781;
+
+  /* Status palette — reserved, never reused as a series color. Always shipped
+     with an icon or text label so state never rests on hue alone. */
+  --status-good: #0ca30c;
+  --status-warning: #fab219;
+  --status-serious: #ec835a;
+  --status-critical: #d03b3b;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-border-secondary: var(--border-secondary);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  --color-brand: var(--brand);
+  --color-brand-hover: var(--brand-hover);
+  --color-brand-muted: var(--brand-muted);
+  --color-cat-compute: var(--cat-compute);
+  --color-cat-network: var(--cat-network);
+  --color-cat-security: var(--cat-security);
+  --color-cat-storage: var(--cat-storage);
+
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-grid: var(--chart-grid);
+  --color-chart-axis: var(--chart-axis);
+  --color-chart-muted: var(--chart-muted);
+  --color-status-good: var(--status-good);
+  --color-status-warning: var(--status-warning);
+  --color-status-serious: var(--status-serious);
+  --color-status-critical: var(--status-critical);
+
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+
+  /* --- IBM Plex type system -----------------------------------------------
+     Sans — IBM Plex Sans: headlines, body, and UI. Engineered skeleton with
+            humanist details; the neutral-but-technical voice this product
+            wants. Display sizes lean on weight and tight tracking, not a
+            second family.
+     Mono — IBM Plex Mono: code and identifiers, and — following IBM's own
+            design language — eyebrows, labels, and metrics, where it does the
+            contrast work a display face would otherwise do. */
+  --font-sans: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+  --font-serif: var(--font-sans);
+
+  /* Originkit sections ship their own font tokens (Outfit / Clash / Audiowide /
+     Inter Tight / Helvetica Neue). All fold into Plex Sans — one family, so
+     the kit sections stop announcing themselves as foreign. */
+  --font-outfit: var(--font-sans);
+  --font-tight: var(--font-sans);
+  --font-instrument: var(--font-sans);
+  --font-aeonik: var(--font-sans);
+  --font-helvetica-neue: var(--font-sans);
+  --font-clash: var(--font-sans);
+  --font-audiowide: var(--font-sans);
+
+  --animate-color-cycle: color-cycle 6s ease-in-out infinite;
+  --animate-glow-breathe: glow-breathe 7s ease-in-out infinite;
+  --animate-dither-drift-a: dither-drift-a 10s linear infinite;
+  --animate-dither-drift-b: dither-drift-b 16s linear infinite;
+
+  /* Gentle pulse for the blurred color wash. */
+  @keyframes glow-breathe {
+    0%,
+    100% {
+      opacity: 0.72;
+      transform: scale(1);
+    }
+    50% {
+      opacity: 1;
+      transform: scale(1.05);
+    }
+  }
+
+  /* Each dot lattice drifts by exactly one tile pitch, so the loop is seamless.
+     The two layers move in opposite diagonals for a subtle parallax shimmer. */
+  @keyframes dither-drift-a {
+    from {
+      background-position: 0 0;
+    }
+    to {
+      background-position: 5px 5px;
+    }
+  }
+  @keyframes dither-drift-b {
+    from {
+      background-position: 4px 4px;
+    }
+    to {
+      background-position: -5px 13px;
+    }
+  }
+
+  @keyframes color-cycle {
+    0%,
+    100% {
+      color: var(--cat-compute);
+    }
+    33% {
+      color: var(--cat-storage);
+    }
+    66% {
+      color: var(--cat-security);
+    }
+  }
+}
+
+@layer base {
+  @media (prefers-reduced-motion: reduce) {
+    .animate-glow-breathe,
+    .animate-dither-drift-a,
+    .animate-dither-drift-b {
+      animation: none;
+    }
+  }
+
+  * {
+    border-color: var(--color-border);
+    outline-color: color-mix(in oklab, var(--color-ring) 50%, transparent);
+  }
+  body {
+    background-color: var(--color-background);
+    color: var(--color-foreground);
+    font-family: var(--font-sans);
+    letter-spacing: -0.006em;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* Plex Sans is generously fitted, so display sizes need real negative
+     tracking to stop headlines reading as loose. Weight carries the hierarchy
+     that a second family would otherwise provide. */
+  h1,
+  h2,
+  h3,
+  h4 {
+    font-weight: 600;
+    letter-spacing: -0.02em;
+  }
+  h1 {
+    letter-spacing: -0.032em;
+  }
+  h2 {
+    letter-spacing: -0.026em;
+  }
+
+  @keyframes shake {
+    0%,
+    100% {
+      transform: translateX(0);
+    }
+    20% {
+      transform: translateX(-6px);
+    }
+    40% {
+      transform: translateX(6px);
+    }
+    60% {
+      transform: translateX(-4px);
+    }
+    80% {
+      transform: translateX(4px);
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    [class*='animate-'] {
+      animation-duration: 0.01ms !important;
+    }
+  }
+
+  /* Plex Mono as the label voice: eyebrows, section kickers, metrics. */
+  .label-mono {
+    font-family: var(--font-mono);
+    font-size: 0.6875rem;
+    font-weight: 500;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+
+  code,
+  pre,
+  kbd {
+    font-family: var(--font-mono);
+    letter-spacing: 0;
+  }
+}
