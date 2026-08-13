@@ -39,7 +39,15 @@ function compile(
   label: string
 ): WebGLShader | null {
   const shader = gl.createShader(type);
-  if (!shader) return null;
+  if (!shader) {
+    // Never fail silently here: a null shader usually means the context is
+    // lost, which otherwise just shows the fallback with no explanation.
+    console.warn(
+      `[${label}] could not create shader` +
+        (gl.isContextLost() ? ' — the WebGL context is lost' : '')
+    );
+    return null;
+  }
   gl.shaderSource(shader, src);
   gl.compileShader(shader);
   if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
@@ -239,7 +247,12 @@ export function useShaderCanvas({
       gl.deleteProgram(program);
       gl.deleteShader(vs);
       gl.deleteShader(fs);
-      gl.getExtension('WEBGL_lose_context')?.loseContext();
+      // Deliberately NOT calling WEBGL_lose_context.loseContext(): a canvas
+      // hands back the same context object on the next getContext(), and a
+      // lost one can never be revived. Under StrictMode's mount → cleanup →
+      // mount cycle that permanently breaks the second mount. Deleting the
+      // program, shaders, and buffer already releases the GPU resources;
+      // the context goes when the canvas is collected.
     };
   }, [frag, label, renderScale, names]);
 
