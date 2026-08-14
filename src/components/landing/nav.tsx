@@ -15,7 +15,7 @@ const LINKS = [
 function Brand({ onClick }: { onClick?: () => void }) {
   return (
     <Link to="/" onClick={onClick} className="flex w-fit items-center gap-2.5">
-      <span className="flex h-7 w-7 items-center justify-center rounded-full border border-white/10 bg-gradient-to-b from-white/10 to-transparent">
+      <span className="flex h-7 w-7 items-center justify-center rounded-full border border-border bg-gradient-to-b from-accent to-card">
         <Wind className="h-3.5 w-3.5 text-brand" />
       </span>
       <span className="text-[15px] font-semibold tracking-tight">Gregale</span>

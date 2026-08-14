@@ -33,6 +33,11 @@
   --brand: #a8c6fe;
   --brand-hover: #c4d8fe;
   --brand-muted: #a8c6fe4d;
+
+  /* CTA button surface (dashboard keeps the white-gradient CTA). */
+  --cta-from: #ffffff;
+  --cta-to: #d4d4d8;
+  --cta-text: #000000;
   --cat-compute: #f7a040;
   --cat-network: #ef7892;
   --cat-security: #5cd49a;
@@ -63,27 +68,74 @@
   --status-critical: #d03b3b;
 }
 
-/* --- Teal brand scope ------------------------------------------------------
-   The journey surfaces (landing, auth, onboarding) carry the teal brand from
-   oklch.fyi's teal ramp (hue 180). The dashboard keeps the :root palette
-   above — nothing under /dashboard opts into this class. Hex values are the
-   published OKLCH steps converted to sRGB:
-     brand       step 7  oklch(0.817 0.131 180)
-     brand-hover step 5  oklch(0.898 0.086 180) */
+/* --- Teal light theme scope ------------------------------------------------
+   The journey surfaces (landing, auth, onboarding) run a white-teal light
+   theme built from oklch.fyi's teal ramp (hue 180). The dashboard keeps the
+   dark :root palette above — nothing under /dashboard opts into this class.
+   Every text/surface pair is contrast-audited: ink 17:1, muted text 8:1,
+   brand links 6.6:1, category accents ≥5:1 on the page background. */
 .theme-teal {
-  --brand: #45dfc6;
-  --brand-hover: #9cf1df;
-  --brand-muted: #45dfc64d;
-  --ring: #45dfc6;
+  --background: #f4fefc; /* step 1  oklch(0.989 0.011 180) */
+  --foreground: #001e1c; /* ink     oklch(0.21 0.045 190) */
+  --card: #ffffff;
+  --card-foreground: #001e1c;
+  --popover: #ffffff;
+  --popover-foreground: #001e1c;
+  --primary: #001e1c;
+  --primary-foreground: #ffffff;
+  --secondary: #ebfcf8; /* step 2 */
+  --secondary-foreground: #001e1c;
+  --muted: #ebfcf8;
+  --muted-foreground: #2a5651; /* oklch(0.42 0.05 185), 8:1 */
+  --accent: #d1faf1; /* step 3 */
+  --accent-foreground: #001e1c;
+  --destructive: #b3261e;
+  --destructive-foreground: #ffffff;
+  --border: #cae5df; /* oklch(0.90 0.03 180) */
+  --border-secondary: #acd5cb; /* oklch(0.84 0.045 180) */
+  --input: #cae5df;
+  --ring: #008c7b;
 
-  /* Category accents re-tuned so teal-180 anchors the family: security green
-     moves off teal's doorstep (hue 160 → 135), storage moves off the old
-     brand blue toward periwinkle (264 → 275). Each keeps its original
-     lightness/chroma, so contrast tuning carries over. */
-  --cat-compute: #f7a03f;
-  --cat-network: #f17985;
-  --cat-security: #92cd70;
-  --cat-storage: #91a1fe;
+  /* Brand on light surfaces: deep steps for readable interactive color
+     (step 11 at 6.6:1), darkening on hover; pale step 7 survives only as a
+     translucent tint. */
+  --brand: #00675a; /* step 11 */
+  --brand-hover: #00443b; /* step 12 */
+  --brand-muted: #45dfc64d;
+
+  /* CTA button surface: deep teal gradient with white text (4.2–6.8:1).
+     The :root values keep the dashboard's white-gradient CTA. */
+  --cta-from: #008c7b; /* step 10 */
+  --cta-to: #00675a; /* step 11 */
+  --cta-text: #ffffff;
+
+  /* Status red darkened for light surfaces (form errors). */
+  --status-critical: #b3261e;
+
+  /* Category accents re-tuned around teal-180 and darkened for light
+     surfaces (hue kept, L 0.52, chroma capped) so they hold ≥5:1 as text. */
+  --cat-compute: #965800;
+  --cat-network: #ad3c4c;
+  --cat-security: #437919;
+  --cat-storage: #545fb6;
+}
+
+/* --- Dark re-pin ------------------------------------------------------------
+   Restores the :root dark neutrals inside a .theme-teal scope. Used by the
+   hero's dashboard preview so the mock keeps matching the real (dark)
+   dashboard while the page around it runs light. */
+.theme-dark {
+  --background: #090909;
+  --foreground: #ffffff;
+  --card: #0d0d0d;
+  --card-foreground: #ffffff;
+  --muted: #1c1c1c;
+  --muted-foreground: #bababa;
+  --secondary: #1c1c1c;
+  --accent: #1c1c1c;
+  --border: #2b2b2b;
+  --border-secondary: #3b3b3b;
+  --cat-security: #5cd49a;
 }
 
 @theme inline {
@@ -218,6 +270,11 @@
   * {
     border-color: var(--color-border);
     outline-color: color-mix(in oklab, var(--color-ring) 50%, transparent);
+  }
+  /* Journey pages run light: repaint the body behind them so Mac overscroll
+     and rubber-banding show the page's own color instead of the dark root. */
+  body:has(.theme-teal) {
+    background-color: #f4fefc;
   }
   body {
     background-color: var(--color-background);

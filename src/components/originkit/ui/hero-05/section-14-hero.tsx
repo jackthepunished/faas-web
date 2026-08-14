@@ -24,7 +24,11 @@ export const Section14Hero = () => {
 
           <div className="mt-[31px] mb-[34px] w-full ">
             <PulseStage>
-              <DashboardCard />
+              {/* The mock mirrors the real dashboard, which stays dark — the
+                  theme-dark re-pin keeps it that way inside the light page. */}
+              <div className="theme-dark">
+                <DashboardCard />
+              </div>
             </PulseStage>
           </div>
         </div>

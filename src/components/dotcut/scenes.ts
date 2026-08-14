@@ -126,13 +126,15 @@ export function styleField(
   }
 }
 
+// Teal-anchored pairs [dot, plate]: the brand ramp carries most rotations,
+// with the re-tuned category hues (periwinkle, amber, rose) as breathers.
 export const PALETTES: [string, string][] = [
-  ['#8aa9ff', '#1f45f5'],
-  ['#ffd166', '#e5484d'],
-  ['#b8f2c9', '#0f8a5f'],
-  ['#ffc2e2', '#c81d77'],
+  ['#b8f6e9', '#00675a'],
+  ['#9cf1df', '#008c7b'],
+  ['#d1faf1', '#00443b'],
   ['#c7d2fe', '#4338ca'],
-  ['#fde68a', '#b45309'],
+  ['#fde68a', '#965800'],
+  ['#ffc2e2', '#ad3c4c'],
 ];
 
 export function rasterize(

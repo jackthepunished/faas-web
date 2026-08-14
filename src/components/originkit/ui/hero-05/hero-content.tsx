@@ -4,14 +4,10 @@
 "use client";
 
 import { motion, useReducedMotion } from "motion/react";
+import { Sparkles } from "lucide-react";
 import { SweepLink } from "@/components/sweep-link";
 // The site-wide button, so the hero's primary action matches the closing CTA.
 import { Button } from "@/components/ui/button";
-
-/** Public asset URLs — use a function so preview rewriters stay stable. */
-function asset(file: string) {
-  return `/originkit/hero-05/${file}`;
-}
 
 /** ease-out-cubic */
 const EASE_OUT = [0.215, 0.61, 0.355, 1] as const;
@@ -64,17 +60,10 @@ export const HeroContent = ({}: HeroContentProps) => {
       <div className="flex w-full flex-col items-center gap-4">
         <motion.div
           {...reveal(0)}
-          className="pointer-events-auto relative inline-flex h-8 w-auto items-center justify-center gap-2.5 overflow-hidden rounded-[32px] bg-[rgba(255,255,255,0.07)] py-1.5 pr-[23px] pl-[15px] shadow-[inset_0_0_4px_0_rgba(255,255,255,0.1)] backdrop-blur-[0.5px]"
+          className="pointer-events-auto relative inline-flex h-8 w-auto items-center justify-center gap-2.5 overflow-hidden rounded-[32px] border border-border bg-card/80 py-1.5 pr-[23px] pl-[15px] shadow-sm backdrop-blur-[0.5px]"
         >
-          <img
-            src={asset("badge-sparkle.svg")}
-            alt=""
-            width={24}
-            height={24}
-            className="size-3.5 shrink-0"
-            aria-hidden="true"
-          />
-          <span className="label-mono whitespace-nowrap text-[rgba(217,217,217,0.65)]">
+          <Sparkles className="size-3.5 shrink-0 text-brand" aria-hidden="true" />
+          <span className="label-mono whitespace-nowrap text-muted-foreground">
             Scale-to-zero on real microVMs
           </span>
         </motion.div>
@@ -82,7 +71,7 @@ export const HeroContent = ({}: HeroContentProps) => {
         <div className="flex w-full flex-col items-center gap-2 text-center">
           <motion.h1
             {...reveal(0.08)}
-            className="pointer-events-auto w-full text-[42px] font-semibold ipad:text-[58px] desktop-sm:text-[66px] leading-[1.06] tracking-[-0.034em] text-white text-balance"
+            className="pointer-events-auto w-full text-[42px] font-semibold ipad:text-[58px] desktop-sm:text-[66px] leading-[1.06] tracking-[-0.034em] text-foreground text-balance"
           >
             The Serverless Cloud for Humans and{' '}
             <span className="text-brand">Agents</span>.
@@ -90,7 +79,7 @@ export const HeroContent = ({}: HeroContentProps) => {
 
           <motion.p
             {...reveal(0.16)}
-            className="pointer-events-auto w-full max-w-[306px] desktop-sm:max-w-[533px] font-aeonik text-[16px] ipad:text-[18px] ipad:max-w-none leading-[1.4] tracking-[-0.32px] text-[rgba(255,255,255,0.75)] text-pretty"
+            className="pointer-events-auto w-full max-w-[306px] desktop-sm:max-w-[533px] font-aeonik text-[16px] ipad:text-[18px] ipad:max-w-none leading-[1.4] tracking-[-0.32px] text-muted-foreground text-pretty"
           >
             Deploy functions to real microVMs on bare metal — they scale to
             zero when idle and wake from a snapshot in under 350ms.
@@ -118,7 +107,7 @@ export const HeroContent = ({}: HeroContentProps) => {
         <Button
           asChild
           variant="outline"
-          className="h-12 w-full whitespace-nowrap rounded-xl border-white/25 bg-white/5 px-6 text-[16px] font-medium text-white hover:bg-white/10 ipad:w-auto ipad:text-[17px]"
+          className="h-12 w-full whitespace-nowrap rounded-xl border-border-secondary bg-card px-6 text-[16px] font-medium text-foreground hover:bg-accent ipad:w-auto ipad:text-[17px]"
         >
           <a href="#deploy">Explore the platform</a>
         </Button>

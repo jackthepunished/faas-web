@@ -78,9 +78,10 @@ void main() {
   float threshold = bayer8(mod(cellId, 8.0));
   float on = step(threshold, field);
 
-  // Dots in the dense core read brighter than stragglers at the fringe.
-  vec3 dim = vec3(0.000, 0.355, 0.309);
-  vec3 hot = vec3(0.716, 0.908, 0.865);
+  // Light surface: dots ink darker toward the dense core, and stragglers at
+  // the fringe stay a pale teal that dissolves into the background.
+  vec3 dim = vec3(0.461, 0.913, 0.830);
+  vec3 hot = vec3(0.000, 0.330, 0.287);
   vec3 col = mix(dim, hot, smoothstep(0.15, 0.95, field));
 
   float alpha = on * (0.42 + 0.58 * field) * 0.72 * u_intensity;

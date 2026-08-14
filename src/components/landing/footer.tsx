@@ -116,7 +116,7 @@ export function Footer() {
         className="pointer-events-none absolute inset-0"
         style={{
           background:
-            'linear-gradient(to bottom, rgba(9,9,9,0.82) 0%, rgba(9,9,9,0.70) 42%, rgba(9,9,9,0.34) 72%, rgba(9,9,9,0.05) 100%)',
+            'linear-gradient(to bottom, color-mix(in oklab, var(--background) 82%, transparent) 0%, color-mix(in oklab, var(--background) 70%, transparent) 42%, color-mix(in oklab, var(--background) 34%, transparent) 72%, color-mix(in oklab, var(--background) 5%, transparent) 100%)',
         }}
       />
 
@@ -197,7 +197,7 @@ export function Footer() {
           {/* Brand column */}
           <div className="md:pr-8">
             <a href="#" className="inline-flex items-center gap-2.5">
-              <span className="flex h-7 w-7 items-center justify-center rounded-full border border-white/10 bg-gradient-to-b from-white/10 to-transparent">
+              <span className="flex h-7 w-7 items-center justify-center rounded-full border border-border bg-gradient-to-b from-accent to-card">
                 <Wind className="h-3.5 w-3.5 text-brand" />
               </span>
               <span className="font-medium tracking-tight">Gregale</span>

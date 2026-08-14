@@ -6,7 +6,7 @@
  * (2356:191 / 2356:202 / 2356:415) — the eight filled cells that zig-zag down
  * the top of the grid.
  *
- * Each group is four squares of #ededed at 80% opacity stepping column to
+ * Each group is four squares of #e2f4ee at 80% opacity stepping column to
  * column on every row, which is exactly two columns by four rows of the
  * background grid — so the group is laid out as that grid, cells sized to the
  * rule pitch (34.996 + 0.67 on phone, 52 + 1 above it), instead of four
@@ -41,7 +41,7 @@ const RIGHT_CELLS = [
 const BlockGrid = ({ cells }: { cells: string[] }) => (
   <div className="grid shrink-0 grid-cols-[repeat(2,34.996px)] grid-rows-[repeat(4,34.996px)] gap-[0.67px] ipad:grid-cols-[repeat(2,52px)] ipad:grid-rows-[repeat(4,52px)] ipad:gap-px">
     {cells.map((cell) => (
-      <span key={cell} className={`bg-[#ededed] opacity-80 ${cell}`} />
+      <span key={cell} className={`bg-[#e2f4ee] opacity-80 ${cell}`} />
     ))}
   </div>
 );

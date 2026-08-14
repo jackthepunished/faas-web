@@ -18,13 +18,12 @@ function RootLayout() {
   return (
     <AuthProvider>
       <DataProvider>
-        {/* Tuned for a near-black page: the sweep runs the brand teal ramp
-            (oklch.fyi teal steps 10 → 6), and brightness is pulled down so
-            the iridescent band does not blow out to white against the dark
-            surface. */}
+        {/* The sweep runs the brand teal ramp (oklch.fyi teal steps 10 → 6).
+            The journey pages are light, so brightness sits high enough that
+            the band reads as a wash of color rather than a dark flash. */}
         <GlimmProvider
           palette={TEAL_SWEEP}
-          brightness={0.72}
+          brightness={0.95}
           sweepMs={950}
           outroMs={620}
           easing="easeInOutCubic"

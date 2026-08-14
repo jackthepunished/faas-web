@@ -105,13 +105,13 @@ function OnboardingPage() {
         className="pointer-events-none absolute inset-0"
         style={{
           background:
-            'linear-gradient(to right, rgba(9,9,9,0.28) 0%, rgba(9,9,9,0.91) 26%, rgba(9,9,9,0.91) 74%, rgba(9,9,9,0.28) 100%)',
+            'linear-gradient(to right, color-mix(in oklab, var(--background) 28%, transparent) 0%, color-mix(in oklab, var(--background) 91%, transparent) 26%, color-mix(in oklab, var(--background) 91%, transparent) 74%, color-mix(in oklab, var(--background) 28%, transparent) 100%)',
         }}
       />
 
       <header className="relative flex items-center justify-between border-b border-border px-5 py-4 sm:px-8">
         <span className="flex items-center gap-2.5">
-          <span className="flex h-7 w-7 items-center justify-center rounded-full border border-white/10 bg-gradient-to-b from-white/10 to-transparent">
+          <span className="flex h-7 w-7 items-center justify-center rounded-full border border-border bg-gradient-to-b from-accent to-card">
             <Wind className="h-3.5 w-3.5 text-brand" />
           </span>
           <span className="text-sm font-semibold tracking-tight">Gregale</span>
@@ -218,7 +218,7 @@ function OnboardingPage() {
                             region === r.id ? 'border-brand bg-brand' : 'border-border'
                           )}
                         >
-                          {region === r.id && <Check className="h-2.5 w-2.5 text-black" />}
+                          {region === r.id && <Check className="h-2.5 w-2.5 text-white" />}
                         </span>
                       </span>
                     </button>

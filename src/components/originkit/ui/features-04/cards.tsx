@@ -7,8 +7,8 @@ import { AsciiArt } from "@/components/originkit/ui/features-04/ascii-art";
 
 /**
  * Figma "Frame 2147261828" / "Frame 2147257816" — every tile in the column is
- * the same two-layer plate: a #ebebeb tray with 8px of padding holding a
- * #f5f5f5 card, 20px and 16px radii. The card's only lift is a 6px #ddd drop
+ * the same two-layer plate: a #ddf2ec tray with 8px of padding holding a
+ * #fbfffe card, 20px and 16px radii. The card's only lift is a 6px #cbe8e0 drop
  * shadow, which has to be a drop-shadow rather than a box-shadow because Figma
  * spreads it off the rounded silhouette. None of that changes across the three
  * frames — what changes is the height the plate is asked to fill, so the tray
@@ -24,10 +24,10 @@ export const Plate = ({
   innerClassName: string;
 }) => (
   <div
-    className={`flex flex-col rounded-[20px] bg-[#ebebeb] p-[8px] ${outerClassName}`}
+    className={`flex flex-col rounded-[20px] bg-[#ddf2ec] p-[8px] ${outerClassName}`}
   >
     <div
-      className={`flex rounded-[16px] bg-[#f5f5f5] drop-shadow-[0px_0px_6px_#ddd] ${innerClassName}`}
+      className={`flex rounded-[16px] bg-[#fbfffe] drop-shadow-[0px_0px_6px_#cbe8e0] ${innerClassName}`}
     >
       {children}
     </div>
@@ -36,7 +36,7 @@ export const Plate = ({
 
 /** Title over body. 18/14 through tablet, 20/16 once the cards go three-up. */
 const CardText = ({ title, body }: { title: string; body: string }) => (
-  <div className="flex w-full flex-col gap-[12px] font-tight leading-[1.2] text-black">
+  <div className="flex w-full flex-col gap-[12px] font-tight leading-[1.2] text-[#001e1c]">
     <h3 className="text-[18px] font-medium desktop-sm:text-[20px]">{title}</h3>
     <p className="text-[14px] opacity-60 desktop-sm:text-[16px]">{body}</p>
   </div>
