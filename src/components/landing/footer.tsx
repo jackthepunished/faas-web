@@ -86,11 +86,11 @@ function CopyCommand() {
       <span className="tracking-tight">{INSTALL_COMMAND}</span>
       <span
         className={`flex h-7 w-7 items-center justify-center rounded-full transition-colors ${
-          copied ? 'bg-cat-security/15' : 'bg-muted group-hover:bg-secondary'
+          copied ? 'bg-brand-muted' : 'bg-muted group-hover:bg-secondary'
         }`}
       >
         {copied ? (
-          <Check className="h-3.5 w-3.5 text-cat-security" />
+          <Check className="h-3.5 w-3.5 text-brand" />
         ) : (
           <Copy className="h-3.5 w-3.5" />
         )}
@@ -116,7 +116,7 @@ export function Footer() {
         className="pointer-events-none absolute inset-0"
         style={{
           background:
-            'linear-gradient(to bottom, rgba(9,9,9,0.82) 0%, rgba(9,9,9,0.70) 42%, rgba(9,9,9,0.34) 72%, rgba(9,9,9,0.05) 100%)',
+            'linear-gradient(to bottom, rgba(251,252,251,0.86) 0%, rgba(251,252,251,0.74) 42%, rgba(251,252,251,0.36) 72%, rgba(251,252,251,0.05) 100%)',
         }}
       />
 
@@ -126,7 +126,7 @@ export function Footer() {
         className="absolute inset-x-0 top-0 h-px"
         style={{
           background:
-            'linear-gradient(to right, transparent, rgba(168,198,254,0.5) 50%, transparent)',
+            'linear-gradient(to right, transparent, rgba(0,206,145,0.55) 50%, transparent)',
         }}
       />
 
@@ -141,7 +141,7 @@ export function Footer() {
             className="absolute inset-x-0 top-0 h-px"
             style={{
               background:
-                'linear-gradient(to right, transparent, rgba(168,198,254,0.55) 50%, transparent)',
+                'linear-gradient(to right, transparent, rgba(0,206,145,0.6) 50%, transparent)',
             }}
           />
 
@@ -182,7 +182,7 @@ export function Footer() {
             <ul className="relative mt-9 flex flex-wrap items-center justify-center gap-x-5 gap-y-2">
               {TRUST_POINTS.map((point) => (
                 <li key={point} className="flex items-center gap-2">
-                  <Check className="h-3 w-3 shrink-0 text-cat-security" />
+                  <Check className="h-3 w-3 shrink-0 text-brand" />
                   <span className="label-mono text-muted-foreground">{point}</span>
                 </li>
               ))}
@@ -197,8 +197,8 @@ export function Footer() {
           {/* Brand column */}
           <div className="md:pr-8">
             <a href="#" className="inline-flex items-center gap-2.5">
-              <span className="flex h-7 w-7 items-center justify-center rounded-full border border-white/10 bg-gradient-to-b from-white/10 to-transparent">
-                <Wind className="h-3.5 w-3.5 text-brand" />
+              <span className="brand-mark">
+                <Wind className="h-3.5 w-3.5" />
               </span>
               <span className="font-medium tracking-tight">Gregale</span>
             </a>
@@ -208,11 +208,11 @@ export function Footer() {
 
             <a
               href="#"
-              className="mt-6 inline-flex items-center gap-2 rounded-full border border-border bg-card/60 px-3 py-1.5 text-xs text-muted-foreground transition-colors hover:border-cat-security/40 hover:text-foreground"
+              className="mt-6 inline-flex items-center gap-2 rounded-full border border-border bg-card/60 px-3 py-1.5 text-xs text-muted-foreground transition-colors hover:border-brand/40 hover:text-foreground"
             >
               <span className="relative flex h-1.5 w-1.5">
-                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-cat-security opacity-75" />
-                <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-cat-security" />
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-status-good opacity-75" />
+                <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-status-good" />
               </span>
               All systems operational
             </a>

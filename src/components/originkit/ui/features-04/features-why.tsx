@@ -22,7 +22,7 @@ function asset(file: string) {
 const Glow = () => (
   <div
     aria-hidden
-    className="pointer-events-none absolute top-[56px] left-[calc(50%-0.43px)] h-[957px] w-[492px] -translate-x-1/2 rounded-[50%] bg-[#f8f8f8] blur-[26px] ipad:top-[27px] ipad:left-[calc(50%+15.21px)] ipad:w-[689px] desktop-sm:hidden"
+    className="pointer-events-none absolute top-[56px] left-[calc(50%-0.43px)] h-[957px] w-[492px] -translate-x-1/2 rounded-[50%] bg-mint-1 blur-[26px] ipad:top-[27px] ipad:left-[calc(50%+15.21px)] ipad:w-[689px] desktop-sm:hidden"
   />
 );
 
@@ -31,11 +31,11 @@ const DesktopGlow = () => (
   <>
     <div
       aria-hidden
-      className="pointer-events-none absolute top-[-17px] left-1/2 hidden h-[267px] w-[660px] -translate-x-1/2 rounded-[50%] bg-[#f8f8f8] blur-[26px] desktop-sm:block"
+      className="pointer-events-none absolute top-[-17px] left-1/2 hidden h-[267px] w-[660px] -translate-x-1/2 rounded-[50%] bg-mint-1 blur-[26px] desktop-sm:block"
     />
     <div
       aria-hidden
-      className="pointer-events-none absolute top-[90px] left-[calc(50%+42px)] hidden h-[1052px] w-[calc(100%+298px)] -translate-x-1/2 rounded-[50%] bg-[#f8f8f8] blur-[26px] desktop-sm:block"
+      className="pointer-events-none absolute top-[90px] left-[calc(50%+42px)] hidden h-[1052px] w-[calc(100%+298px)] -translate-x-1/2 rounded-[50%] bg-mint-1 blur-[26px] desktop-sm:block"
     />
   </>
 );
@@ -83,8 +83,14 @@ const FEATURES = {
   },
 };
 
+/*
+ * The band is mint-2, not the page's own paper, so the section still reads as a
+ * distinct block the way the original grey band did against the dark page. The
+ * washes above are mint-1 — a step lighter than the band — which preserves the
+ * original glow-lighter-than-ground relationship.
+ */
 export const FeaturesWhy = () => (
-  <section className="animate-hero-reveal relative w-full overflow-hidden bg-[#f5f5f2] desktop-sm:bg-[#f8f8f8]">
+  <section className="animate-hero-reveal relative w-full overflow-hidden bg-mint-2">
     <div className="relative mx-auto w-full overflow-hidden pt-[81px] ipad:pt-[127px] desktop-sm:pt-[63px] wide-lg:max-w-[1440px]">
       <GridRows />
       <GridColumns />
@@ -95,7 +101,7 @@ export const FeaturesWhy = () => (
 
       <div className="relative mx-auto flex w-[71.22%] max-w-[286.301px] flex-col items-center gap-[32px] pb-[81px] ipad:w-[80.51%] ipad:max-w-[599px] ipad:gap-[52px] ipad:pb-[104px] desktop-sm:w-[82.78%] desktop-sm:max-w-[1192px] desktop-sm:gap-[72px] desktop-sm:pb-[62px]">
         <header className="flex w-full flex-col items-center gap-[20px] ipad:w-[502px]">
-          <div className="flex items-center gap-[8px] rounded-[100px] bg-[#efeff0] px-[14px] py-[12px]">
+          <div className="flex items-center gap-[8px] rounded-[100px] bg-secondary px-[14px] py-[12px]">
             <img
               src={asset("flame.svg")}
               alt=""
@@ -105,7 +111,7 @@ export const FeaturesWhy = () => (
               Why Gregale
             </span>
           </div>
-          <div className="flex w-full flex-col items-center gap-[12px] text-center leading-[1.2] text-[#121212]">
+          <div className="flex w-full flex-col items-center gap-[12px] text-center leading-[1.2] text-foreground">
             <h2 className="max-w-[282px] font-helvetica-neue text-[24px] tracking-[-0.48px] ipad:max-w-none ipad:text-[32px] ipad:tracking-[-0.64px]">
               Built Around the Way Functions Should Run.
             </h2>

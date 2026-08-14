@@ -127,7 +127,7 @@ function DeleteWorkspaceDialog({
       <button
         aria-label="Cancel"
         onClick={onCancel}
-        className="absolute inset-0 bg-black/70 backdrop-blur-sm"
+        className="absolute inset-0 bg-mint-12/50 backdrop-blur-sm"
       />
       <div
         role="dialog"

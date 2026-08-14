@@ -98,21 +98,22 @@ function OnboardingPage() {
     <div className="relative min-h-screen overflow-hidden bg-background text-foreground">
       <PixelBeams className="inset-0" intensity={beamIntensity} />
 
-      {/* Darkens the centre column the content occupies, leaving the beams
-          legible down both margins. */}
+      {/* Veils the centre column the content occupies, leaving the beams
+          legible down both margins. Paper rather than ink now that onboarding
+          sits on the light side of the split. */}
       <div
         aria-hidden
         className="pointer-events-none absolute inset-0"
         style={{
           background:
-            'linear-gradient(to right, rgba(9,9,9,0.28) 0%, rgba(9,9,9,0.91) 26%, rgba(9,9,9,0.91) 74%, rgba(9,9,9,0.28) 100%)',
+            'linear-gradient(to right, rgba(251,252,251,0.28) 0%, rgba(251,252,251,0.91) 26%, rgba(251,252,251,0.91) 74%, rgba(251,252,251,0.28) 100%)',
         }}
       />
 
       <header className="relative flex items-center justify-between border-b border-border px-5 py-4 sm:px-8">
         <span className="flex items-center gap-2.5">
-          <span className="flex h-7 w-7 items-center justify-center rounded-full border border-white/10 bg-gradient-to-b from-white/10 to-transparent">
-            <Wind className="h-3.5 w-3.5 text-brand" />
+          <span className="brand-mark">
+            <Wind className="h-3.5 w-3.5" />
           </span>
           <span className="text-sm font-semibold tracking-tight">Gregale</span>
         </span>

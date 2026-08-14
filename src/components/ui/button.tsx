@@ -19,10 +19,15 @@ const buttonVariants = cva(
         ghost:
           "hover:bg-accent hover:text-accent-foreground dark:hover:bg-accent/50",
         link: "text-primary underline-offset-4 hover:underline",
-        // Primary conversion action: gradient fill with an inset top highlight
-        // so it reads as a lit surface, a brand-tinted glow that intensifies on
-        // hover, and a shine that sweeps across once per hover.
-        cta: "relative overflow-hidden bg-gradient-to-b from-white to-zinc-300 font-semibold text-black shadow-[inset_0_1px_0_0_rgba(255,255,255,0.7),0_6px_24px_-10px_rgba(168,198,254,0.6)] hover:shadow-[inset_0_1px_0_0_rgba(255,255,255,0.85),0_10px_34px_-8px_rgba(168,198,254,0.9)] active:translate-y-px after:pointer-events-none after:absolute after:inset-0 after:-translate-x-full after:bg-gradient-to-r after:from-transparent after:via-white/50 after:to-transparent after:transition-transform after:duration-700 hover:after:translate-x-full motion-reduce:after:hidden",
+        // Primary conversion action: a mint fill with an inset top highlight so
+        // it reads as a lit surface, a mint glow that intensifies on hover, and
+        // a shine that sweeps across once per hover.
+        //
+        // The gradient is deliberately shallow — mint-7 to mint-8 — because the
+        // deep-mint label has to clear 4.5:1 against *both* ends. Running it
+        // down to mint-9 looks richer and drops the bottom of the button to
+        // 3.3:1, which fails for a 16px label.
+        cta: "relative overflow-hidden bg-gradient-to-b from-mint-7 to-mint-8 font-semibold text-mint-12 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.55),0_6px_24px_-10px_rgba(0,164,101,0.55)] hover:shadow-[inset_0_1px_0_0_rgba(255,255,255,0.75),0_10px_34px_-8px_rgba(0,164,101,0.85)] active:translate-y-px after:pointer-events-none after:absolute after:inset-0 after:-translate-x-full after:bg-gradient-to-r after:from-transparent after:via-white/55 after:to-transparent after:transition-transform after:duration-700 hover:after:translate-x-full motion-reduce:after:hidden",
       },
       size: {
         default: "h-9 px-4 py-2 has-[>svg]:px-3",

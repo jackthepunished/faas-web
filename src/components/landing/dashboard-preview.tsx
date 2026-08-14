@@ -25,10 +25,17 @@ const PROJECTS = [
   { name: 'nightly-etl', status: 'Running', components: '6/6', updated: '3d ago' },
 ];
 
-/** The dashboard mock as a standalone card, reusable inside other sections. */
+/**
+ * The dashboard mock as a standalone card, reusable inside other sections.
+ *
+ * Carries `console`, so it renders in the dark palette even though it now sits
+ * on a white page. That is the point: the console really is dark, and a product
+ * shot that recoloured itself to match the marketing site would be a lie. The
+ * inset dark plate also gives the light hero its one high-contrast anchor.
+ */
 export function DashboardCard() {
   return (
-    <div className="overflow-hidden rounded-xl border border-border bg-card shadow-2xl shadow-black/50">
+    <div className="console overflow-hidden rounded-xl border border-border bg-card text-foreground shadow-2xl shadow-mint-12/15">
       {/* Window top bar */}
       <div className="flex items-center justify-between border-b border-border px-4 py-2.5">
         <div className="flex items-center gap-3">
@@ -91,9 +98,12 @@ export function DashboardCard() {
                     <h3 className="font-mono text-sm">{project.name}</h3>
                     <Badge
                       variant="outline"
+                      // Running is a *state*, so it reads from the status
+                      // palette rather than the category taxonomy, which no
+                      // longer means "healthy" now that security is violet.
                       className={
                         project.status === 'Running'
-                          ? 'border-cat-security/40 text-cat-security'
+                          ? 'border-status-good/40 text-status-good'
                           : 'border-border text-muted-foreground'
                       }
                     >

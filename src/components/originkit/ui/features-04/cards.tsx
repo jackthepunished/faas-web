@@ -24,10 +24,10 @@ export const Plate = ({
   innerClassName: string;
 }) => (
   <div
-    className={`flex flex-col rounded-[20px] bg-[#ebebeb] p-[8px] ${outerClassName}`}
+    className={`flex flex-col rounded-[20px] bg-secondary p-[8px] ${outerClassName}`}
   >
     <div
-      className={`flex rounded-[16px] bg-[#f5f5f5] drop-shadow-[0px_0px_6px_#ddd] ${innerClassName}`}
+      className={`flex rounded-[16px] bg-card drop-shadow-[0px_0px_6px_var(--border)] ${innerClassName}`}
     >
       {children}
     </div>
@@ -36,9 +36,9 @@ export const Plate = ({
 
 /** Title over body. 18/14 through tablet, 20/16 once the cards go three-up. */
 const CardText = ({ title, body }: { title: string; body: string }) => (
-  <div className="flex w-full flex-col gap-[12px] font-tight leading-[1.2] text-black">
+  <div className="flex w-full flex-col gap-[12px] font-tight leading-[1.2] text-foreground">
     <h3 className="text-[18px] font-medium desktop-sm:text-[20px]">{title}</h3>
-    <p className="text-[14px] opacity-60 desktop-sm:text-[16px]">{body}</p>
+    <p className="text-[14px] text-muted-foreground desktop-sm:text-[16px]">{body}</p>
   </div>
 );
 

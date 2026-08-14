@@ -25,7 +25,9 @@
  */
 
 const DOT_TILE = `url("data:image/svg+xml,${encodeURIComponent(
-  '<svg xmlns="http://www.w3.org/2000/svg" width="453" height="725"><rect width="292" height="408" rx="42" fill="#000000" fill-opacity="0.1"/></svg>',
+  // Neutral 10% black read as grey dots; mint-12 at the same opacity keeps the
+  // identical density while tinting the bands into the brand.
+  '<svg xmlns="http://www.w3.org/2000/svg" width="453" height="725"><rect width="292" height="408" rx="42" fill="#00482a" fill-opacity="0.1"/></svg>',
 )}")`;
 
 const BAR =

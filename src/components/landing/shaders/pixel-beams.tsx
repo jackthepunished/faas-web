@@ -23,13 +23,14 @@ float hash11(float n) {
   return fract(sin(n * 12.9898) * 43758.5453);
 }
 
-// Deep -> mid blue -> brand sky -> hot core. Piecewise so the ramp has a
-// definite shoulder instead of washing out to a single tint.
+// Pale -> mint -> saturated -> deep core. Inverted from the original blue
+// ramp: on paper a beam gains presence by getting DARKER, not brighter.
+// Piecewise so the ramp keeps a definite shoulder instead of washing out.
 vec3 ramp(float x) {
-  vec3 c0 = vec3(0.035, 0.047, 0.094);
-  vec3 c1 = vec3(0.145, 0.290, 0.640);
-  vec3 c2 = vec3(0.408, 0.588, 0.949);
-  vec3 c3 = vec3(0.780, 0.867, 1.000);
+  vec3 c0 = vec3(0.827, 0.980, 0.910);   // mint-3  #d3fae8
+  vec3 c1 = vec3(0.502, 0.914, 0.745);   // mint-6  #80e9be
+  vec3 c2 = vec3(0.000, 0.808, 0.569);   // mint-8  #00ce91
+  vec3 c3 = vec3(0.000, 0.588, 0.345);   // mint-10 #009658
   vec3 col = mix(c0, c1, smoothstep(0.00, 0.38, x));
   col = mix(col, c2, smoothstep(0.34, 0.72, x));
   col = mix(col, c3, smoothstep(0.70, 1.00, x));
@@ -100,7 +101,9 @@ void main() {
   vec3 col = ramp(stepped);
 
   // Alpha ceiling protects text contrast; instances over copy dim further.
-  float alpha = stepped * 0.88 * u_intensity;
+  // Lowered from 0.88 for the light ground — these beams now darken the page
+  // rather than lifting it, and the pricing copy sits directly over them.
+  float alpha = stepped * 0.55 * u_intensity;
   gl_FragColor = vec4(col * alpha, alpha);   // premultiplied
 }
 `;

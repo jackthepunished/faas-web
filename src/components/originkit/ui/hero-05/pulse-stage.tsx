@@ -63,9 +63,12 @@ export const PulseStage = ({ children }: { children?: ReactNode }) => {
   return (
     <motion.div
       {...reveal}
-      className="relative mx-auto flex min-h-65 w-full items-center justify-center overflow-hidden rounded-lg border border-solid border-[#585858] bg-[#0b0b0b] ipad:min-h-93.5 ipad:max-w-162 desktop-sm:min-h-118.5 desktop-sm:max-w-7xl"
+      className="relative mx-auto flex min-h-65 w-full items-center justify-center overflow-hidden rounded-lg border border-solid border-border bg-mint-1 ipad:min-h-93.5 ipad:max-w-162 desktop-sm:min-h-118.5 desktop-sm:max-w-7xl"
     >
-      {/* Animation fills the stage as a backdrop layer. */}
+      {/* Animation fills the stage as a backdrop layer. The canvas takes colour
+          literals rather than tokens: paper ground, mint-5 rules, so the pulse
+          reads as mint drawn onto the page instead of light emitted out of a
+          dark stage. */}
       <div aria-hidden="true" className="absolute inset-0">
         <WaveBg
           shape="line"
@@ -73,8 +76,8 @@ export const PulseStage = ({ children }: { children?: ReactNode }) => {
           speed={speed}
           gap={gap}
           scale={2}
-          backgroundColor="#0b0b0b"
-          lineColor="#585858"
+          backgroundColor="#fbfcfb"
+          lineColor="#9ff1cd"
         />
       </div>
 

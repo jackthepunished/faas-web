@@ -42,8 +42,8 @@ function SidebarBody({
         className={cn('flex items-center gap-2.5 py-1', collapsed ? 'justify-center' : 'px-2.5')}
         aria-label="Gregale home"
       >
-        <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-white/10 bg-gradient-to-b from-white/10 to-transparent">
-          <Wind className="h-3.5 w-3.5 text-brand" />
+        <span className="brand-mark">
+          <Wind className="h-3.5 w-3.5" />
         </span>
         {!collapsed && <span className="text-sm font-semibold tracking-tight">Gregale</span>}
       </Link>
@@ -261,8 +261,11 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
     sweepNavigate('/login');
   };
 
+  // `console` re-declares the colour tokens to the dark palette for everything
+  // beneath it. The shell and its 21 routes are written entirely in tokens, so
+  // nothing below this line knows the marketing site is now light.
   return (
-    <div className="min-h-screen bg-background text-foreground">
+    <div className="console min-h-screen bg-background text-foreground">
       {/* Desktop sidebar */}
       <aside
         className={cn(
@@ -323,7 +326,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
         <div className="fixed inset-0 z-50 lg:hidden">
           <button
             aria-label="Close navigation"
-            className="absolute inset-0 bg-black/70 backdrop-blur-sm"
+            className="absolute inset-0 bg-mint-12/50 backdrop-blur-sm"
             onClick={() => setMobileOpen(false)}
           />
           <aside className="absolute inset-y-0 left-0 flex w-64 flex-col border-r border-border bg-card px-3 py-5">

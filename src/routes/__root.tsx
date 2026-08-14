@@ -1,4 +1,5 @@
 import { createRootRoute, Link, Outlet } from '@tanstack/react-router';
+import { accentChain } from 'glimm';
 import { GlimmProvider } from 'glimm/react';
 import { AuthProvider } from '@/lib/auth';
 import { DataProvider } from '@/lib/store';
@@ -9,16 +10,27 @@ export const Route = createRootRoute({
   notFoundComponent: NotFound,
 });
 
+/**
+ * The sweep palette, fitted to the brand ramp.
+ *
+ * glimm ships six named palettes and none of them are mint — `mint` exists only
+ * in its accent set, which is not what `palette` takes. `accentChain` fits a
+ * cosine palette to an arbitrary chain of hexes, so the sweep travels the same
+ * three steps of the ramp the rest of the site uses.
+ */
+const MINT_SWEEP = accentChain(['#d3fae8', '#00ce91', '#006f40']);
+
 function RootLayout() {
   return (
     <AuthProvider>
       <DataProvider>
-        {/* Tuned for a near-black page: azure sits closest to the brand hue,
-            and brightness is pulled down so the iridescent band does not
-            blow out to white against the dark surface. */}
+        {/* Tuned for a paper page: the sweep now has to read as a darkening
+            band rather than a glow, so brightness comes up toward neutral —
+            pulling it down was what kept it from blowing out against the old
+            near-black surface, and on white that only made it muddy. */}
         <GlimmProvider
-          palette="azure"
-          brightness={0.72}
+          palette={MINT_SWEEP}
+          brightness={0.94}
           sweepMs={950}
           outroMs={620}
           easing="easeInOutCubic"

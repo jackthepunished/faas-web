@@ -13,15 +13,21 @@ import { EASE, Reveal } from './reveal';
 import { TextReveal } from './text-reveal';
 import { FlowLines } from './shapes/flow-lines';
 
+/**
+ * The four-colour category taxonomy is console wayfinding — it earns its keep
+ * across 21 sidebar routes. Eight tiles in a row on a white page is not
+ * wayfinding, it is confetti, so the grid runs on the single brand accent and
+ * lets the icon and label carry the category.
+ */
 const COMPONENTS = [
-  { icon: Zap, name: 'Functions', desc: 'Snapshot-backed, sub-350ms cold starts', color: 'text-cat-compute', border: 'hover:border-cat-compute/50' },
-  { icon: Container, name: 'Containers', desc: 'Long-running services on microVMs', color: 'text-cat-compute', border: 'hover:border-cat-compute/50' },
-  { icon: Database, name: 'Databases', desc: 'Postgres and Redis, wired in automatically', color: 'text-cat-storage', border: 'hover:border-cat-storage/50' },
-  { icon: FolderArchive, name: 'Buckets', desc: 'S3-compatible object storage', color: 'text-cat-storage', border: 'hover:border-cat-storage/50' },
-  { icon: HardDrive, name: 'Volumes', desc: 'Persistent disks that follow your VMs', color: 'text-cat-storage', border: 'hover:border-cat-storage/50' },
-  { icon: Globe, name: 'Domains', desc: 'TLS and routing, managed end to end', color: 'text-cat-network', border: 'hover:border-cat-network/50' },
-  { icon: Radio, name: 'CDN', desc: 'Edge caching in front of any component', color: 'text-cat-network', border: 'hover:border-cat-network/50' },
-  { icon: KeyRound, name: 'Secrets', desc: 'Scoped credentials, injected at boot', color: 'text-cat-security', border: 'hover:border-cat-security/50' },
+  { icon: Zap, name: 'Functions', desc: 'Snapshot-backed, sub-350ms cold starts' },
+  { icon: Container, name: 'Containers', desc: 'Long-running services on microVMs' },
+  { icon: Database, name: 'Databases', desc: 'Postgres and Redis, wired in automatically' },
+  { icon: FolderArchive, name: 'Buckets', desc: 'S3-compatible object storage' },
+  { icon: HardDrive, name: 'Volumes', desc: 'Persistent disks that follow your VMs' },
+  { icon: Globe, name: 'Domains', desc: 'TLS and routing, managed end to end' },
+  { icon: Radio, name: 'CDN', desc: 'Edge caching in front of any component' },
+  { icon: KeyRound, name: 'Secrets', desc: 'Scoped credentials, injected at boot' },
 ];
 
 export function ComponentsGrid() {
@@ -60,16 +66,16 @@ export function ComponentsGrid() {
         />
 
         <div className="mt-12 grid grid-cols-2 gap-3 lg:grid-cols-4">
-          {COMPONENTS.map(({ icon: Icon, name, desc, color, border }, i) => (
+          {COMPONENTS.map(({ icon: Icon, name, desc }, i) => (
             <motion.div
               key={name}
               initial={{ opacity: 0, y: 16 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true, margin: '-60px' }}
               transition={{ duration: 0.6, delay: i * 0.05, ease: EASE }}
-              className={`rounded-lg border border-border bg-card p-5 transition-colors ${border}`}
+              className="rounded-lg border border-border bg-card p-5 transition-colors hover:border-brand/50"
             >
-              <Icon className={`h-5 w-5 ${color}`} />
+              <Icon className="h-5 w-5 text-brand" />
               <h3 className="mt-3 text-sm font-medium">{name}</h3>
               <p className="mt-1 text-xs leading-relaxed text-muted-foreground">{desc}</p>
             </motion.div>

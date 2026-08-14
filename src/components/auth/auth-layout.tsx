@@ -15,8 +15,8 @@ export function AuthLayout({ children }: { children: ReactNode }) {
       {/* Form side */}
       <div className="flex w-full flex-col px-5 py-8 sm:px-10 lg:w-[52%] lg:px-16">
         <Link to="/" className="inline-flex w-fit items-center gap-2.5">
-          <span className="flex h-7 w-7 items-center justify-center rounded-full border border-white/10 bg-gradient-to-b from-white/10 to-transparent">
-            <Wind className="h-3.5 w-3.5 text-brand" />
+          <span className="brand-mark">
+            <Wind className="h-3.5 w-3.5" />
           </span>
           <span className="text-sm font-semibold tracking-tight">Gregale</span>
         </Link>

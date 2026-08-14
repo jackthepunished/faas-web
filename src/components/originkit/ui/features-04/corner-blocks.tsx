@@ -41,7 +41,7 @@ const RIGHT_CELLS = [
 const BlockGrid = ({ cells }: { cells: string[] }) => (
   <div className="grid shrink-0 grid-cols-[repeat(2,34.996px)] grid-rows-[repeat(4,34.996px)] gap-[0.67px] ipad:grid-cols-[repeat(2,52px)] ipad:grid-rows-[repeat(4,52px)] ipad:gap-px">
     {cells.map((cell) => (
-      <span key={cell} className={`bg-[#ededed] opacity-80 ${cell}`} />
+      <span key={cell} className={`bg-muted opacity-80 ${cell}`} />
     ))}
   </div>
 );

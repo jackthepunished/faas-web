@@ -145,7 +145,7 @@ export function CommandPalette({
         aria-label="Close command palette"
         tabIndex={-1}
         onClick={close}
-        className="absolute inset-0 bg-black/70 backdrop-blur-sm"
+        className="absolute inset-0 bg-mint-12/50 backdrop-blur-sm"
       />
 
       <div

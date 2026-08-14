@@ -68,7 +68,7 @@ export const GridRows = () => (
     {Array.from({ length: ROWS }, (_, i) => (
       <span
         key={`row-${i}`}
-        className="h-[0.674px] w-full shrink-0 bg-[#e0e0e0] shadow-[0px_0.674px_0px_0px_#ffffff] ipad:h-px ipad:shadow-[0px_1px_0px_0px_#ffffff]"
+        className="h-[0.674px] w-full shrink-0 bg-border shadow-[0px_0.674px_0px_0px_var(--card)] ipad:h-px ipad:shadow-[0px_1px_0px_0px_var(--card)]"
       />
     ))}
   </div>
@@ -82,7 +82,7 @@ export const GridColumns = () => (
     {Array.from({ length: COLUMNS + WIDE_COLUMNS }, (_, i) => (
       <span
         key={`col-${i}`}
-        className={`w-[0.674px] shrink-0 bg-[#e0e0e0] shadow-[0.674px_0px_0px_0px_#ffffff] ipad:w-px ipad:shadow-[1px_0px_0px_0px_#ffffff] ${
+        className={`w-[0.674px] shrink-0 bg-border shadow-[0.674px_0px_0px_0px_var(--card)] ipad:w-px ipad:shadow-[1px_0px_0px_0px_var(--card)] ${
           i < COLUMNS ? "" : "hidden desktop-sm:block"
         }`}
       />

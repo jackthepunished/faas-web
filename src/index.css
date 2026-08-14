@@ -6,37 +6,74 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/* --- Mint ramp ------------------------------------------------------------
+   12 steps at hue 165 (oklch.fyi/color-palettes/mint). The single source of
+   brand colour for both polarities — the light site and the dark console pull
+   different steps out of the same ramp, so there is one brand, rendered twice.
+
+   Measured contrast (sRGB):
+     step 8  #00ce91  9.7:1 on ink      -> mint fill, dark text. Reads mint.
+     step 11 #006f40  6.1:1 on paper    -> mint text/links on white. AA body.
+     step 7  #51deaa  11.7:1 on #090909 -> mint on the console surface.
+   ------------------------------------------------------------------------- */
 :root {
-  --background: #090909;
-  --foreground: #ffffff;
-  --card: #0d0d0d;
-  --card-foreground: #ffffff;
-  --popover: #0d0d0d;
-  --popover-foreground: #ffffff;
-  --primary: #ffffff;
-  --primary-foreground: #000000;
-  --secondary: #1c1c1c;
-  --secondary-foreground: #ffffff;
-  --muted: #1c1c1c;
-  --muted-foreground: #bababa;
-  --accent: #1c1c1c;
-  --accent-foreground: #ffffff;
-  --destructive: #ef4444;
+  --mint-1: oklch(0.989 0.012 165);
+  --mint-2: oklch(0.977 0.021 165);
+  --mint-3: oklch(0.953 0.048 165);
+  --mint-4: oklch(0.926 0.071 165);
+  --mint-5: oklch(0.895 0.094 165);
+  --mint-6: oklch(0.859 0.117 165);
+  --mint-7: oklch(0.811 0.143 165);
+  --mint-8: oklch(0.747 0.175 165);
+  --mint-9: oklch(0.609 0.192 165);
+  --mint-10: oklch(0.565 0.192 165);
+  --mint-11: oklch(0.454 0.154 165);
+  --mint-12: oklch(0.341 0.102 165);
+}
+
+/* --- Light surface (marketing, auth, 404) ---------------------------------
+   White dominant, mint as signal. Paper is a hair off pure white and cards are
+   pure white, so a card lifts off the page the same way #0d0d0d lifts off
+   #090909 in the console — the polarity flips, the relationship does not.
+   ------------------------------------------------------------------------- */
+:root {
+  --background: #fbfcfb;
+  --foreground: #0d1512;
+  --card: #ffffff;
+  --card-foreground: #0d1512;
+  --popover: #ffffff;
+  --popover-foreground: #0d1512;
+  /* Mint fill with deep-mint ink (5.3:1) rather than white text — step 8 is
+     the step that actually looks mint, and it is too light to carry white. */
+  --primary: #00ce91;
+  --primary-foreground: #00482a;
+  --secondary: #eff3f1;
+  --secondary-foreground: #0d1512;
+  --muted: #eff3f1;
+  --muted-foreground: #55625c;
+  --accent: #eaf2ee;
+  --accent-foreground: #0d1512;
+  --destructive: #c02626;
   --destructive-foreground: #ffffff;
-  --border: #2b2b2b;
-  --border-secondary: #3b3b3b;
-  --input: #2b2b2b;
-  --ring: #a8c6fe;
+  --border: #e4eae7;
+  --border-secondary: #ccd6d1;
+  --input: #e4eae7;
+  --ring: #00a465;
   --radius: 0.5rem;
 
-  /* Brand + category accents (mirroring the reference palette) */
-  --brand: #a8c6fe;
-  --brand-hover: #c4d8fe;
-  --brand-muted: #a8c6fe4d;
-  --cat-compute: #f7a040;
-  --cat-network: #ef7892;
-  --cat-security: #5cd49a;
-  --cat-storage: #7ea7ff;
+  /* Brand. On paper the accent has to carry text, so it is a deep step; the
+     bright step is kept separately for fills and marks that carry no copy. */
+  --brand: #006f40;
+  --brand-hover: #00482a;
+  --brand-muted: #d3fae8;
+  --brand-fill: #00ce91;
+
+  /* Category accents are console wayfinding only — the light site runs on one
+     accent. Declared here so shared primitives never resolve to nothing. */
+  --cat-compute: #b45309;
+  --cat-network: #be3455;
+  --cat-security: #6d28d9;
+  --cat-storage: #1d4ed8;
 
   /* --- Chart tokens --------------------------------------------------------
      Validated against the dark chart surface (#0d0d0d) with the dataviz
@@ -56,7 +93,55 @@
   --chart-muted: #898781;
 
   /* Status palette — reserved, never reused as a series color. Always shipped
-     with an icon or text label so state never rests on hue alone. */
+     with an icon or text label so state never rests on hue alone. These are the
+     light-surface steps; .console restates them for the dark surface, because
+     the dark values wash out below 3:1 on paper. */
+  --status-good: #0a7d0a;
+  --status-warning: #9a6700;
+  --status-serious: #b4521f;
+  --status-critical: #c02626;
+}
+
+/* --- Dark surface (the console) -------------------------------------------
+   Applied by DashboardShell and by the dashboard mock embedded in the light
+   hero, which is a genuine product shot and so keeps the product's own skin.
+   Only the token values change — no component knows which polarity it is in.
+   ------------------------------------------------------------------------- */
+.console {
+  --background: #090909;
+  --foreground: #ffffff;
+  --card: #0d0d0d;
+  --card-foreground: #ffffff;
+  --popover: #0d0d0d;
+  --popover-foreground: #ffffff;
+  --primary: #ffffff;
+  --primary-foreground: #000000;
+  --secondary: #1c1c1c;
+  --secondary-foreground: #ffffff;
+  --muted: #1c1c1c;
+  --muted-foreground: #bababa;
+  --accent: #1c1c1c;
+  --accent-foreground: #ffffff;
+  --destructive: #ef4444;
+  --destructive-foreground: #ffffff;
+  --border: #2b2b2b;
+  --border-secondary: #3b3b3b;
+  --input: #2b2b2b;
+
+  /* Mint needs a light step to survive on #090909; step 7 lands at 11.7:1. */
+  --brand: #51deaa;
+  --brand-hover: #80e9be;
+  --brand-muted: #51deaa4d;
+  --brand-fill: #00ce91;
+  --ring: #51deaa;
+
+  /* Four-colour wayfinding across 21 routes. Security moved off mint to violet
+     so the taxonomy stops colliding with the brand accent. */
+  --cat-compute: #f7a040;
+  --cat-network: #ef7892;
+  --cat-security: #a78bfa;
+  --cat-storage: #7ea7ff;
+
   --status-good: #0ca30c;
   --status-warning: #fab219;
   --status-serious: #ec835a;
@@ -88,6 +173,21 @@
   --color-brand: var(--brand);
   --color-brand-hover: var(--brand-hover);
   --color-brand-muted: var(--brand-muted);
+  --color-brand-fill: var(--brand-fill);
+
+  --color-mint-1: var(--mint-1);
+  --color-mint-2: var(--mint-2);
+  --color-mint-3: var(--mint-3);
+  --color-mint-4: var(--mint-4);
+  --color-mint-5: var(--mint-5);
+  --color-mint-6: var(--mint-6);
+  --color-mint-7: var(--mint-7);
+  --color-mint-8: var(--mint-8);
+  --color-mint-9: var(--mint-9);
+  --color-mint-10: var(--mint-10);
+  --color-mint-11: var(--mint-11);
+  --color-mint-12: var(--mint-12);
+
   --color-cat-compute: var(--cat-compute);
   --color-cat-network: var(--cat-network);
   --color-cat-security: var(--cat-security);
@@ -169,16 +269,18 @@
     }
   }
 
+  /* One accent, three depths — the cycle now moves through the mint ramp
+     instead of across the category hues, which are console-only. */
   @keyframes color-cycle {
     0%,
     100% {
-      color: var(--cat-compute);
+      color: var(--mint-11);
     }
     33% {
-      color: var(--cat-storage);
+      color: var(--mint-9);
     }
     66% {
-      color: var(--cat-security);
+      color: var(--mint-12);
     }
   }
 }
@@ -244,6 +346,26 @@
     [class*='animate-'] {
       animation-duration: 0.01ms !important;
     }
+  }
+
+  /* Brand mark — the Wind glyph's disc. Was four copies of a white/10 border
+     over a white/10 gradient, which only exists on a dark ground. Now one
+     class, expressed in tokens, so it inverts with the surface. */
+  .brand-mark {
+    display: flex;
+    height: 1.75rem;
+    width: 1.75rem;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    border-radius: 9999px;
+    border: 1px solid color-mix(in oklab, var(--brand) 22%, transparent);
+    background-image: linear-gradient(
+      to bottom,
+      color-mix(in oklab, var(--brand) 14%, transparent),
+      transparent
+    );
+    color: var(--brand);
   }
 
   /* Plex Mono as the label voice: eyebrows, section kickers, metrics. */

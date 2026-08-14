@@ -78,12 +78,17 @@ void main() {
   float threshold = bayer8(mod(cellId, 8.0));
   float on = step(threshold, field);
 
-  // Dots in the dense core read brighter than stragglers at the fringe.
-  vec3 dim = vec3(0.180, 0.286, 0.545);
-  vec3 hot = vec3(0.780, 0.867, 1.000);
-  vec3 col = mix(dim, hot, smoothstep(0.15, 0.95, field));
+  // Subtractive on paper: the dense core is the DARKEST mint and stragglers at
+  // the fringe are the palest — the inverse of the light-on-black original,
+  // where the core was the brightest. Alpha still rises with field, so colour
+  // and opacity now pull the same direction instead of against each other.
+  vec3 faint = vec3(0.624, 0.945, 0.804);   // mint-5  #9ff1cd
+  vec3 deep  = vec3(0.000, 0.588, 0.345);   // mint-10 #009658
+  vec3 col = mix(faint, deep, smoothstep(0.15, 0.95, field));
 
-  float alpha = on * (0.42 + 0.58 * field) * 0.72 * u_intensity;
+  // Dark ink on white is far more assertive than light on black at the same
+  // alpha, so the ceiling comes down from 0.72 to keep copy legible over it.
+  float alpha = on * (0.42 + 0.58 * field) * 0.50 * u_intensity;
   gl_FragColor = vec4(col * alpha, alpha);   // premultiplied
 }
 `;

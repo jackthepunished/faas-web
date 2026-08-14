@@ -126,13 +126,22 @@ export function styleField(
   }
 }
 
+/**
+ * `[dot, ground]` — the engine paints `ground` and stamps the cells in `dot`.
+ *
+ * Re-cut from six unrelated hues (blue, amber, jade, magenta, indigo, ochre)
+ * to six depths of the one mint ramp. Variety now comes from how far apart the
+ * pair sits on the ramp and from flipping which end carries the ink, rather
+ * than from changing hue — so the crossfade between scenes never travels
+ * outside the brand, and the panel stays a mint block on a white page.
+ */
 export const PALETTES: [string, string][] = [
-  ['#8aa9ff', '#1f45f5'],
-  ['#ffd166', '#e5484d'],
-  ['#b8f2c9', '#0f8a5f'],
-  ['#ffc2e2', '#c81d77'],
-  ['#c7d2fe', '#4338ca'],
-  ['#fde68a', '#b45309'],
+  ['#d3fae8', '#00a465'], // mint-3  on mint-9
+  ['#bbf6db', '#006f40'], // mint-4  on mint-11
+  ['#9ff1cd', '#00482a'], // mint-5  on mint-12  — deepest
+  ['#00482a', '#80e9be'], // inverted: ink on mint-6
+  ['#ebfcf4', '#009658'], // mint-2  on mint-10
+  ['#006f40', '#d3fae8'], // inverted: mint-11 on mint-3 — lightest
 ];
 
 export function rasterize(

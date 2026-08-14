@@ -27,7 +27,8 @@ import AsciiImage from "@/components/originkit/ui/features-04/ascii-reveal";
  * pitch — hold that at 1.57px and the texture matches Figma at every size.
  * Figma's PNGs are rendered several times oversampled and scaled down, so
  * matching them also needs an ink lifted off pure black; measured against the
- * Figma frame, #333 lands on the same density.
+ * Figma frame, #333 lands on the same density — now taken at that density in
+ * mint-12 rather than neutral ink, so the artwork joins the brand.
  */
 
 /** On-screen character pitch, in CSS px. */
@@ -74,7 +75,7 @@ export const AsciiArt = ({
             image={{ src, alt }}
             fit="contain"
             columns={Math.round(width / PITCH)}
-            inkColor="#333333"
+            inkColor="#00482a"
             revealOptions={{
               size: Math.round(width / REVEAL_RATIO),
               softness: 12,
