@@ -95,7 +95,7 @@ function OnboardingPage() {
   const beamIntensity = deployed ? 0.55 : deploying ? 0.95 : 0.22;
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-background text-foreground">
+    <div className="theme-teal relative min-h-screen overflow-hidden bg-background text-foreground">
       <PixelBeams className="inset-0" intensity={beamIntensity} />
 
       {/* Darkens the centre column the content occupies, leaving the beams

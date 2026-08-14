@@ -1,8 +1,13 @@
 import { createRootRoute, Link, Outlet } from '@tanstack/react-router';
+import { accentPair } from 'glimm';
 import { GlimmProvider } from 'glimm/react';
 import { AuthProvider } from '@/lib/auth';
 import { DataProvider } from '@/lib/store';
 import { ToastProvider } from '@/components/ui/toast';
+
+// Brand sweep: dark teal into the pale brand-adjacent step, fitted once at
+// module scope. Matches --brand in the .theme-teal scope (hue 180).
+const TEAL_SWEEP = accentPair('#008c7b', '#7ae9d5');
 
 export const Route = createRootRoute({
   component: RootLayout,
@@ -13,11 +18,12 @@ function RootLayout() {
   return (
     <AuthProvider>
       <DataProvider>
-        {/* Tuned for a near-black page: azure sits closest to the brand hue,
-            and brightness is pulled down so the iridescent band does not
-            blow out to white against the dark surface. */}
+        {/* Tuned for a near-black page: the sweep runs the brand teal ramp
+            (oklch.fyi teal steps 10 → 6), and brightness is pulled down so
+            the iridescent band does not blow out to white against the dark
+            surface. */}
         <GlimmProvider
-          palette="azure"
+          palette={TEAL_SWEEP}
           brightness={0.72}
           sweepMs={950}
           outroMs={620}

@@ -15,7 +15,7 @@ export const Route = createFileRoute('/')({
 function LandingPage() {
   return (
     <MotionConfig reducedMotion="user">
-      <div className="min-h-screen bg-background text-foreground">
+      <div className="theme-teal min-h-screen bg-background text-foreground">
         <Nav />
         <main>
           <OriginkitHero />

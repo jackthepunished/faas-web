@@ -23,13 +23,14 @@ float hash11(float n) {
   return fract(sin(n * 12.9898) * 43758.5453);
 }
 
-// Deep -> mid blue -> brand sky -> hot core. Piecewise so the ramp has a
-// definite shoulder instead of washing out to a single tint.
+// Deep -> mid teal -> brand teal -> hot core. Piecewise so the ramp has a
+// definite shoulder instead of washing out to a single tint. Stops are the
+// old blue ramp re-hued to 180 in OKLCH with lightness/chroma preserved.
 vec3 ramp(float x) {
-  vec3 c0 = vec3(0.035, 0.047, 0.094);
-  vec3 c1 = vec3(0.145, 0.290, 0.640);
-  vec3 c2 = vec3(0.408, 0.588, 0.949);
-  vec3 c3 = vec3(0.780, 0.867, 1.000);
+  vec3 c0 = vec3(0.004, 0.064, 0.052);
+  vec3 c1 = vec3(0.000, 0.375, 0.326);
+  vec3 c2 = vec3(0.000, 0.694, 0.610);
+  vec3 c3 = vec3(0.716, 0.908, 0.865);
   vec3 col = mix(c0, c1, smoothstep(0.00, 0.38, x));
   col = mix(col, c2, smoothstep(0.34, 0.72, x));
   col = mix(col, c3, smoothstep(0.70, 1.00, x));

@@ -79,8 +79,8 @@ void main() {
   float on = step(threshold, field);
 
   // Dots in the dense core read brighter than stragglers at the fringe.
-  vec3 dim = vec3(0.180, 0.286, 0.545);
-  vec3 hot = vec3(0.780, 0.867, 1.000);
+  vec3 dim = vec3(0.000, 0.355, 0.309);
+  vec3 hot = vec3(0.716, 0.908, 0.865);
   vec3 col = mix(dim, hot, smoothstep(0.15, 0.95, field));
 
   float alpha = on * (0.42 + 0.58 * field) * 0.72 * u_intensity;

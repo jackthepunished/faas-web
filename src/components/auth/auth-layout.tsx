@@ -11,7 +11,7 @@ const PROOF_POINTS = [
 
 export function AuthLayout({ children }: { children: ReactNode }) {
   return (
-    <div className="flex min-h-screen bg-background text-foreground">
+    <div className="theme-teal flex min-h-screen bg-background text-foreground">
       {/* Form side */}
       <div className="flex w-full flex-col px-5 py-8 sm:px-10 lg:w-[52%] lg:px-16">
         <Link to="/" className="inline-flex w-fit items-center gap-2.5">

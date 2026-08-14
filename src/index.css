@@ -63,6 +63,29 @@
   --status-critical: #d03b3b;
 }
 
+/* --- Teal brand scope ------------------------------------------------------
+   The journey surfaces (landing, auth, onboarding) carry the teal brand from
+   oklch.fyi's teal ramp (hue 180). The dashboard keeps the :root palette
+   above — nothing under /dashboard opts into this class. Hex values are the
+   published OKLCH steps converted to sRGB:
+     brand       step 7  oklch(0.817 0.131 180)
+     brand-hover step 5  oklch(0.898 0.086 180) */
+.theme-teal {
+  --brand: #45dfc6;
+  --brand-hover: #9cf1df;
+  --brand-muted: #45dfc64d;
+  --ring: #45dfc6;
+
+  /* Category accents re-tuned so teal-180 anchors the family: security green
+     moves off teal's doorstep (hue 160 → 135), storage moves off the old
+     brand blue toward periwinkle (264 → 275). Each keeps its original
+     lightness/chroma, so contrast tuning carries over. */
+  --cat-compute: #f7a03f;
+  --cat-network: #f17985;
+  --cat-security: #92cd70;
+  --cat-storage: #91a1fe;
+}
+
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);

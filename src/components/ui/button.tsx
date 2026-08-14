@@ -22,7 +22,7 @@ const buttonVariants = cva(
         // Primary conversion action: gradient fill with an inset top highlight
         // so it reads as a lit surface, a brand-tinted glow that intensifies on
         // hover, and a shine that sweeps across once per hover.
-        cta: "relative overflow-hidden bg-gradient-to-b from-white to-zinc-300 font-semibold text-black shadow-[inset_0_1px_0_0_rgba(255,255,255,0.7),0_6px_24px_-10px_rgba(168,198,254,0.6)] hover:shadow-[inset_0_1px_0_0_rgba(255,255,255,0.85),0_10px_34px_-8px_rgba(168,198,254,0.9)] active:translate-y-px after:pointer-events-none after:absolute after:inset-0 after:-translate-x-full after:bg-gradient-to-r after:from-transparent after:via-white/50 after:to-transparent after:transition-transform after:duration-700 hover:after:translate-x-full motion-reduce:after:hidden",
+        cta: "relative overflow-hidden bg-gradient-to-b from-white to-zinc-300 font-semibold text-black shadow-[inset_0_1px_0_0_rgba(255,255,255,0.7),0_6px_24px_-10px_color-mix(in_oklab,var(--brand)_60%,transparent)] hover:shadow-[inset_0_1px_0_0_rgba(255,255,255,0.85),0_10px_34px_-8px_color-mix(in_oklab,var(--brand)_90%,transparent)] active:translate-y-px after:pointer-events-none after:absolute after:inset-0 after:-translate-x-full after:bg-gradient-to-r after:from-transparent after:via-white/50 after:to-transparent after:transition-transform after:duration-700 hover:after:translate-x-full motion-reduce:after:hidden",
       },
       size: {
         default: "h-9 px-4 py-2 has-[>svg]:px-3",

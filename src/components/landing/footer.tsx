@@ -126,7 +126,7 @@ export function Footer() {
         className="absolute inset-x-0 top-0 h-px"
         style={{
           background:
-            'linear-gradient(to right, transparent, rgba(168,198,254,0.5) 50%, transparent)',
+            'linear-gradient(to right, transparent, color-mix(in oklab, var(--brand) 50%, transparent) 50%, transparent)',
         }}
       />
 
@@ -141,7 +141,7 @@ export function Footer() {
             className="absolute inset-x-0 top-0 h-px"
             style={{
               background:
-                'linear-gradient(to right, transparent, rgba(168,198,254,0.55) 50%, transparent)',
+                'linear-gradient(to right, transparent, color-mix(in oklab, var(--brand) 55%, transparent) 50%, transparent)',
             }}
           />
 
