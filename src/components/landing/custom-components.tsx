@@ -4,11 +4,28 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { Reveal } from './reveal';
+import { TruchetTiles } from './shapes/truchet-tiles';
 
 export function CustomComponents() {
   return (
-    <section className="border-t border-border">
-      <div className="mx-auto grid max-w-6xl items-center gap-12 px-4 py-24 sm:px-6 lg:grid-cols-2">
+    <section className="relative overflow-hidden border-t border-border">
+      {/* Truchet tiles: one small rule set, rotated at random, that can never
+          produce an invalid join — and the highlighted routes are walked out of
+          that same set rather than drawn. The mask keeps the lattice densest
+          between the two columns and clears it off the copy. */}
+      <div
+        className="pointer-events-none absolute inset-0"
+        style={{
+          // Nudged just right of centre so the densest part falls in the gutter
+          // between the copy and the form card rather than on the paragraphs.
+          WebkitMaskImage: 'radial-gradient(72% 82% at 52% 50%, black, transparent 78%)',
+          maskImage: 'radial-gradient(72% 82% at 52% 50%, black, transparent 78%)',
+        }}
+      >
+        <TruchetTiles />
+      </div>
+
+      <div className="relative mx-auto grid max-w-6xl items-center gap-12 px-4 py-24 sm:px-6 lg:grid-cols-2">
         <Reveal>
           <h2 className="text-balance text-2xl font-medium tracking-tight sm:text-3xl">
             Codify the rules of your organization.
