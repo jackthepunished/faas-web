@@ -1,5 +1,5 @@
 import { motion, useReducedMotion } from 'framer-motion';
-import type { ElementType } from 'react';
+import { Fragment, type ElementType } from 'react';
 import { EASE } from './reveal';
 
 /**
@@ -61,27 +61,40 @@ export function TextReveal({
   return (
     <Tag className={className}>
       {words.map(({ word, className: wordClass }, i) => (
-        <span
-          key={i}
-          // The clip box needs room below the baseline or descenders get
-          // shaved; the negative margin gives it back to the line box.
-          className="inline-block overflow-hidden pb-[0.14em] align-bottom -mb-[0.14em]"
-        >
-          <motion.span
-            className={`inline-block ${wordClass}`}
-            initial={{ y: '115%', opacity: 0, filter: 'blur(6px)' }}
-            whileInView={{ y: '0%', opacity: 1, filter: 'blur(0px)' }}
-            viewport={{ once: true, margin: '-12% 0px -12% 0px' }}
-            transition={{
-              duration: 0.85,
-              delay: delay + i * stagger,
-              ease: EASE,
-            }}
+        <Fragment key={i}>
+          <span
+            // The clip box needs room below the baseline or descenders get
+            // shaved; the negative margin gives it back to the line box.
+            className="inline-block overflow-hidden pb-[0.14em] align-bottom -mb-[0.14em]"
           >
-            {word}
-          </motion.span>
-          {i < words.length - 1 && <span aria-hidden>&nbsp;</span>}
-        </span>
+            <motion.span
+              className={`inline-block ${wordClass}`}
+              initial={{ y: '115%', opacity: 0, filter: 'blur(6px)' }}
+              whileInView={{ y: '0%', opacity: 1, filter: 'blur(0px)' }}
+              // Pixels, not percentages. With a percentage margin these words
+              // never received an in-view callback, so they stayed parked at
+              // y:115% — outside the clip box above — and the heading rendered
+              // as nothing while still occupying its full height. Every other
+              // reveal on this page uses a px margin and fires correctly.
+              viewport={{ once: true, margin: '-80px 0px' }}
+              transition={{
+                duration: 0.85,
+                delay: delay + i * stagger,
+                ease: EASE,
+              }}
+            >
+              {word}
+            </motion.span>
+          </span>
+          {/* The separator has to live BETWEEN the clip boxes, not inside one.
+              Held inside, it was a non-breaking space enclosed in an
+              inline-block, so consecutive words were glued with no soft-wrap
+              opportunity anywhere and the heading became a single unbreakable
+              line — which then overflowed and was clipped by the section's
+              own overflow-hidden. A plain space here is a real break
+              opportunity, so the heading wraps again. */}
+          {i < words.length - 1 && ' '}
+        </Fragment>
       ))}
     </Tag>
   );
