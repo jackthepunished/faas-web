@@ -1,8 +1,16 @@
 import { useMemo, useState } from 'react';
-import { createFileRoute, Link } from '@tanstack/react-router';
+import { createFileRoute, Link, useNavigate } from '@tanstack/react-router';
 import { ArrowUpRight, Plus } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { AreaChart } from '@/components/dashboard/charts';
+import {
+  Area,
+  AreaChart,
+  type ChartConfig,
+  DitherButton,
+  Grid,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from '@/components/dither-kit';
 import {
   PageHeader,
   Panel,
@@ -14,6 +22,7 @@ import {
   PROJECTS,
   RANGES,
   buildSeries,
+  formatAxisTime,
   formatCompact,
   formatMs,
   formatRelative,
@@ -25,6 +34,11 @@ export const Route = createFileRoute('/dashboard/')({
   component: OverviewPage,
 });
 
+/** Series → colour on the Invocations chart. One key, one mint fill. */
+const INVOCATIONS_CONFIG: ChartConfig = {
+  invocations: { label: 'Invocations', color: 'green' },
+};
+
 /** Percentage change between the first and second half of a series. */
 function deltaOf(values: number[]): number {
   const mid = Math.floor(values.length / 2);
@@ -35,8 +49,17 @@ function deltaOf(values: number[]): number {
 
 function OverviewPage() {
   const [range, setRange] = useState<RangeKey>('24h');
+  const navigate = useNavigate();
   const series = useMemo(() => buildSeries(range), [range]);
   const { workflows, deployments, workflowsForProject, getWorkflow } = useData();
+
+  // Rows for the dither chart: same points, plus a preformatted time label the
+  // axis and tooltip can show verbatim. Memoised because the chart keys its
+  // entrance replay off the array identity.
+  const rows = useMemo(
+    () => series.map((s) => ({ ...s, time: formatAxisTime(s.t, range) })),
+    [series, range]
+  );
 
   const invocations = series.map((s) => s.invocations);
   const errors = series.map((s) => s.errors);
@@ -59,16 +82,23 @@ function OverviewPage() {
         actions={
           <>
             <RangeSelector
+              dither
               value={range}
               onChange={setRange}
               options={RANGES.map((r) => ({ key: r.key, label: r.key }))}
             />
-            <Button asChild size="sm" className="gap-1.5">
-              <Link to="/dashboard/workflows/new">
+            <DitherButton
+              color="green"
+              variant="solid"
+              bloom="low"
+              onClick={() => navigate({ to: '/dashboard/workflows/new' })}
+              className="h-8 px-3 py-0 text-xs font-medium whitespace-nowrap text-primary-foreground"
+            >
+              <span className="inline-flex items-center gap-1.5">
                 <Plus className="h-3.5 w-3.5" />
                 New function
-              </Link>
-            </Button>
+              </span>
+            </DitherButton>
           </>
         }
       />
@@ -80,6 +110,7 @@ function OverviewPage() {
           value={formatCompact(totalInvocations)}
           delta={deltaOf(invocations)}
           series={invocations}
+          tone="green"
         />
         <StatTile
           label="Median latency"
@@ -87,7 +118,7 @@ function OverviewPage() {
           delta={deltaOf(series.map((s) => s.p50))}
           deltaGood={false}
           series={series.map((s) => s.p50)}
-          color="var(--chart-ord-2)"
+          tone="blue"
         />
         <StatTile
           label="Error rate"
@@ -96,7 +127,7 @@ function OverviewPage() {
           delta={deltaOf(errors)}
           deltaGood={false}
           series={errors}
-          color="var(--chart-2)"
+          tone="orange"
         />
         <StatTile
           label="Compute"
@@ -104,12 +135,23 @@ function OverviewPage() {
           unit="GB-s"
           delta={deltaOf(series.map((s) => s.gbSeconds))}
           series={series.map((s) => s.gbSeconds)}
-          color="var(--chart-3)"
+          tone="purple"
         />
       </div>
 
       <Panel title="Invocations" description={RANGES.find((r) => r.key === range)?.label}>
-        <AreaChart data={series} range={range} metric="invocations" label="invocations" />
+        <AreaChart
+          data={rows}
+          config={INVOCATIONS_CONFIG}
+          bloom="low"
+          className="h-64 w-full"
+        >
+          <Grid vertical={false} />
+          <XAxis dataKey="time" maxTicks={6} />
+          <YAxis tickCount={4} tickFormatter={(v) => formatCompact(v)} />
+          <Area dataKey="invocations" variant="gradient" />
+          <Tooltip labelKey="time" valueFormatter={(v) => formatCompact(v)} />
+        </AreaChart>
       </Panel>
 
       <div className="grid gap-6 lg:grid-cols-2">

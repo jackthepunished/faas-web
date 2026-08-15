@@ -2,6 +2,11 @@ import type { ReactNode } from 'react';
 import { AlertTriangle, CheckCircle2, CircleDashed, Loader2, TrendingDown, TrendingUp } from 'lucide-react';
 import type { LogLevel, RunState } from '@/lib/mock-data';
 import { Sparkline } from './charts';
+import {
+  DitherButton,
+  Sparkline as DitherSparkline,
+  type DitherColor,
+} from '@/components/dither-kit';
 import { cn } from '@/lib/utils';
 
 /* ------------------------------------------------------------------ *
@@ -68,6 +73,7 @@ export function StatTile({
   deltaGood = true,
   series,
   color = 'var(--chart-1)',
+  tone,
 }: {
   label: string;
   value: string;
@@ -77,6 +83,9 @@ export function StatTile({
   deltaGood?: boolean;
   series?: number[];
   color?: string;
+  /** Set to render the sparkline with Dither Kit in this palette colour
+   * instead of the flat SVG spark. */
+  tone?: DitherColor;
 }) {
   const positive = (delta ?? 0) >= 0;
   const good = positive === deltaGood;
@@ -106,9 +115,19 @@ export function StatTile({
           )}
         </div>
 
-        {series && series.length > 1 && (
-          <Sparkline values={series} color={color} className="h-9 w-24 shrink-0" />
-        )}
+        {series &&
+          series.length > 1 &&
+          (tone ? (
+            <DitherSparkline
+              data={series}
+              color={tone}
+              bloom="low"
+              bloomOnHover
+              className="h-9 w-24 shrink-0"
+            />
+          ) : (
+            <Sparkline values={series} color={color} className="h-9 w-24 shrink-0" />
+          ))}
       </div>
     </div>
   );
@@ -172,11 +191,40 @@ export function RangeSelector<T extends string>({
   value,
   options,
   onChange,
+  dither = false,
 }: {
   value: T;
   options: { key: T; label: string }[];
   onChange: (key: T) => void;
+  /** Render the segments as Dither Kit buttons — solid mint for the active
+   * range, a quiet dotted grey for the rest. */
+  dither?: boolean;
 }) {
+  if (dither) {
+    return (
+      <div role="group" aria-label="Time range" className="flex gap-1">
+        {options.map((opt) => {
+          const active = value === opt.key;
+          return (
+            <DitherButton
+              key={opt.key}
+              aria-pressed={active}
+              onClick={() => onChange(opt.key)}
+              color={active ? 'green' : 'grey'}
+              variant={active ? 'solid' : 'dotted'}
+              className={cn(
+                'h-8 px-2.5 py-0 text-xs',
+                active ? 'text-background' : 'text-muted-foreground hover:text-foreground'
+              )}
+            >
+              {opt.label}
+            </DitherButton>
+          );
+        })}
+      </div>
+    );
+  }
+
   return (
     <div role="group" aria-label="Time range" className="flex rounded-md border border-border p-0.5">
       {options.map((opt) => (
