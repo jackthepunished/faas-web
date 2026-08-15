@@ -1,6 +1,3 @@
-// Delivered by Originkit · stack: nextjs · styling: tailwind
-"use client";
-
 import { FeatureCard, Plate, WideCard } from "@/components/originkit/ui/features-04/cards";
 import { CornerBlocks } from "@/components/originkit/ui/features-04/corner-blocks";
 import { EdgeDotBands } from "@/components/originkit/ui/features-04/edge-dot-bands";
@@ -41,9 +38,9 @@ const DesktopGlow = () => (
 );
 
 const AVATARS = [
-  { src: asset("avatar-1.png"), alt: "" },
-  { src: asset("avatar-2.png"), alt: "" },
-  { src: asset("avatar-3.png"), alt: "" },
+  { src: asset("avatar-1.webp"), alt: "" },
+  { src: asset("avatar-2.webp"), alt: "" },
+  { src: asset("avatar-3.webp"), alt: "" },
 ];
 
 const FEATURES = {
@@ -51,7 +48,7 @@ const FEATURES = {
     title: "Isolate",
     body: "Every function runs in its own hardware-isolated microVM with locked-down defaults — no shared kernels, no noisy neighbors.",
     art: {
-      src: asset("focus.png"),
+      src: asset("focus.webp"),
       alt: "An isometric cube rendered in ASCII characters",
       boxClassName: "h-[166px] w-[180px] ipad:h-[196px] ipad:w-[212px]",
       artClassName:
@@ -62,7 +59,7 @@ const FEATURES = {
     title: "Connect",
     body: "Functions, databases, buckets, and domains wire themselves together — no glue code, no hand-built networking.",
     art: {
-      src: asset("connect.png"),
+      src: asset("connect.webp"),
       alt: "Interlocking isometric blocks rendered in ASCII characters",
       boxClassName: "h-[166px] w-[198px] ipad:h-[196px] ipad:w-[234px]",
       artClassName:
@@ -73,7 +70,7 @@ const FEATURES = {
     title: "Scale",
     body: "From one function to a bare-metal fleet — everything scales to zero when idle and wakes from a snapshot when traffic returns.",
     art: {
-      src: asset("scale.png"),
+      src: asset("scale.webp"),
       alt: "A rising staircase of isometric blocks rendered in ASCII characters",
       boxClassName:
         "h-[166px] w-[173px] ipad:h-[213px] ipad:w-[223px] desktop-sm:h-[271px] desktop-sm:w-[283px]",
@@ -115,7 +112,7 @@ export const FeaturesWhy = () => (
             <h2 className="max-w-[282px] font-helvetica-neue text-[24px] tracking-[-0.48px] ipad:max-w-none ipad:text-[32px] ipad:tracking-[-0.64px]">
               Built Around the Way Functions Should Run.
             </h2>
-            <p className="max-w-[238px] font-tight text-[16px] tracking-[-0.32px] opacity-60 ipad:max-w-none ipad:text-[18px] ipad:tracking-[-0.36px] ipad:whitespace-nowrap">
+            <p className="max-w-[238px] font-tight text-[16px] tracking-[-0.32px] opacity-60 ipad:max-w-none ipad:text-[18px] ipad:tracking-[-0.36px]">
               Isolate by default, connect without glue code, scale to zero.
             </p>
           </div>
@@ -141,7 +138,7 @@ export const FeaturesWhy = () => (
                     />
                   ))}
                 </div>
-                <p className="w-[154px] font-tight text-[16px] leading-[1.2] font-medium text-black desktop-sm:w-auto desktop-sm:text-[18px] desktop-sm:whitespace-nowrap">
+                <p className="w-[154px] font-tight text-[16px] leading-[1.2] font-medium text-black desktop-sm:w-auto desktop-sm:text-[18px]">
                   Built with Private-Beta Teams
                 </p>
               </Plate>
@@ -158,7 +155,7 @@ export const FeaturesWhy = () => (
                   alt=""
                   className="size-[24px] shrink-0"
                 />
-                <p className="font-tight text-[16px] leading-[1.2] font-medium whitespace-nowrap text-black desktop-sm:text-[18px]">
+                <p className="font-tight text-[16px] leading-[1.2] font-medium text-black desktop-sm:text-[18px]">
                   &lt;350ms p50 Cold Starts
                 </p>
               </Plate>

@@ -151,7 +151,6 @@ export interface Worker {
   activeTasks: number;
   cpuPct: number;
   memPct: number;
-  uptimeSec: number;
 }
 
 export const WORKERS: Worker[] = (() => {
@@ -167,7 +166,6 @@ export const WORKERS: Worker[] = (() => {
       activeTasks: Math.round(rand() * concurrency),
       cpuPct: Number((rand() * 92).toFixed(1)),
       memPct: Number((22 + rand() * 66).toFixed(1)),
-      uptimeSec: Math.round(rand() * 40 * DAY) / 1000,
     };
   });
 })();

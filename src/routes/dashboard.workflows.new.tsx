@@ -3,6 +3,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router';
 import { ArrowLeft, ArrowRight, Check, Github, Package, Upload } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/components/ui/toast';
 import { BuildLog } from '@/components/dashboard/build-log';
 import { PageHeader, Panel } from '@/components/dashboard/primitives';
@@ -322,20 +323,12 @@ function NewFunctionPage() {
                     Snapshot the microVM after 60s idle. Wakes in under 350ms on the next request.
                   </p>
                 </div>
-                <button
-                  type="button"
-                  role="switch"
-                  aria-checked={scaleToZero}
+                <Switch
+                  checked={scaleToZero}
+                  onCheckedChange={setScaleToZero}
                   aria-label="Scale to zero"
-                  onClick={() => setScaleToZero((v) => !v)}
-                  className="relative mt-1 h-5 w-9 shrink-0 rounded-full border border-border transition-colors"
-                  style={{ background: scaleToZero ? 'var(--brand)' : 'var(--muted)' }}
-                >
-                  <span
-                    className="absolute top-0.5 h-3.5 w-3.5 rounded-full bg-background transition-transform"
-                    style={{ transform: scaleToZero ? 'translateX(18px)' : 'translateX(3px)' }}
-                  />
-                </button>
+                  className="mt-1 data-[state=checked]:bg-brand"
+                />
               </div>
             </Panel>
 

@@ -9,7 +9,6 @@ import {
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { DitherGlow } from './dither-glow';
-import { Reveal } from './reveal';
 
 const SIDEBAR_ITEMS = [
   { label: 'Infrastructure', icon: Layers, active: true },
@@ -58,7 +57,7 @@ export function DashboardCard() {
         {/* Sidebar */}
         <aside className="hidden w-48 shrink-0 flex-col border-r border-border p-3 md:flex">
           <p className="mb-3 px-2 text-xs font-medium">my-app</p>
-          <nav className="flex flex-col gap-0.5">
+          <nav aria-label="Console preview" className="flex flex-col gap-0.5">
             {SIDEBAR_ITEMS.map(({ label, icon: Icon, active }) => (
               <span
                 key={label}
@@ -120,16 +119,5 @@ export function DashboardCard() {
         </div>
       </div>
     </div>
-  );
-}
-
-/** Standalone section wrapper — kept for reuse if the card leaves the hero. */
-export function DashboardPreview() {
-  return (
-    <section className="mx-auto max-w-6xl px-4 pb-24 sm:px-6">
-      <Reveal y={40}>
-        <DashboardCard />
-      </Reveal>
-    </section>
   );
 }

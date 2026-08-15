@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/toast';
 import { BuildLog } from '@/components/dashboard/build-log';
 import { PixelBeams } from '@/components/landing/shaders/pixel-beams';
-import { markOnboarded, readSession, useAuth } from '@/lib/auth';
+import { DEFAULT_WORKSPACE, markOnboarded, readSession, saveWorkspace, useAuth } from '@/lib/auth';
 import { cn } from '@/lib/utils';
 
 export const Route = createFileRoute('/onboarding')({
@@ -75,7 +75,7 @@ function OnboardingPage() {
   const { user } = useAuth();
 
   const [step, setStep] = useState(0);
-  const [workspace, setWorkspace] = useState('acme-corp');
+  const [workspace, setWorkspace] = useState(DEFAULT_WORKSPACE);
   const [region, setRegion] = useState(REGIONS[0].id);
   const [template, setTemplate] = useState(TEMPLATES[0].id);
   const [deploying, setDeploying] = useState(false);
@@ -84,6 +84,7 @@ function OnboardingPage() {
   const slugValid = /^[a-z0-9][a-z0-9-]{1,30}[a-z0-9]$/.test(workspace);
 
   const finish = () => {
+    saveWorkspace(workspace);
     markOnboarded();
     toast({ kind: 'success', title: 'Workspace ready', description: `${workspace} · ${region}` });
     // The biggest context switch in the product — setup handing off to the app.

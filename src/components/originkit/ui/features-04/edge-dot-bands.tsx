@@ -1,6 +1,3 @@
-// Delivered by Originkit · stack: nextjs · styling: tailwind
-"use client";
-
 /**
  * Figma "Mask group" (2356:132 / 2356:284 / 2356:422) — the dotted column at
  * each frame edge.

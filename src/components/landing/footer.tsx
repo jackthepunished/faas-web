@@ -220,8 +220,8 @@ export function Footer() {
 
           {/* Link groups */}
           {LINK_GROUPS.map((group) => (
-            <nav key={group.title} className="md:border-l md:border-border md:pl-6">
-              <h3 className="label-mono text-muted-foreground/70">{group.title}</h3>
+            <nav key={group.title} aria-label={group.title} className="md:border-l md:border-border md:pl-6">
+              <h3 className="label-mono text-muted-foreground">{group.title}</h3>
               <ul className="mt-4 flex flex-col gap-2.5">
                 {group.links.map((link) => (
                   <li key={link.label}>

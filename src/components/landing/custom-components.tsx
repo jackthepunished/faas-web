@@ -41,9 +41,14 @@ export function CustomComponents() {
           </p>
         </Reveal>
 
-        {/* Form mock */}
+        {/* Form mock — decorative. `inert` keeps its inputs and buttons out
+            of the tab order; aria-hidden keeps them out of the a11y tree. */}
         <Reveal delay={0.15}>
-          <div className="rounded-xl border border-border bg-card p-6">
+          <div
+            inert
+            aria-hidden="true"
+            className="rounded-xl border border-border bg-card p-6"
+          >
           <h3 className="text-sm font-medium">New custom component</h3>
           <Separator className="my-4" />
 

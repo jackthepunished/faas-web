@@ -56,7 +56,15 @@ export function BuildLog({
   const scroller = useRef<HTMLDivElement>(null);
   const completed = useRef(false);
 
+  // The deploy is scheduled once per mount; re-running it would restart the
+  // build. Callers may pass a fresh `onComplete` per render, so read the
+  // latest through a ref instead of re-subscribing.
+  const onCompleteRef = useRef(onComplete);
+  onCompleteRef.current = onComplete;
+  const stagesRef = useRef(stages);
+
   useEffect(() => {
+    const stages = stagesRef.current;
     const timers: ReturnType<typeof setTimeout>[] = [];
     let elapsed = 0;
     let lineId = 0;
@@ -82,14 +90,12 @@ export function BuildLog({
         setCurrent(stages.length);
         if (!completed.current) {
           completed.current = true;
-          onComplete?.();
+          onCompleteRef.current?.();
         }
       }, elapsed)
     );
 
     return () => timers.forEach(clearTimeout);
-    // Stages are static per mount; re-running would restart the deploy.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
@@ -100,6 +106,8 @@ export function BuildLog({
     i < current ? 'done' : i === current ? 'active' : 'pending';
 
   const progress = Math.min(100, (current / stages.length) * 100);
+  const status =
+    current >= stages.length ? 'Deployed' : `${stages[current]?.label ?? 'Starting'}…`;
 
   return (
     <div className="overflow-hidden rounded-xl border border-border bg-card">
@@ -112,6 +120,11 @@ export function BuildLog({
           transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
         />
       </div>
+
+      {/* One-line live region: announces the stage instead of every log line. */}
+      <p aria-live="polite" aria-atomic="true" className="sr-only">
+        {status}
+      </p>
 
       <ol className="flex flex-col gap-0.5 p-4">
         {stages.map((stage, i) => {
@@ -144,7 +157,8 @@ export function BuildLog({
       {/* Streaming output */}
       <div
         ref={scroller}
-        aria-live="polite"
+        role="log"
+        aria-live="off"
         className="max-h-44 overflow-y-auto border-t border-border bg-background px-4 py-3 font-mono text-xs"
       >
         {lines.length === 0 ? (

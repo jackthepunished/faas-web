@@ -1,4 +1,13 @@
-import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from 'react';
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from 'react';
 import {
   DEPLOYMENTS,
   WORKFLOWS,
@@ -88,47 +97,58 @@ export function DataProvider({ children }: { children: ReactNode }) {
     return created;
   }, []);
 
+  // Pending redeploy timers, cleared on unmount so a torn-down provider never
+  // sets state. Version bumps read the latest workflows through a ref rather
+  // than the closure, so a workflow edited mid-deploy is not clobbered.
+  const workflowsRef = useRef(workflows);
+  workflowsRef.current = workflows;
+  const timers = useRef(new Set<ReturnType<typeof setTimeout>>());
+  useEffect(() => {
+    const pending = timers.current;
+    return () => {
+      pending.forEach(clearTimeout);
+      pending.clear();
+    };
+  }, []);
+
   const redeploy = useCallback((id: string) => {
     setFunctions((prev) =>
       prev.map((fn) => (fn.id === id ? { ...fn, state: 'deploying' as const } : fn))
     );
 
-    setTimeout(() => {
+    const timer = setTimeout(() => {
+      timers.current.delete(timer);
+      const current = workflowsRef.current.find((f) => f.id === id);
+      if (!current) return;
+      const nextVersion = bumpPatch(current.version);
+
       setFunctions((prev) =>
         prev.map((fn) =>
           fn.id === id
-            ? {
-                ...fn,
-                state: 'running' as const,
-                version: bumpPatch(fn.version),
-                lastDeployedAt: Date.now(),
-              }
+            ? { ...fn, state: 'running' as const, version: nextVersion, lastDeployedAt: Date.now() }
             : fn
         )
       );
-      setDeployments((prev) => {
-        const fn = workflows.find((f) => f.id === id);
-        if (!fn) return prev;
-        return [
-          {
-            id: `dep_${id}_${prev.length}`,
-            workflowId: id,
-            version: bumpPatch(fn.version),
-            state: 'succeeded' as const,
-            commit: Math.abs(hash(id + prev.length))
-              .toString(16)
-              .padStart(7, '0')
-              .slice(0, 7),
-            message: 'Manual redeploy from the dashboard',
-            author: 'you',
-            createdAt: Date.now(),
-            durationMs: 8200,
-          },
-          ...prev,
-        ];
-      });
+      setDeployments((prev) => [
+        {
+          id: `dep_${id}_${prev.length}`,
+          workflowId: id,
+          version: nextVersion,
+          state: 'succeeded' as const,
+          commit: Math.abs(hash(id + prev.length))
+            .toString(16)
+            .padStart(7, '0')
+            .slice(0, 7),
+          message: 'Manual redeploy from the dashboard',
+          author: 'you',
+          createdAt: Date.now(),
+          durationMs: 8200,
+        },
+        ...prev,
+      ]);
     }, 8200);
-  }, [workflows]);
+    timers.current.add(timer);
+  }, []);
 
   const value = useMemo<DataValue>(
     () => ({

@@ -108,17 +108,7 @@ function OverviewPage() {
         />
       </div>
 
-      <Panel
-        title="Invocations"
-        description={RANGES.find((r) => r.key === range)?.label}
-        actions={
-          <RangeSelector
-            value={range}
-            onChange={setRange}
-            options={RANGES.map((r) => ({ key: r.key, label: r.key }))}
-          />
-        }
-      >
+      <Panel title="Invocations" description={RANGES.find((r) => r.key === range)?.label}>
         <AreaChart data={series} range={range} metric="invocations" label="invocations" />
       </Panel>
 

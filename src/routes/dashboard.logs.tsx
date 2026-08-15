@@ -77,6 +77,12 @@ function LogsPage() {
 
   const errorCount = rows.filter((l) => l.level === 'error').length;
 
+  // One lookup table instead of a `.find` per rendered row.
+  const workflowById = useMemo(
+    () => new Map(workflows.map((fn) => [fn.id, fn])),
+    [workflows]
+  );
+
   return (
     <div className="flex flex-col gap-6">
       <PageHeader
@@ -159,7 +165,7 @@ function LogsPage() {
           <div className="max-h-[62vh] overflow-y-auto">
             <ul className="flex flex-col divide-y divide-border/60 font-mono text-xs">
               {rows.map((log) => {
-                const fn = workflows.find((f) => f.id === log.workflowId);
+                const fn = workflowById.get(log.workflowId);
                 return (
                   <li
                     key={log.id}

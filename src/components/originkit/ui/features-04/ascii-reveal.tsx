@@ -1,9 +1,4 @@
-"use client";
-
 import { useEffect, useRef, type CSSProperties } from "react";
-
-const DEFAULT_IMAGE =
-    "https://imagedelivery.net/IEUjvl3YUlxY-MrTpOAWDQ/e4476503-c1e3-4358-3ff6-539deda1f800/w=800";
 
 type ColorMode = "mono" | "image";
 type Fit = "cover" | "contain";
@@ -96,7 +91,8 @@ export default function AsciiImage(props: AsciiImageProps) {
     const seededRef = useRef(false);
     const pointer = useRef({ x: -9999, y: -9999, inside: false });
 
-    const src = resolveImageSrc(image) || DEFAULT_IMAGE;
+    // No image → nothing to draw. Every caller passes one.
+    const src = resolveImageSrc(image);
     const revealSize = revealOptions?.size ?? DEFAULTS.revealOptions.size;
     const revealSoftness =
         revealOptions?.softness ?? DEFAULTS.revealOptions.softness;
@@ -173,7 +169,7 @@ export default function AsciiImage(props: AsciiImageProps) {
             let data: Uint8ClampedArray;
             try {
                 data = sctx.getImageData(0, 0, cols, rows).data;
-            } catch (e) {
+            } catch {
                 imgRef.current = null;
                 return;
             }
@@ -234,9 +230,11 @@ export default function AsciiImage(props: AsciiImageProps) {
             return layer;
         }
 
-        function updateBlobs() {
+        // Returns true when a blob is still easing towards the pointer, so
+        // the caller knows another frame is worth painting.
+        function updateBlobs(): boolean {
             const blobs = blobsRef.current;
-            if (blobs.length === 0) return;
+            if (blobs.length === 0) return false;
             const { dpr } = getSize();
             const tx = pointer.current.x * dpr;
             const ty = pointer.current.y * dpr;
@@ -246,14 +244,21 @@ export default function AsciiImage(props: AsciiImageProps) {
                     blob.y = ty;
                 }
                 seededRef.current = true;
-                return;
+                return true;
             }
-            blobs[0].x += (tx - blobs[0].x) * 0.35;
-            blobs[0].y += (ty - blobs[0].y) * 0.35;
+            let moved = 0;
+            const step = (blob: { x: number; y: number }, gx: number, gy: number) => {
+                const dx = (gx - blob.x) * 0.35;
+                const dy = (gy - blob.y) * 0.35;
+                blob.x += dx;
+                blob.y += dy;
+                moved = Math.max(moved, Math.abs(dx), Math.abs(dy));
+            };
+            step(blobs[0], tx, ty);
             for (let i = 1; i < blobs.length; i++) {
-                blobs[i].x += (blobs[i - 1].x - blobs[i].x) * 0.35;
-                blobs[i].y += (blobs[i - 1].y - blobs[i].y) * 0.35;
+                step(blobs[i], blobs[i - 1].x, blobs[i - 1].y);
             }
+            return moved > 0.05;
         }
 
         function paint() {
@@ -263,7 +268,8 @@ export default function AsciiImage(props: AsciiImageProps) {
             ctx.drawImage(off, 0, 0);
 
             const img = imgRef.current;
-            if (!reveal || !pointer.current.inside || !img) return;
+            if (!reveal || reduced.matches || !pointer.current.inside || !img)
+                return;
 
             const { dpr } = getSize();
             const blobs = blobsRef.current;
@@ -302,11 +308,58 @@ export default function AsciiImage(props: AsciiImageProps) {
             ctx.drawImage(photo, 0, 0);
         }
 
+        // --- Frame scheduling -------------------------------------------
+        // The loop only runs while the canvas is on screen, the tab is
+        // visible, and the user has not asked for reduced motion; and it only
+        // paints while something is actually changing (pointer moved, blobs
+        // still easing, or a rebuild). Once the blobs settle it goes idle
+        // until the next pointer event. Mirrors use-shader-canvas.ts.
+        const reduced = window.matchMedia("(prefers-reduced-motion: reduce)");
+        let onscreen = true;
+        let pageVisible = document.visibilityState !== "hidden";
+        let running = false;
+        let dirty = true;
+
+        const canAnimate = () =>
+            reveal && !reduced.matches && onscreen && pageVisible && !!imgRef.current;
+
         function loop() {
-            if (!alive) return;
-            updateBlobs();
-            paint();
-            raf = requestAnimationFrame(loop);
+            raf = 0;
+            if (!alive || !running) return;
+            const easing = pointer.current.inside && updateBlobs();
+            if (dirty || easing) {
+                paint();
+                dirty = false;
+            }
+            if (easing || pointer.current.inside) {
+                raf = requestAnimationFrame(loop);
+            } else {
+                running = false; // idle until the next pointer event
+            }
+        }
+
+        function stop() {
+            running = false;
+            if (raf) cancelAnimationFrame(raf);
+            raf = 0;
+        }
+
+        function kick() {
+            if (!canAnimate()) return;
+            if (!running) {
+                running = true;
+                if (!raf) raf = requestAnimationFrame(loop);
+            }
+        }
+
+        function sync() {
+            if (!canAnimate()) {
+                stop();
+                if (imgRef.current) paint(); // one static frame
+                return;
+            }
+            dirty = true;
+            kick();
         }
 
         function onMove(event: PointerEvent) {
@@ -317,38 +370,76 @@ export default function AsciiImage(props: AsciiImageProps) {
             pointer.current.y = y;
             pointer.current.inside =
                 x >= 0 && y >= 0 && x <= rect.width && y <= rect.height;
+            dirty = true;
+            kick();
         }
         function onLeave() {
             pointer.current.inside = false;
             seededRef.current = false;
+            dirty = true;
+            kick();
+            // The loop may already be idle; paint the cleared frame directly.
+            if (!running) paint();
         }
 
-        const img = new Image();
-        img.crossOrigin = "anonymous";
-        img.onload = () => {
-            if (!alive) return;
-            imgRef.current = img;
-            buildAscii();
-            paint();
-            if (reveal) raf = requestAnimationFrame(loop);
-        };
-        if (src) img.src = src;
-
-        let ro: ResizeObserver | null = null;
-        if (typeof ResizeObserver !== "undefined") {
-            ro = new ResizeObserver(() => {
+        let img: HTMLImageElement | null = null;
+        if (src) {
+            img = new Image();
+            img.crossOrigin = "anonymous";
+            img.onload = () => {
+                if (!alive || !img) return;
+                imgRef.current = img;
                 buildAscii();
                 paint();
+                dirty = true;
+                sync();
+            };
+            img.src = src;
+        }
+
+        // Rebuilds coalesce onto one animation frame.
+        let ro: ResizeObserver | null = null;
+        let resizeRaf = 0;
+        if (typeof ResizeObserver !== "undefined") {
+            ro = new ResizeObserver(() => {
+                if (resizeRaf) return;
+                resizeRaf = requestAnimationFrame(() => {
+                    resizeRaf = 0;
+                    if (!alive) return;
+                    buildAscii();
+                    paint();
+                    dirty = true;
+                });
             });
             ro.observe(canvas);
         }
+
+        let io: IntersectionObserver | null = null;
+        if (typeof IntersectionObserver !== "undefined") {
+            io = new IntersectionObserver(([entry]) => {
+                onscreen = entry.isIntersecting;
+                sync();
+            });
+            io.observe(canvas);
+        }
+        const onVisibility = () => {
+            pageVisible = document.visibilityState !== "hidden";
+            sync();
+        };
+        document.addEventListener("visibilitychange", onVisibility);
+        reduced.addEventListener("change", sync);
         canvas.addEventListener("pointermove", onMove);
         canvas.addEventListener("pointerleave", onLeave);
 
         return () => {
             alive = false;
-            cancelAnimationFrame(raf);
+            stop();
+            if (resizeRaf) cancelAnimationFrame(resizeRaf);
+            if (img) img.onload = null;
             ro?.disconnect();
+            io?.disconnect();
+            document.removeEventListener("visibilitychange", onVisibility);
+            reduced.removeEventListener("change", sync);
             canvas.removeEventListener("pointermove", onMove);
             canvas.removeEventListener("pointerleave", onLeave);
         };
@@ -370,6 +461,7 @@ export default function AsciiImage(props: AsciiImageProps) {
     return (
         <canvas
             ref={canvasRef}
+            role="img"
             aria-label={
                 typeof image === "object"
                     ? (image?.alt ?? "ASCII art")

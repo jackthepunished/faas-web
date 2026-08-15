@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useId, useMemo, useRef, useState } from 'react';
 import { createFileRoute, Link, useParams } from '@tanstack/react-router';
 import { ArrowLeft, ExternalLink, RotateCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -45,6 +45,21 @@ function FunctionDetailPage() {
   const navigate = Route.useNavigate();
   // Replace rather than push, so tab switching does not fill the back stack.
   const setTab = (next: Tab) => navigate({ search: { tab: next }, replace: true });
+  const tabsId = useId();
+  const tabRefs = useRef<(HTMLButtonElement | null)[]>([]);
+  // Roving focus: arrows move between tabs and select as they go.
+  const onTabKeyDown = (e: React.KeyboardEvent, index: number) => {
+    const last = TABS.length - 1;
+    let next: number | null = null;
+    if (e.key === 'ArrowRight') next = index === last ? 0 : index + 1;
+    else if (e.key === 'ArrowLeft') next = index === 0 ? last : index - 1;
+    else if (e.key === 'Home') next = 0;
+    else if (e.key === 'End') next = last;
+    if (next === null) return;
+    e.preventDefault();
+    tabRefs.current[next]?.focus();
+    setTab(TABS[next]);
+  };
   const [range, setRange] = useState<RangeKey>('24h');
   const { getWorkflow, deploymentsFor, redeploy } = useData();
   const { toast } = useToast();
@@ -119,15 +134,22 @@ function FunctionDetailPage() {
 
       {/* Tabs */}
       <div role="tablist" aria-label="Function detail" className="flex gap-1 border-b border-border">
-        {TABS.map((t) => (
+        {TABS.map((t, i) => (
           <button
             key={t}
+            ref={(el) => {
+              tabRefs.current[i] = el;
+            }}
             type="button"
             role="tab"
+            id={`${tabsId}-tab-${t}`}
             aria-selected={tab === t}
+            aria-controls={`${tabsId}-panel`}
+            tabIndex={tab === t ? 0 : -1}
             onClick={() => setTab(t)}
+            onKeyDown={(e) => onTabKeyDown(e, i)}
             className={cn(
-              '-mb-px border-b-2 px-3 py-2 text-sm transition-colors',
+              '-mb-px border-b-2 px-3 py-2 text-sm transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand',
               tab === t
                 ? 'border-brand text-foreground'
                 : 'border-transparent text-muted-foreground hover:text-foreground'
@@ -137,6 +159,13 @@ function FunctionDetailPage() {
           </button>
         ))}
       </div>
+
+      <div
+        role="tabpanel"
+        id={`${tabsId}-panel`}
+        aria-labelledby={`${tabsId}-tab-${tab}`}
+        className="flex flex-col gap-6"
+      >
 
       {tab === 'Metrics' && (
         <div className="flex flex-col gap-6">
@@ -258,6 +287,7 @@ function FunctionDetailPage() {
           </dl>
         </Panel>
       )}
+      </div>
     </div>
   );
 }

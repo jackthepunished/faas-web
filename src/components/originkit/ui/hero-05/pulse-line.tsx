@@ -1,13 +1,8 @@
-// Delivered by Originkit · stack: nextjs · styling: tailwind
-"use client";
-
 // Pulse Lines — Originkit
 // Props set in the preview:
 //   speed: 34
 //   gap: 22
 //   scale: 2
-
-"use client";
 
 import { useEffect, useRef, useState, useId, type CSSProperties } from "react";
 
@@ -155,7 +150,6 @@ export default function WaveBg({
 	stroke-linecap: ${strokeLinecap};
 	stroke-dasharray: var(--dash-width) var(--gap-width);
 	stroke-dashoffset: var(--dash-width);
-	will-change: stroke, stroke-dashoffset;
 	animation: ${instanceId}-pulse 2s cubic-bezier(0.65, 0, 0.35, 1) infinite alternate-reverse;
 	animation-delay: var(--delay);
 }
@@ -164,6 +158,10 @@ export default function WaveBg({
 	0% { stroke-dashoffset: var(--dash-width); }
 	50% { stroke: var(--pulse); }
 	100% { stroke-dashoffset: calc(var(--gap-width) * -8px + 40px); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.${instanceId}-l { animation: none; }
 }`;
 
   const span = horizontal ? dimensions.height : dimensions.width;

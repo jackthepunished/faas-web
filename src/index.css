@@ -1,6 +1,5 @@
 /* IBM Plex type system — see index.html for the font loads. */
 @import 'tailwindcss';
-@import "./originkit-section-themes.css";
 @import "./originkit-section-theme.css";
 @import 'tw-animate-css';
 
@@ -297,6 +296,37 @@
   * {
     border-color: var(--color-border);
     outline-color: color-mix(in oklab, var(--color-ring) 50%, transparent);
+  }
+
+  /* Keyboard focus is always visible: a solid 2px ring in the brand ring
+     colour, offset so it clears rounded controls. Pointer focus (:focus
+     without :focus-visible) keeps whatever the component draws. */
+  :focus-visible {
+    outline: 2px solid var(--color-ring);
+    outline-offset: 2px;
+  }
+
+  /* Skip link — first focusable element on the landing page. Visually
+     hidden until it receives keyboard focus, then pinned top-left. */
+  .skip-link {
+    position: absolute;
+    left: 0.75rem;
+    top: 0.75rem;
+    z-index: 100;
+    padding: 0.5rem 0.875rem;
+    border-radius: 9999px;
+    background-color: var(--color-primary);
+    color: var(--color-primary-foreground);
+    font-size: 0.875rem;
+    font-weight: 500;
+    transform: translateY(-200%);
+    opacity: 0;
+    pointer-events: none;
+  }
+  .skip-link:focus-visible {
+    transform: none;
+    opacity: 1;
+    pointer-events: auto;
   }
   body {
     background-color: var(--color-background);

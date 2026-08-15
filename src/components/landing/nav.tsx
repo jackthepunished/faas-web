@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Link } from '@tanstack/react-router';
 import { ArrowUpRight, Menu, Wind, X } from 'lucide-react';
@@ -26,6 +26,9 @@ function Brand({ onClick }: { onClick?: () => void }) {
 export function Nav() {
   const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const toggleRef = useRef<HTMLButtonElement | null>(null);
+  const panelRef = useRef<HTMLElement | null>(null);
+  const wasOpen = useRef(false);
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 24);
@@ -47,6 +50,17 @@ export function Nav() {
     };
   }, [menuOpen]);
 
+  // Keyboard users: focus moves into the panel when it opens and back to the
+  // toggle when it closes, so it never lands on nothing.
+  useEffect(() => {
+    if (menuOpen) {
+      panelRef.current?.querySelector<HTMLElement>('a, button')?.focus();
+    } else if (wasOpen.current) {
+      toggleRef.current?.focus();
+    }
+    wasOpen.current = menuOpen;
+  }, [menuOpen]);
+
   return (
     <motion.header
       initial={{ y: -20, opacity: 0 }}
@@ -64,7 +78,7 @@ export function Nav() {
       <div className="mx-auto flex h-16 max-w-[1440px] items-center justify-between gap-6 px-5 sm:px-8 lg:grid lg:grid-cols-[1fr_auto_1fr] lg:px-16">
         <Brand />
 
-        <nav className="hidden items-center gap-1 lg:flex">
+        <nav aria-label="Primary" className="hidden items-center gap-1 lg:flex">
           {LINKS.map((link) => (
             <a
               key={link.label}
@@ -92,9 +106,11 @@ export function Nav() {
           </SweepLink>
 
           <button
+            ref={toggleRef}
             type="button"
             aria-label={menuOpen ? 'Close menu' : 'Open menu'}
             aria-expanded={menuOpen}
+            aria-controls="mobile-nav"
             onClick={() => setMenuOpen((v) => !v)}
             className="-mr-1.5 ml-1 rounded-md p-2 text-muted-foreground transition-colors hover:text-foreground lg:hidden"
           >
@@ -114,7 +130,12 @@ export function Nav() {
             transition={{ duration: 0.28, ease: EASE }}
             className="overflow-hidden border-t border-border lg:hidden"
           >
-            <nav className="flex flex-col px-5 py-3 sm:px-8">
+            <nav
+              id="mobile-nav"
+              ref={panelRef}
+              aria-label="Mobile"
+              className="flex flex-col px-5 py-3 sm:px-8"
+            >
               {LINKS.map((link) => (
                 <a
                   key={link.label}

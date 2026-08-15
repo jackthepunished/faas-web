@@ -15,7 +15,6 @@
     "framer-motion": "^13.1.0",
     "glimm": "^0.3.0",
     "lucide-react": "^0.539.0",
-    "motion": "^13.1.0",
     "radix-ui": "^1.6.7",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",

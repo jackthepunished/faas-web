@@ -1,6 +1,3 @@
-// Delivered by Originkit · stack: nextjs · styling: tailwind
-"use client";
-
 /**
  * Figma "Group 2147240570" (2356:186 / 2356:197 / 2356:475) and its partner
  * (2356:191 / 2356:202 / 2356:415) — the eight filled cells that zig-zag down

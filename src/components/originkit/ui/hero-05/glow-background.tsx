@@ -1,6 +1,3 @@
-// Delivered by Originkit · stack: nextjs · styling: tailwind
-"use client";
-
 /** Public asset URLs — use a function so preview rewriters stay stable. */
 function asset(file: string) {
   return `/originkit/hero-05/${file}`;

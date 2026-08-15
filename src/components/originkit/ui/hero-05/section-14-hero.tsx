@@ -1,8 +1,3 @@
-// Delivered by Originkit · stack: nextjs · styling: tailwind
-"use client";
-
-"use client";
-
 import { GlowBackground } from "@/components/originkit/ui/hero-05/glow-background";
 import { HeroContent } from "@/components/originkit/ui/hero-05/hero-content";
 import { PulseStage } from "@/components/originkit/ui/hero-05/pulse-stage";
@@ -16,13 +11,13 @@ export const Section14Hero = () => {
     >
       <GlowBackground />
 
-      <div className="relative z-10 mx-auto flex min-h-screen w-full  flex-col items-center">
+      <div className="relative z-10 mx-auto flex w-full flex-col items-center">
         {/* Site nav is the fixed floating capsule (landing/nav.tsx); the kit's
             in-flow navbar is unused, so the top padding clears the fixed nav. */}
         <div className="flex w-full flex-col items-center gap-8 px-4 pt-28 desktop-sm:pt-[160px]">
           <HeroContent />
 
-          <div className="mt-[31px] mb-[34px] w-full ">
+          <div className="mt-[31px] mb-[34px] w-full">
             <PulseStage>
               <DashboardCard />
             </PulseStage>

@@ -1,10 +1,11 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
 import { useNavigate } from '@tanstack/react-router';
 import { CornerDownLeft, GitBranch, Plus, Search } from 'lucide-react';
 import { NAV_ITEMS } from './nav-config';
 import { useData } from '@/lib/store';
 import { formatCompact } from '@/lib/mock-data';
 import { cn } from '@/lib/utils';
+import { useFocusTrap } from '@/lib/use-focus-trap';
 
 /**
  * ⌘K command palette. Navigation, every function by name, and the actions
@@ -34,9 +35,11 @@ export function CommandPalette({
 
   const inputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLUListElement>(null);
-  const restoreFocus = useRef<HTMLElement | null>(null);
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const listId = useId();
 
-  const close = () => onOpenChange(false);
+  const close = useCallback(() => onOpenChange(false), [onOpenChange]);
+  useFocusTrap(dialogRef, open);
 
   const commands = useMemo<Command[]>(() => {
     const go = (to: string) => () => {
@@ -76,9 +79,7 @@ export function CommandPalette({
         },
       })),
     ];
-    // `close` and `navigate` are stable enough for this list's lifetime.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [workflows, navigate]);
+  }, [workflows, navigate, close]);
 
   const results = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -94,16 +95,15 @@ export function CommandPalette({
   useEffect(() => {
     if (!open) return;
 
-    restoreFocus.current = document.activeElement as HTMLElement | null;
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
-    // Focus after paint, or the input is not yet mounted.
+    // Focus after paint, or the input is not yet mounted. (The trap restores
+    // focus to the opener on close.)
     const id = requestAnimationFrame(() => inputRef.current?.focus());
 
     return () => {
       cancelAnimationFrame(id);
       document.body.style.overflow = previousOverflow;
-      restoreFocus.current?.focus?.();
       setQuery('');
     };
   }, [open]);
@@ -149,6 +149,7 @@ export function CommandPalette({
       />
 
       <div
+        ref={dialogRef}
         role="dialog"
         aria-modal="true"
         aria-label="Command palette"
@@ -163,6 +164,10 @@ export function CommandPalette({
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Search workflows, jump to a page, run an action…"
             aria-label="Search commands"
+            role="combobox"
+            aria-expanded={results.length > 0}
+            aria-controls={listId}
+            aria-autocomplete="list"
             aria-activedescendant={results[active] ? `cmd-${results[active].id}` : undefined}
             className="h-12 flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
           />
@@ -176,39 +181,48 @@ export function CommandPalette({
             No matches for “{query}”.
           </p>
         ) : (
-          <ul ref={listRef} role="listbox" aria-label="Results" className="max-h-80 overflow-y-auto p-2">
+          <ul
+            ref={listRef}
+            id={listId}
+            role="listbox"
+            aria-label="Results"
+            className="max-h-80 overflow-y-auto p-2"
+          >
             {results.map((cmd, i) => {
               const Icon = cmd.icon;
               const newGroup = cmd.group !== lastGroup;
               lastGroup = cmd.group;
-              return (
-                <li key={cmd.id}>
-                  {newGroup && (
-                    <p className="label-mono px-2 pb-1.5 pt-3 text-muted-foreground/70 first:pt-1">
-                      {cmd.group}
-                    </p>
-                  )}
-                  <div
-                    id={`cmd-${cmd.id}`}
-                    role="option"
-                    aria-selected={i === active}
-                    data-active={i === active}
-                    onMouseMove={() => setActive(i)}
-                    onClick={cmd.run}
-                    className={cn(
-                      'flex cursor-pointer items-center gap-2.5 rounded-md px-2 py-2 text-sm',
-                      i === active ? 'bg-muted text-foreground' : 'text-muted-foreground'
-                    )}
+              return [
+                newGroup && (
+                  <li
+                    key={`group-${cmd.group}`}
+                    role="presentation"
+                    className="label-mono px-2 pb-1.5 pt-3 text-muted-foreground/70 first:pt-1"
                   >
-                    <Icon className="h-3.5 w-3.5 shrink-0" />
-                    <span className="flex-1 truncate">{cmd.label}</span>
-                    {cmd.hint && (
-                      <span className="shrink-0 text-xs text-muted-foreground">{cmd.hint}</span>
-                    )}
-                    {i === active && <CornerDownLeft className="h-3 w-3 shrink-0" />}
-                  </div>
-                </li>
-              );
+                    {cmd.group}
+                  </li>
+                ),
+                <li
+                  key={cmd.id}
+                  id={`cmd-${cmd.id}`}
+                  role="option"
+                  aria-selected={i === active}
+                  data-active={i === active}
+                  onMouseMove={() => setActive(i)}
+                  onClick={cmd.run}
+                  className={cn(
+                    'flex cursor-pointer items-center gap-2.5 rounded-md px-2 py-2 text-sm',
+                    i === active ? 'bg-muted text-foreground' : 'text-muted-foreground'
+                  )}
+                >
+                  <Icon className="h-3.5 w-3.5 shrink-0" />
+                  <span className="flex-1 truncate">{cmd.label}</span>
+                  {cmd.hint && (
+                    <span className="shrink-0 text-xs text-muted-foreground">{cmd.hint}</span>
+                  )}
+                  {i === active && <CornerDownLeft className="h-3 w-3 shrink-0" />}
+                </li>,
+              ];
             })}
           </ul>
         )}
