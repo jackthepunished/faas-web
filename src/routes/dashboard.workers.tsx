@@ -2,8 +2,12 @@ import { createFileRoute } from '@tanstack/react-router';
 import { PageHeader } from '@/components/dashboard/primitives';
 import { Pill, ResourceTable, type Column } from '@/components/dashboard/resource-table';
 import { WORKERS, type Worker } from '@/lib/mock-resources';
+import { consoleHead } from '@/lib/seo';
 
-export const Route = createFileRoute('/dashboard/workers')({ component: WorkersPage });
+export const Route = createFileRoute('/dashboard/workers')({
+  component: WorkersPage,
+  head: () => consoleHead('workers'),
+});
 
 const STATE_COLOR: Record<Worker['state'], string | undefined> = {
   online: 'var(--status-good)',

@@ -3,8 +3,12 @@ import { createFileRoute } from '@tanstack/react-router';
 import { AreaChart, PercentileChart, UsageBars } from '@/components/dashboard/charts';
 import { PageHeader, Panel, RangeSelector, StatTile } from '@/components/dashboard/primitives';
 import { RANGES, buildSeries, formatCompact, formatMs, type RangeKey } from '@/lib/mock-data';
+import { consoleHead } from '@/lib/seo';
 
-export const Route = createFileRoute('/dashboard/metrics')({ component: MetricsPage });
+export const Route = createFileRoute('/dashboard/metrics')({
+  component: MetricsPage,
+  head: () => consoleHead('metrics'),
+});
 
 function MetricsPage() {
   const [range, setRange] = useState<RangeKey>('24h');

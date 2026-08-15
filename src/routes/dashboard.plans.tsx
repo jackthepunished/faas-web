@@ -4,8 +4,12 @@ import { Button } from '@/components/ui/button';
 import { PageHeader } from '@/components/dashboard/primitives';
 import { PLANS } from '@/lib/mock-resources';
 import { cn } from '@/lib/utils';
+import { consoleHead } from '@/lib/seo';
 
-export const Route = createFileRoute('/dashboard/plans')({ component: PlansPage });
+export const Route = createFileRoute('/dashboard/plans')({
+  component: PlansPage,
+  head: () => consoleHead('plans'),
+});
 
 function PlansPage() {
   return (

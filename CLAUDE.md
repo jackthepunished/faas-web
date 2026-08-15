@@ -30,5 +30,8 @@ should not add to that count, and does not need to reduce it.
 - **Do not reformat files you did not otherwise change.** Prettier was adopted
   late and applied in one isolated commit; drive-by reformatting buries real
   diffs.
+- **A new route needs a `head`.** Use `consoleHead('<segment>')` for console
+  pages or `pageHead({ title })` elsewhere (`src/lib/seo.ts`), or the page
+  inherits the bare brand title. See the Page titles section in `README.md`.
 - **Adding a console page means touching `nav-config.ts` too**, or the page
   exists but is unreachable from the sidebar, breadcrumb, and ⌘K palette.

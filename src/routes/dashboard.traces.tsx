@@ -3,8 +3,12 @@ import { PageHeader } from '@/components/dashboard/primitives';
 import { Pill, ResourceTable, type Column } from '@/components/dashboard/resource-table';
 import { TRACES, type Trace } from '@/lib/mock-resources';
 import { formatClock, formatMs, getWorkflow } from '@/lib/mock-data';
+import { consoleHead } from '@/lib/seo';
 
-export const Route = createFileRoute('/dashboard/traces')({ component: TracesPage });
+export const Route = createFileRoute('/dashboard/traces')({
+  component: TracesPage,
+  head: () => consoleHead('traces'),
+});
 
 const COLUMNS: Column<Trace>[] = [
   {

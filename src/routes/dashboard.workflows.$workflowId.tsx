@@ -26,11 +26,13 @@ import {
 import { useData } from '@/lib/store';
 import { useToast } from '@/components/ui/toast';
 import { cn } from '@/lib/utils';
+import { pageHead, useDocumentTitle } from '@/lib/seo';
 
 const TABS = ['Metrics', 'Deployments', 'Logs', 'Configuration'] as const;
 type Tab = (typeof TABS)[number];
 
 export const Route = createFileRoute('/dashboard/workflows/$workflowId')({
+  head: () => pageHead({ title: 'Workflow' }),
   // Tab lives in the URL, so a refresh or a shared link lands on the same one.
   // Optional, so links elsewhere need not pass it and the default tab leaves
   // no query string behind.
@@ -65,6 +67,10 @@ function FunctionDetailPage() {
   const { toast } = useToast();
 
   const fn = getWorkflow(workflowId);
+  // The route's `head` can only name the id, so the real name is applied here
+  // once the store resolves it. Above the early return — it is a hook.
+  useDocumentTitle(fn?.name ?? 'Function not found');
+
   const seedOffset = useMemo(
     () => workflowId.split('').reduce((a, c) => a + c.charCodeAt(0), 0),
     [workflowId]

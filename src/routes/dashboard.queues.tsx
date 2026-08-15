@@ -5,8 +5,12 @@ import { PageHeader } from '@/components/dashboard/primitives';
 import { Pill, ResourceTable, type Column } from '@/components/dashboard/resource-table';
 import { QUEUES, type Queue } from '@/lib/mock-resources';
 import { formatCompact } from '@/lib/mock-data';
+import { consoleHead } from '@/lib/seo';
 
-export const Route = createFileRoute('/dashboard/queues')({ component: QueuesPage });
+export const Route = createFileRoute('/dashboard/queues')({
+  component: QueuesPage,
+  head: () => consoleHead('queues'),
+});
 
 const STATE_COLOR: Record<Queue['state'], string> = {
   healthy: 'var(--status-good)',

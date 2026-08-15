@@ -8,8 +8,12 @@ import { EmptyState, PageHeader, Panel } from '@/components/dashboard/primitives
 import { Pill } from '@/components/dashboard/resource-table';
 import { API_KEYS, type ApiKeyRecord } from '@/lib/mock-resources';
 import { formatRelative } from '@/lib/mock-data';
+import { consoleHead } from '@/lib/seo';
 
-export const Route = createFileRoute('/dashboard/keys')({ component: KeysPage });
+export const Route = createFileRoute('/dashboard/keys')({
+  component: KeysPage,
+  head: () => consoleHead('keys'),
+});
 
 /** 20 hex chars, matching the shape of the seeded keys. */
 function generateKey(): string {

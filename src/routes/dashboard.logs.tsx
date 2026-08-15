@@ -5,8 +5,10 @@ import { EmptyState, LevelTag, PageHeader } from '@/components/dashboard/primiti
 import { LOGS, formatClock, type LogEntry, type LogLevel } from '@/lib/mock-data';
 import { useData } from '@/lib/store';
 import { cn } from '@/lib/utils';
+import { consoleHead } from '@/lib/seo';
 
 export const Route = createFileRoute('/dashboard/logs')({
+  head: () => consoleHead('logs'),
   component: LogsPage,
 });
 

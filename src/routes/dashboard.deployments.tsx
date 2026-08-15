@@ -3,8 +3,12 @@ import { PageHeader } from '@/components/dashboard/primitives';
 import { Pill, ResourceTable, type Column } from '@/components/dashboard/resource-table';
 import { formatRelative, type Deployment } from '@/lib/mock-data';
 import { useData } from '@/lib/store';
+import { consoleHead } from '@/lib/seo';
 
-export const Route = createFileRoute('/dashboard/deployments')({ component: DeploymentsPage });
+export const Route = createFileRoute('/dashboard/deployments')({
+  component: DeploymentsPage,
+  head: () => consoleHead('deployments'),
+});
 
 const STATE_COLOR: Record<Deployment['state'], string> = {
   succeeded: 'var(--status-good)',

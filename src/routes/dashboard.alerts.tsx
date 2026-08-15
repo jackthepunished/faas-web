@@ -5,8 +5,12 @@ import { PageHeader } from '@/components/dashboard/primitives';
 import { Pill, ResourceTable, type Column } from '@/components/dashboard/resource-table';
 import { ALERT_RULES, type AlertRule } from '@/lib/mock-resources';
 import { formatRelative } from '@/lib/mock-data';
+import { consoleHead } from '@/lib/seo';
 
-export const Route = createFileRoute('/dashboard/alerts')({ component: AlertsPage });
+export const Route = createFileRoute('/dashboard/alerts')({
+  component: AlertsPage,
+  head: () => consoleHead('alerts'),
+});
 
 const STATE_COLOR: Record<AlertRule['state'], string | undefined> = {
   ok: 'var(--status-good)',

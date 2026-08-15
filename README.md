@@ -90,6 +90,53 @@ is the rule to preserve: if you find yourself writing a literal hex or a
 The colour ramp, contrast measurements, and chart tokens are documented inline
 at the top of `index.css`.
 
+## Deployment
+
+The build output in `dist/` is fully static, but routing happens in the
+browser — `/` is the only real file. **The host must serve `index.html` for
+every unmatched path**, or refreshing on `/dashboard/logs` (or opening a shared
+link to it) 404s before the router ever runs. `vite preview` does this
+automatically, which is why the problem only ever shows up in production.
+
+Config for the common hosts is committed:
+
+- **Netlify / Cloudflare Pages** — `public/_redirects`, copied into `dist/`.
+- **Vercel** — `vercel.json`, which also sets far-future caching on the
+  content-hashed `/assets/*` and `no-cache` on `index.html`.
+
+Anywhere else, the equivalent one-liner:
+
+```nginx
+# Nginx
+location / { try_files $uri $uri/ /index.html; }
+```
+
+```apache
+# Apache — .htaccess
+FallbackResource /index.html
+```
+
+## Page titles
+
+Routes declare their own metadata through the router's `head` option, rendered
+by `<HeadContent />` in the root layout. Helpers live in `src/lib/seo.ts`:
+
+- `pageHead({ title, description })` — any route; omit the title for the
+  landing page, which owns the bare brand string.
+- `consoleHead(segment)` — console pages. The title is read from
+  `nav-config.ts`, the same source as the sidebar and breadcrumb, so a renamed
+  nav item cannot leave a stale title behind.
+- `useDocumentTitle(title)` — for a title only known after data resolves, like
+  the workflow detail page. `head` runs outside React and sees only params.
+
+A new route with no `head` inherits the root's, so it degrades to the brand
+title rather than keeping the previous page's.
+
+The app is client-rendered with no prerender step, so this fixes tabs, history,
+and bookmarks, and covers crawlers that execute JS. Social unfurlers (Slack,
+Twitter) do not run JS and still read the static tags in `index.html` — giving
+them per-route previews would need prerendering.
+
 ## Conventions
 
 - **Motion honours `prefers-reduced-motion`, always.** Use `useReducedMotion()`

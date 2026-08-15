@@ -4,8 +4,12 @@ import { PageHeader } from '@/components/dashboard/primitives';
 import { Pill, ResourceTable, type Column } from '@/components/dashboard/resource-table';
 import { INVOICES, formatDate, type Invoice } from '@/lib/mock-resources';
 import { formatUsd } from '@/lib/mock-data';
+import { consoleHead } from '@/lib/seo';
 
-export const Route = createFileRoute('/dashboard/invoices')({ component: InvoicesPage });
+export const Route = createFileRoute('/dashboard/invoices')({
+  component: InvoicesPage,
+  head: () => consoleHead('invoices'),
+});
 
 const STATUS_COLOR: Record<Invoice['status'], string | undefined> = {
   paid: 'var(--status-good)',

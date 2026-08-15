@@ -1,13 +1,17 @@
-import { createRootRoute, Link, Outlet } from '@tanstack/react-router';
+import { createRootRoute, HeadContent, Link, Outlet } from '@tanstack/react-router';
 import { accentChain } from 'glimm';
 import { GlimmProvider } from 'glimm/react';
 import { AuthProvider } from '@/lib/auth';
 import { DataProvider } from '@/lib/store';
 import { ToastProvider } from '@/components/ui/toast';
+import { pageHead } from '@/lib/seo';
 
 export const Route = createRootRoute({
   component: RootLayout,
   notFoundComponent: NotFound,
+  // The floor every route overrides. Without it, a route that declares no
+  // head of its own would inherit whatever the previous route left behind.
+  head: () => pageHead(),
 });
 
 /**
@@ -38,6 +42,8 @@ function RootLayout() {
           swellAmount={0.6}
         >
           <ToastProvider>
+            {/* Applies each route's `head` to the document. */}
+            <HeadContent />
             <Outlet />
           </ToastProvider>
         </GlimmProvider>

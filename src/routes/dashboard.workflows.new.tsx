@@ -10,8 +10,10 @@ import { PageHeader, Panel } from '@/components/dashboard/primitives';
 import { PROJECTS, type Runtime } from '@/lib/mock-data';
 import { useData } from '@/lib/store';
 import { cn } from '@/lib/utils';
+import { pageHead } from '@/lib/seo';
 
 export const Route = createFileRoute('/dashboard/workflows/new')({
+  head: () => pageHead({ title: 'New workflow' }),
   component: NewFunctionPage,
 });
 

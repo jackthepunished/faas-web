@@ -14,8 +14,10 @@ import {
   formatUsd,
   type RangeKey,
 } from '@/lib/mock-data';
+import { consoleHead } from '@/lib/seo';
 
 export const Route = createFileRoute('/dashboard/usage')({
+  head: () => consoleHead('usage'),
   component: UsagePage,
 });
 

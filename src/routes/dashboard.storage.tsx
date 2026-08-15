@@ -5,8 +5,12 @@ import { PageHeader } from '@/components/dashboard/primitives';
 import { Pill, ResourceTable, type Column } from '@/components/dashboard/resource-table';
 import { BUCKETS, formatBytes, formatDate, type Bucket } from '@/lib/mock-resources';
 import { formatCompact } from '@/lib/mock-data';
+import { consoleHead } from '@/lib/seo';
 
-export const Route = createFileRoute('/dashboard/storage')({ component: StoragePage });
+export const Route = createFileRoute('/dashboard/storage')({
+  component: StoragePage,
+  head: () => consoleHead('storage'),
+});
 
 const COLUMNS: Column<Bucket>[] = [
   { key: 'name', label: 'Bucket', render: (b) => <span className="font-mono">{b.name}</span> },

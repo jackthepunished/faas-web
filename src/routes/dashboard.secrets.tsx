@@ -5,8 +5,12 @@ import { PageHeader } from '@/components/dashboard/primitives';
 import { Pill, ResourceTable, type Column } from '@/components/dashboard/resource-table';
 import { SECRETS, type Secret } from '@/lib/mock-resources';
 import { formatRelative, getWorkflow } from '@/lib/mock-data';
+import { consoleHead } from '@/lib/seo';
 
-export const Route = createFileRoute('/dashboard/secrets')({ component: SecretsPage });
+export const Route = createFileRoute('/dashboard/secrets')({
+  component: SecretsPage,
+  head: () => consoleHead('secrets'),
+});
 
 const COLUMNS: Column<Secret>[] = [
   {

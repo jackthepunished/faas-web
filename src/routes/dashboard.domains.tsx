@@ -5,8 +5,12 @@ import { PageHeader } from '@/components/dashboard/primitives';
 import { Pill, ResourceTable, type Column } from '@/components/dashboard/resource-table';
 import { DOMAINS, formatDate, type Domain } from '@/lib/mock-resources';
 import { getWorkflow } from '@/lib/mock-data';
+import { consoleHead } from '@/lib/seo';
 
-export const Route = createFileRoute('/dashboard/domains')({ component: DomainsPage });
+export const Route = createFileRoute('/dashboard/domains')({
+  component: DomainsPage,
+  head: () => consoleHead('domains'),
+});
 
 const TLS_COLOR: Record<Domain['tls'], string> = {
   active: 'var(--status-good)',
