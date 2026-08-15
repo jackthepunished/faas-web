@@ -126,7 +126,11 @@ function KeysPage() {
         ) : (
           <ul className="flex flex-col divide-y divide-border">
             {keys.map((k) => (
-              <KeyRow key={k.id} apiKey={k} onRevoke={(id) => setPendingRevoke(keys.find((x) => x.id === id) ?? null)} />
+              <KeyRow
+                key={k.id}
+                apiKey={k}
+                onRevoke={(id) => setPendingRevoke(keys.find((x) => x.id === id) ?? null)}
+              />
             ))}
           </ul>
         )}

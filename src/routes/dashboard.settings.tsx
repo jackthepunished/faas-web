@@ -172,7 +172,10 @@ function SettingsPage() {
       <Panel title="Runtime behavior">
         <ul className="flex flex-col divide-y divide-border">
           {TOGGLES.map((t) => (
-            <li key={t.id} className="flex items-start justify-between gap-6 py-4 first:pt-0 last:pb-0">
+            <li
+              key={t.id}
+              className="flex items-start justify-between gap-6 py-4 first:pt-0 last:pb-0"
+            >
               <div>
                 <p className="text-sm font-medium">{t.label}</p>
                 <p className="mt-1 max-w-lg text-xs leading-relaxed text-muted-foreground">

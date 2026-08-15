@@ -1,4 +1,4 @@
-import { useChartPart } from "./chart-context"
+import { useChartPart } from './chart-context';
 
 /**
  * A horizontal marker line at a value on the y-axis — most useful as the zero
@@ -9,19 +9,19 @@ import { useChartPart } from "./chart-context"
 export function ReferenceLine({
   y = 0,
   label,
-  strokeDasharray = "4 4",
-  className = "stroke-muted-foreground/60",
+  strokeDasharray = '4 4',
+  className = 'stroke-muted-foreground/60',
 }: {
-  y?: number
-  label?: string
-  strokeDasharray?: string
-  className?: string
+  y?: number;
+  label?: string;
+  strokeDasharray?: string;
+  className?: string;
 }) {
-  const ctx = useChartPart("ReferenceLine")
-  if (!ctx.ready) return null
+  const ctx = useChartPart('ReferenceLine');
+  if (!ctx.ready) return null;
 
-  const { width } = ctx.plot
-  const py = ctx.y(y)
+  const { width } = ctx.plot;
+  const py = ctx.y(y);
 
   return (
     <g>
@@ -44,5 +44,5 @@ export function ReferenceLine({
         </text>
       ) : null}
     </g>
-  )
+  );
 }

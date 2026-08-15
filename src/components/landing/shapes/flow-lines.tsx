@@ -44,8 +44,7 @@ function streamline(sx: number, sy: number): string | null {
   const pts = [...halves[1].reverse(), [sx, sy] as [number, number], ...halves[0]];
   if (pts.length < 8) return null;
   return (
-    'M' +
-    pts.map(([x, y]) => `${Math.round(x * 10) / 10},${Math.round(y * 10) / 10}`).join('L')
+    'M' + pts.map(([x, y]) => `${Math.round(x * 10) / 10},${Math.round(y * 10) / 10}`).join('L')
   );
 }
 

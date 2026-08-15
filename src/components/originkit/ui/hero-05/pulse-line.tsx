@@ -4,7 +4,7 @@
 //   gap: 22
 //   scale: 2
 
-import { useEffect, useRef, useState, useId, type CSSProperties } from "react";
+import { useEffect, useRef, useState, useId, type CSSProperties } from 'react';
 
 interface ColorsValue {
   paletteCount?: number;
@@ -12,9 +12,9 @@ interface ColorsValue {
 }
 
 interface WaveBgProps {
-  shape?: "line" | "circle" | "square";
+  shape?: 'line' | 'circle' | 'square';
   cornerRadius?: number;
-  type?: "vertical" | "horizontal";
+  type?: 'vertical' | 'horizontal';
   speed?: number;
   lineWidth?: number;
   gap?: number;
@@ -34,26 +34,26 @@ interface Rgb {
 function parseColor(input?: string): Rgb {
   if (!input) return { r: 255, g: 255, b: 255 };
   const s = input.trim();
-  if (s[0] === "#") {
+  if (s[0] === '#') {
     let h = s.slice(1);
     if (h.length === 3)
       h = h
-        .split("")
+        .split('')
         .map((c) => c + c)
-        .join("");
+        .join('');
     const n = parseInt(h.slice(0, 6), 16);
     return { r: (n >> 16) & 255, g: (n >> 8) & 255, b: n & 255 };
   }
   const m = s.match(/rgba?\(([^)]+)\)/i);
   if (m) {
-    const p = m[1].split(",").map((v) => parseFloat(v));
+    const p = m[1].split(',').map((v) => parseFloat(v));
     return { r: p[0] || 0, g: p[1] || 0, b: p[2] || 0 };
   }
   return { r: 255, g: 255, b: 255 };
 }
 
 function paletteAt(colors: string[], p: number): string {
-  if (colors.length === 0) return "rgb(255, 255, 255)";
+  if (colors.length === 0) return 'rgb(255, 255, 255)';
   if (colors.length === 1) return colors[0];
   const scaled = Math.max(0, Math.min(1, p)) * (colors.length - 1);
   const i = Math.floor(scaled);
@@ -61,50 +61,44 @@ function paletteAt(colors: string[], p: number): string {
   const a = parseColor(colors[i]);
   const b = parseColor(colors[Math.min(i + 1, colors.length - 1)]);
   return `rgb(${Math.round(a.r + (b.r - a.r) * f)}, ${Math.round(
-    a.g + (b.g - a.g) * f,
+    a.g + (b.g - a.g) * f
   )}, ${Math.round(a.b + (b.b - a.b) * f)})`;
 }
 
 const useInstanceId = () => {
   const id = useId();
-  const cleanId = id.replace(/:/g, "");
+  const cleanId = id.replace(/:/g, '');
   return `wave-bg-${cleanId}`;
 };
 
 export default function WaveBg({
-  shape = "line",
+  shape = 'line',
   cornerRadius = 0,
-  type = "vertical",
+  type = 'vertical',
   speed = 99,
   lineWidth = 2,
   gap = 30,
   scale = 2.5,
-  backgroundColor = "#000000",
+  backgroundColor = '#000000',
   style,
   colors: colorsProp = {
     paletteCount: 1,
-    color1: "#FFFFFF",
-    color2: "#FFFFFF",
-    color3: "#FFFFFF",
-    color4: "#FFFFFF",
-    color5: "#FFFFFF",
+    color1: '#FFFFFF',
+    color2: '#FFFFFF',
+    color3: '#FFFFFF',
+    color4: '#FFFFFF',
+    color5: '#FFFFFF',
   },
-  lineColor = "#222222",
+  lineColor = '#222222',
 }: WaveBgProps) {
   const instanceId = useInstanceId();
-  const horizontal = type === "horizontal";
+  const horizontal = type === 'horizontal';
 
   const maxRadius = lineWidth / 2;
-  const r =
-    shape === "square" ? Math.max(0, Math.min(cornerRadius, maxRadius)) : 0;
-  const strokeLinecap =
-    shape === "circle" || (shape === "square" && r > 0) ? "round" : "butt";
+  const r = shape === 'square' ? Math.max(0, Math.min(cornerRadius, maxRadius)) : 0;
+  const strokeLinecap = shape === 'circle' || (shape === 'square' && r > 0) ? 'round' : 'butt';
   const dashWidth =
-    shape === "line"
-      ? 10 * scale
-      : shape === "circle"
-        ? 0.01
-        : Math.max(0.01, lineWidth - 2 * r);
+    shape === 'line' ? 10 * scale : shape === 'circle' ? 0.01 : Math.max(0.01, lineWidth - 2 * r);
 
   const palette: string[] = (() => {
     const entries: string[] = [];
@@ -112,11 +106,10 @@ export default function WaveBg({
       const count = Math.max(1, Math.min(5, colorsProp.paletteCount || 1));
       for (let i = 1; i <= count; i++) {
         const v = colorsProp[`color${i}`];
-        if (typeof v === "string" && v.trim().length > 0)
-          entries.push(v.trim());
+        if (typeof v === 'string' && v.trim().length > 0) entries.push(v.trim());
       }
     }
-    return entries.length ? entries : ["#FFFFFF"];
+    return entries.length ? entries : ['#FFFFFF'];
   })();
 
   const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
@@ -173,10 +166,10 @@ export default function WaveBg({
     <div
       ref={containerRef}
       style={{
-        overflow: "hidden",
-        position: "relative",
-        width: "100%",
-        height: "100%",
+        overflow: 'hidden',
+        position: 'relative',
+        width: '100%',
+        height: '100%',
         minWidth: 0,
         minHeight: 0,
         backgroundColor,
@@ -186,12 +179,12 @@ export default function WaveBg({
       <style>{styleContent}</style>
       <svg
         style={{
-          position: "absolute",
-          left: "0",
-          top: "0",
-          width: "100%",
-          height: "100%",
-          pointerEvents: "none",
+          position: 'absolute',
+          left: '0',
+          top: '0',
+          width: '100%',
+          height: '100%',
+          pointerEvents: 'none',
         }}
         viewBox={`0 0 ${dimensions.width} ${dimensions.height}`}
         preserveAspectRatio="none"
@@ -211,8 +204,8 @@ export default function WaveBg({
             <g
               style={
                 {
-                  "--delay": `${(delayFactor * speed) / 50}s`,
-                  "--pulse": pulse,
+                  '--delay': `${(delayFactor * speed) / 50}s`,
+                  '--pulse': pulse,
                 } as CSSProperties
               }
               key={i}

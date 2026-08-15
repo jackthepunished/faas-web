@@ -3,13 +3,7 @@ import { createFileRoute, Link, useNavigate } from '@tanstack/react-router';
 import { ArrowDown, ArrowUp, Plus, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { EmptyState, PageHeader, StateBadge } from '@/components/dashboard/primitives';
-import {
-  PROJECTS,
-  formatCompact,
-  formatMs,
-  formatRelative,
-  type RunState,
-} from '@/lib/mock-data';
+import { PROJECTS, formatCompact, formatMs, formatRelative, type RunState } from '@/lib/mock-data';
 import { useData } from '@/lib/store';
 import { cn } from '@/lib/utils';
 
@@ -162,11 +156,7 @@ function FunctionsPage() {
                         key={col.key}
                         scope="col"
                         aria-sort={
-                          isSorted
-                            ? sort.dir === 'asc'
-                              ? 'ascending'
-                              : 'descending'
-                            : 'none'
+                          isSorted ? (sort.dir === 'asc' ? 'ascending' : 'descending') : 'none'
                         }
                         className={cn('px-4 py-3', col.numeric && 'text-right')}
                       >

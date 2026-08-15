@@ -38,20 +38,20 @@ export function Pricing() {
           <PixelBeams className="-inset-x-10 -top-24 -bottom-28" />
 
           <div className="relative grid gap-3 sm:grid-cols-3">
-          {METERS.map((meter, i) => (
-            <motion.div
-              key={meter.label}
-              initial={{ opacity: 0, y: 16 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true, margin: '-60px' }}
-              transition={{ duration: 0.6, delay: i * 0.08, ease: EASE }}
-              className="rounded-lg border border-border bg-card/80 p-6 backdrop-blur-lg"
-            >
-              <p className="label-mono text-muted-foreground">{meter.label}</p>
-              <p className="mt-3 font-mono text-2xl font-medium tracking-tight">{meter.value}</p>
-              <p className="mt-1 text-xs text-muted-foreground">{meter.unit}</p>
-            </motion.div>
-          ))}
+            {METERS.map((meter, i) => (
+              <motion.div
+                key={meter.label}
+                initial={{ opacity: 0, y: 16 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true, margin: '-60px' }}
+                transition={{ duration: 0.6, delay: i * 0.08, ease: EASE }}
+                className="rounded-lg border border-border bg-card/80 p-6 backdrop-blur-lg"
+              >
+                <p className="label-mono text-muted-foreground">{meter.label}</p>
+                <p className="mt-3 font-mono text-2xl font-medium tracking-tight">{meter.value}</p>
+                <p className="mt-1 text-xs text-muted-foreground">{meter.unit}</p>
+              </motion.div>
+            ))}
           </div>
         </div>
 

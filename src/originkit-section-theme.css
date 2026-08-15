@@ -9,8 +9,8 @@
  */
 
 @theme {
-  --font-tight: "Inter Tight", Inter, sans-serif;
-  --font-helvetica-neue: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  --font-tight: 'Inter Tight', Inter, sans-serif;
+  --font-helvetica-neue: 'Helvetica Neue', Helvetica, Arial, sans-serif;
   --font-aeonik: Inter, ui-sans-serif, sans-serif;
 
   --breakpoint-android-sm: 360px;

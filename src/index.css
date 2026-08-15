@@ -1,6 +1,6 @@
 /* IBM Plex type system — see index.html for the font loads. */
 @import 'tailwindcss';
-@import "./originkit-section-theme.css";
+@import './originkit-section-theme.css';
 @import 'tw-animate-css';
 
 @custom-variant dark (&:is(.dark *));
@@ -36,6 +36,13 @@
    #090909 in the console — the polarity flips, the relationship does not.
    ------------------------------------------------------------------------- */
 :root {
+  /* Declares the polarity to the UA, not just to our own components: it is
+     what makes the scrollbar, the text caret, and native form controls follow
+     the surface. Without it the dark console gets a white scrollbar gutter
+     and a light-mode caret, which is the one part of the theme our tokens
+     cannot reach. */
+  color-scheme: light;
+
   --background: #fbfcfb;
   --foreground: #0d1512;
   --card: #ffffff;
@@ -107,6 +114,8 @@
    Only the token values change — no component knows which polarity it is in.
    ------------------------------------------------------------------------- */
 .console {
+  color-scheme: dark;
+
   --background: #090909;
   --foreground: #ffffff;
   --card: #0d0d0d;
@@ -396,6 +405,31 @@
       transparent
     );
     color: var(--brand);
+  }
+
+  /* Route-pending dots. Opacity only — no transform — so the three dots hold
+     their baseline and read as a pulse rather than a bounce. Reduced motion
+     is covered by the `[class*='animate-']` rule above only for animate-*
+     utilities, so this one states its own. */
+  .route-pending-dot {
+    animation: route-pending-pulse 1.1s ease-in-out infinite;
+  }
+
+  @keyframes route-pending-pulse {
+    0%,
+    100% {
+      opacity: 0.25;
+    }
+    50% {
+      opacity: 1;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .route-pending-dot {
+      animation: none;
+      opacity: 0.6;
+    }
   }
 
   /* Plex Mono as the label voice: eyebrows, section kickers, metrics. */

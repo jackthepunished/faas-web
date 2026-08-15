@@ -1,6 +1,6 @@
 import { useMemo, useState, type ReactNode } from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
-import { ArrowDown, ArrowUp, Search } from 'lucide-react';
+import { ArrowDown, ArrowUp, Search, X } from 'lucide-react';
 import { EmptyState } from './primitives';
 import { EASE } from './motion';
 import { cn } from '@/lib/utils';
@@ -69,7 +69,11 @@ export function ResourceTable<T extends { id: string }>({
     const filtered =
       q && stableSearchKeys.length
         ? rows.filter((row) =>
-            stableSearchKeys.some((k) => String(row[k] ?? '').toLowerCase().includes(q))
+            stableSearchKeys.some((k) =>
+              String(row[k] ?? '')
+                .toLowerCase()
+                .includes(q)
+            )
           )
         : rows;
 
@@ -100,15 +104,40 @@ export function ResourceTable<T extends { id: string }>({
             <label className="relative flex min-w-56 flex-1 items-center sm:max-w-xs">
               <Search className="pointer-events-none absolute left-3 h-3.5 w-3.5 text-muted-foreground" />
               <input
+                type="search"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
+                // Escape clears without leaving the field, so refining a
+                // filter never means select-all-and-delete.
+                onKeyDown={(e) => {
+                  if (e.key === 'Escape' && query) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    setQuery('');
+                  }
+                }}
                 placeholder={searchPlaceholder}
-                className="h-9 w-full rounded-lg border border-border bg-card pl-9 pr-3 text-sm outline-none transition-colors placeholder:text-muted-foreground focus:border-brand/50"
+                className="h-9 w-full rounded-lg border border-border bg-card pl-9 pr-9 text-sm outline-none transition-colors placeholder:text-muted-foreground focus:border-brand/50 [&::-webkit-search-cancel-button]:appearance-none"
               />
+              {query && (
+                <button
+                  type="button"
+                  aria-label="Clear filter"
+                  onClick={() => setQuery('')}
+                  className="absolute right-2 rounded p-1 text-muted-foreground transition-colors hover:text-foreground"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              )}
             </label>
           ) : null}
           {filters}
-          <span className="ml-auto text-xs text-muted-foreground [font-variant-numeric:tabular-nums]">
+          {/* Announced, so a screen-reader user filtering the table hears the
+              result count change instead of typing into silence. */}
+          <span
+            aria-live="polite"
+            className="ml-auto text-xs text-muted-foreground [font-variant-numeric:tabular-nums]"
+          >
             {visible.length} of {rows.length}
           </span>
         </div>
@@ -226,9 +255,7 @@ export function Pill({ label, color }: { label: string; color?: string }) {
         !color && 'border-border text-muted-foreground'
       )}
       style={
-        color
-          ? { borderColor: `color-mix(in oklab, ${color} 35%, transparent)`, color }
-          : undefined
+        color ? { borderColor: `color-mix(in oklab, ${color} 35%, transparent)`, color } : undefined
       }
     >
       {label}

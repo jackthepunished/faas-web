@@ -87,8 +87,7 @@ export function useShaderCanvas({
       depth: false,
       stencil: false,
       powerPreference: 'low-power',
-    }) ||
-      canvas.getContext('experimental-webgl')) as WebGLRenderingContext | null;
+    }) || canvas.getContext('experimental-webgl')) as WebGLRenderingContext | null;
 
     if (!gl) {
       setSupported(false);

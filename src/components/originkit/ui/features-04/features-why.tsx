@@ -1,7 +1,7 @@
-import { FeatureCard, Plate, WideCard } from "@/components/originkit/ui/features-04/cards";
-import { CornerBlocks } from "@/components/originkit/ui/features-04/corner-blocks";
-import { EdgeDotBands } from "@/components/originkit/ui/features-04/edge-dot-bands";
-import { GridColumns, GridRows } from "@/components/originkit/ui/features-04/grid-pattern";
+import { FeatureCard, Plate, WideCard } from '@/components/originkit/ui/features-04/cards';
+import { CornerBlocks } from '@/components/originkit/ui/features-04/corner-blocks';
+import { EdgeDotBands } from '@/components/originkit/ui/features-04/edge-dot-bands';
+import { GridColumns, GridRows } from '@/components/originkit/ui/features-04/grid-pattern';
 
 function asset(file: string) {
   return `/originkit/features-04/${file}`;
@@ -38,44 +38,44 @@ const DesktopGlow = () => (
 );
 
 const AVATARS = [
-  { src: asset("avatar-1.webp"), alt: "" },
-  { src: asset("avatar-2.webp"), alt: "" },
-  { src: asset("avatar-3.webp"), alt: "" },
+  { src: asset('avatar-1.webp'), alt: '' },
+  { src: asset('avatar-2.webp'), alt: '' },
+  { src: asset('avatar-3.webp'), alt: '' },
 ];
 
 const FEATURES = {
   focus: {
-    title: "Isolate",
-    body: "Every function runs in its own hardware-isolated microVM with locked-down defaults — no shared kernels, no noisy neighbors.",
+    title: 'Isolate',
+    body: 'Every function runs in its own hardware-isolated microVM with locked-down defaults — no shared kernels, no noisy neighbors.',
     art: {
-      src: asset("focus.webp"),
-      alt: "An isometric cube rendered in ASCII characters",
-      boxClassName: "h-[166px] w-[180px] ipad:h-[196px] ipad:w-[212px]",
+      src: asset('focus.webp'),
+      alt: 'An isometric cube rendered in ASCII characters',
+      boxClassName: 'h-[166px] w-[180px] ipad:h-[196px] ipad:w-[212px]',
       artClassName:
-        "top-[-29.98px] left-[-30.13px] h-[242.3px] w-[242.3px] ipad:top-[-35.4px] ipad:left-[-35.49px] ipad:h-[285.4px] ipad:w-[285.4px]",
+        'top-[-29.98px] left-[-30.13px] h-[242.3px] w-[242.3px] ipad:top-[-35.4px] ipad:left-[-35.49px] ipad:h-[285.4px] ipad:w-[285.4px]',
     },
   },
   connect: {
-    title: "Connect",
-    body: "Functions, databases, buckets, and domains wire themselves together — no glue code, no hand-built networking.",
+    title: 'Connect',
+    body: 'Functions, databases, buckets, and domains wire themselves together — no glue code, no hand-built networking.',
     art: {
-      src: asset("connect.webp"),
-      alt: "Interlocking isometric blocks rendered in ASCII characters",
-      boxClassName: "h-[166px] w-[198px] ipad:h-[196px] ipad:w-[234px]",
+      src: asset('connect.webp'),
+      alt: 'Interlocking isometric blocks rendered in ASCII characters',
+      boxClassName: 'h-[166px] w-[198px] ipad:h-[196px] ipad:w-[234px]',
       artClassName:
-        "top-[-7.55px] left-[7.44px] h-[179.8px] w-[194.2px] ipad:top-[-8.91px] ipad:left-[8.79px] ipad:h-[212.3px] ipad:w-[229.5px]",
+        'top-[-7.55px] left-[7.44px] h-[179.8px] w-[194.2px] ipad:top-[-8.91px] ipad:left-[8.79px] ipad:h-[212.3px] ipad:w-[229.5px]',
     },
   },
   scale: {
-    title: "Scale",
-    body: "From one function to a bare-metal fleet — everything scales to zero when idle and wakes from a snapshot when traffic returns.",
+    title: 'Scale',
+    body: 'From one function to a bare-metal fleet — everything scales to zero when idle and wakes from a snapshot when traffic returns.',
     art: {
-      src: asset("scale.webp"),
-      alt: "A rising staircase of isometric blocks rendered in ASCII characters",
+      src: asset('scale.webp'),
+      alt: 'A rising staircase of isometric blocks rendered in ASCII characters',
       boxClassName:
-        "h-[166px] w-[173px] ipad:h-[213px] ipad:w-[223px] desktop-sm:h-[271px] desktop-sm:w-[283px]",
+        'h-[166px] w-[173px] ipad:h-[213px] ipad:w-[223px] desktop-sm:h-[271px] desktop-sm:w-[283px]',
       artClassName:
-        "top-[-21.83px] left-[-60.63px] h-[209.8px] w-[279.7px] ipad:top-[-28.01px] ipad:left-[-78.15px] ipad:h-[269.2px] ipad:w-[360.5px] desktop-sm:top-[-35.64px] desktop-sm:left-[-99.18px] desktop-sm:h-[342.5px] desktop-sm:w-[457.5px]",
+        'top-[-21.83px] left-[-60.63px] h-[209.8px] w-[279.7px] ipad:top-[-28.01px] ipad:left-[-78.15px] ipad:h-[269.2px] ipad:w-[360.5px] desktop-sm:top-[-35.64px] desktop-sm:left-[-99.18px] desktop-sm:h-[342.5px] desktop-sm:w-[457.5px]',
     },
   },
 };
@@ -99,11 +99,7 @@ export const FeaturesWhy = () => (
       <div className="relative mx-auto flex w-[71.22%] max-w-[286.301px] flex-col items-center gap-[32px] pb-[81px] ipad:w-[80.51%] ipad:max-w-[599px] ipad:gap-[52px] ipad:pb-[104px] desktop-sm:w-[82.78%] desktop-sm:max-w-[1192px] desktop-sm:gap-[72px] desktop-sm:pb-[62px]">
         <header className="flex w-full flex-col items-center gap-[20px] ipad:w-[502px]">
           <div className="flex items-center gap-[8px] rounded-[100px] bg-secondary px-[14px] py-[12px]">
-            <img
-              src={asset("flame.svg")}
-              alt=""
-              className="size-[16px] ipad:size-[18px]"
-            />
+            <img src={asset('flame.svg')} alt="" className="size-[16px] ipad:size-[18px]" />
             <span className="font-tight text-[12px] leading-[1.2] font-medium tracking-[-0.24px] whitespace-nowrap text-black ipad:text-[14px] ipad:tracking-[-0.28px]">
               Why Gregale
             </span>
@@ -131,9 +127,7 @@ export const FeaturesWhy = () => (
                       width={32}
                       height={32}
                       className={`size-[32px] shrink-0 rounded-full desktop-sm:size-[42px] ${
-                        index < AVATARS.length - 1
-                          ? "mr-[-15.238px] desktop-sm:mr-[-20px]"
-                          : ""
+                        index < AVATARS.length - 1 ? 'mr-[-15.238px] desktop-sm:mr-[-20px]' : ''
                       }`}
                     />
                   ))}
@@ -150,11 +144,7 @@ export const FeaturesWhy = () => (
               <FeatureCard {...FEATURES.connect} />
 
               <Plate innerClassName="h-[76px] items-center gap-[12px] px-[20px] py-[12px]">
-                <img
-                  src={asset("pie-chart.svg")}
-                  alt=""
-                  className="size-[24px] shrink-0"
-                />
+                <img src={asset('pie-chart.svg')} alt="" className="size-[24px] shrink-0" />
                 <p className="font-tight text-[16px] leading-[1.2] font-medium text-black desktop-sm:text-[18px]">
                   &lt;350ms p50 Cold Starts
                 </p>

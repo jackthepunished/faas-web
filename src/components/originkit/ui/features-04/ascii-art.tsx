@@ -1,6 +1,6 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from 'react';
 
-import AsciiImage from "@/components/originkit/ui/features-04/ascii-reveal";
+import AsciiImage from '@/components/originkit/ui/features-04/ascii-reveal';
 
 /**
  * Card artwork — source PNGs are fed through the ascii-reveal canvas so
@@ -41,12 +41,7 @@ interface AsciiArtProps {
   artClassName: string;
 }
 
-export const AsciiArt = ({
-  src,
-  alt,
-  boxClassName,
-  artClassName,
-}: AsciiArtProps) => {
+export const AsciiArt = ({ src, alt, boxClassName, artClassName }: AsciiArtProps) => {
   const artRef = useRef<HTMLDivElement>(null);
   const [width, setWidth] = useState(0);
 
@@ -61,9 +56,7 @@ export const AsciiArt = ({
   }, []);
 
   return (
-    <div
-      className={`relative max-w-full shrink-0 overflow-hidden ${boxClassName}`}
-    >
+    <div className={`relative max-w-full shrink-0 overflow-hidden ${boxClassName}`}>
       <div ref={artRef} className={`absolute ${artClassName}`}>
         {width > 0 && (
           <AsciiImage

@@ -1,7 +1,7 @@
-import { GlowBackground } from "@/components/originkit/ui/hero-05/glow-background";
-import { HeroContent } from "@/components/originkit/ui/hero-05/hero-content";
-import { PulseStage } from "@/components/originkit/ui/hero-05/pulse-stage";
-import { DashboardCard } from "@/components/landing/dashboard-preview";
+import { GlowBackground } from '@/components/originkit/ui/hero-05/glow-background';
+import { HeroContent } from '@/components/originkit/ui/hero-05/hero-content';
+import { PulseStage } from '@/components/originkit/ui/hero-05/pulse-stage';
+import { DashboardCard } from '@/components/landing/dashboard-preview';
 
 export const Section14Hero = () => {
   return (

@@ -133,7 +133,11 @@ function FunctionDetailPage() {
       </a>
 
       {/* Tabs */}
-      <div role="tablist" aria-label="Function detail" className="flex gap-1 border-b border-border">
+      <div
+        role="tablist"
+        aria-label="Function detail"
+        className="flex gap-1 border-b border-border"
+      >
         {TABS.map((t, i) => (
           <button
             key={t}
@@ -166,127 +170,129 @@ function FunctionDetailPage() {
         aria-labelledby={`${tabsId}-tab-${tab}`}
         className="flex flex-col gap-6"
       >
+        {tab === 'Metrics' && (
+          <div className="flex flex-col gap-6">
+            <div className="flex justify-end">
+              <RangeSelector
+                value={range}
+                onChange={setRange}
+                options={RANGES.map((r) => ({ key: r.key, label: r.key }))}
+              />
+            </div>
 
-      {tab === 'Metrics' && (
-        <div className="flex flex-col gap-6">
-          <div className="flex justify-end">
-            <RangeSelector
-              value={range}
-              onChange={setRange}
-              options={RANGES.map((r) => ({ key: r.key, label: r.key }))}
-            />
+            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+              <StatTile
+                label="Invocations"
+                value={formatCompact(totalInvocations)}
+                series={series.map((s) => s.invocations)}
+              />
+              <StatTile
+                label="Cold starts"
+                value={formatCompact(coldStarts)}
+                series={series.map((s) => s.coldStarts)}
+                color="var(--chart-3)"
+              />
+              <StatTile label="Cold start p50" value={formatMs(fn.coldStartP50Ms)} />
+              <StatTile
+                label="Error rate"
+                value={fn.errorRatePct.toFixed(2)}
+                unit="%"
+                series={series.map((s) => s.errors)}
+                color="var(--chart-2)"
+                deltaGood={false}
+              />
+            </div>
+
+            <Panel title="Response latency" description="Percentile distribution over time">
+              <PercentileChart data={series} range={range} />
+            </Panel>
+
+            <Panel title="Invocations">
+              <AreaChart data={series} range={range} metric="invocations" label="invocations" />
+            </Panel>
           </div>
+        )}
 
-          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-            <StatTile
-              label="Invocations"
-              value={formatCompact(totalInvocations)}
-              series={series.map((s) => s.invocations)}
-            />
-            <StatTile
-              label="Cold starts"
-              value={formatCompact(coldStarts)}
-              series={series.map((s) => s.coldStarts)}
-              color="var(--chart-3)"
-            />
-            <StatTile label="Cold start p50" value={formatMs(fn.coldStartP50Ms)} />
-            <StatTile
-              label="Error rate"
-              value={fn.errorRatePct.toFixed(2)}
-              unit="%"
-              series={series.map((s) => s.errors)}
-              color="var(--chart-2)"
-              deltaGood={false}
-            />
-          </div>
-
-          <Panel title="Response latency" description="Percentile distribution over time">
-            <PercentileChart data={series} range={range} />
-          </Panel>
-
-          <Panel title="Invocations">
-            <AreaChart data={series} range={range} metric="invocations" label="invocations" />
-          </Panel>
-        </div>
-      )}
-
-      {tab === 'Deployments' && (
-        <Panel title="Deployment history" description={`${deployments.length} deployments`}>
-          <ul className="flex flex-col divide-y divide-border">
-            {deployments.map((dep) => (
-              <li key={dep.id} className="flex flex-wrap items-center gap-3 py-3 first:pt-0 last:pb-0">
-                <span
-                  className="h-1.5 w-1.5 shrink-0 rounded-full"
-                  style={{
-                    background:
-                      dep.state === 'succeeded'
-                        ? 'var(--status-good)'
-                        : dep.state === 'failed'
-                          ? 'var(--status-critical)'
-                          : 'var(--status-warning)',
-                  }}
-                />
-                <span className="font-mono text-xs text-muted-foreground">{dep.version}</span>
-                <span className="min-w-0 flex-1 truncate text-sm">{dep.message}</span>
-                <span className="font-mono text-xs text-muted-foreground">{dep.commit}</span>
-                <span className="text-xs text-muted-foreground">{dep.author}</span>
-                <span className="w-20 text-right text-xs text-muted-foreground [font-variant-numeric:tabular-nums]">
-                  {(dep.durationMs / 1000).toFixed(1)}s
-                </span>
-                <span className="w-16 text-right text-xs text-muted-foreground [font-variant-numeric:tabular-nums]">
-                  {formatRelative(dep.createdAt)}
-                </span>
-              </li>
-            ))}
-          </ul>
-        </Panel>
-      )}
-
-      {tab === 'Logs' && (
-        <Panel title="Recent logs" description={`Last ${logs.length} entries`}>
-          {logs.length === 0 ? (
-            <EmptyState message="No log entries in this window." />
-          ) : (
-            <ul className="flex flex-col gap-0.5 font-mono text-xs">
-              {logs.map((log) => (
+        {tab === 'Deployments' && (
+          <Panel title="Deployment history" description={`${deployments.length} deployments`}>
+            <ul className="flex flex-col divide-y divide-border">
+              {deployments.map((dep) => (
                 <li
-                  key={log.id}
-                  className="flex items-start gap-3 rounded px-2 py-1.5 transition-colors hover:bg-muted/50"
+                  key={dep.id}
+                  className="flex flex-wrap items-center gap-3 py-3 first:pt-0 last:pb-0"
                 >
-                  <span className="shrink-0 text-muted-foreground [font-variant-numeric:tabular-nums]">
-                    {formatClock(log.ts)}
+                  <span
+                    className="h-1.5 w-1.5 shrink-0 rounded-full"
+                    style={{
+                      background:
+                        dep.state === 'succeeded'
+                          ? 'var(--status-good)'
+                          : dep.state === 'failed'
+                            ? 'var(--status-critical)'
+                            : 'var(--status-warning)',
+                    }}
+                  />
+                  <span className="font-mono text-xs text-muted-foreground">{dep.version}</span>
+                  <span className="min-w-0 flex-1 truncate text-sm">{dep.message}</span>
+                  <span className="font-mono text-xs text-muted-foreground">{dep.commit}</span>
+                  <span className="text-xs text-muted-foreground">{dep.author}</span>
+                  <span className="w-20 text-right text-xs text-muted-foreground [font-variant-numeric:tabular-nums]">
+                    {(dep.durationMs / 1000).toFixed(1)}s
                   </span>
-                  <LevelTag level={log.level} />
-                  <span className="min-w-0 flex-1">{log.message}</span>
-                  <span className="shrink-0 text-muted-foreground [font-variant-numeric:tabular-nums]">
-                    {log.durationMs}ms
+                  <span className="w-16 text-right text-xs text-muted-foreground [font-variant-numeric:tabular-nums]">
+                    {formatRelative(dep.createdAt)}
                   </span>
                 </li>
               ))}
             </ul>
-          )}
-        </Panel>
-      )}
+          </Panel>
+        )}
 
-      {tab === 'Configuration' && (
-        <Panel title="Configuration">
-          <dl className="grid gap-x-8 gap-y-4 sm:grid-cols-2">
-            {[
-              ['Runtime', fn.runtime],
-              ['Memory', `${fn.memoryMb} MB`],
-              ['Region', fn.region],
-              ['Current version', fn.version],
-              ['Endpoint', fn.url],
-              ['Last deployed', formatRelative(fn.lastDeployedAt)],
-            ].map(([label, value]) => (
-              <div key={label} className="flex flex-col gap-1 border-b border-border pb-3">
-                <dt className="label-mono text-muted-foreground">{label}</dt>
-                <dd className="font-mono text-sm">{value}</dd>
-              </div>
-            ))}
-          </dl>
-        </Panel>
-      )}
+        {tab === 'Logs' && (
+          <Panel title="Recent logs" description={`Last ${logs.length} entries`}>
+            {logs.length === 0 ? (
+              <EmptyState message="No log entries in this window." />
+            ) : (
+              <ul className="flex flex-col gap-0.5 font-mono text-xs">
+                {logs.map((log) => (
+                  <li
+                    key={log.id}
+                    className="flex items-start gap-3 rounded px-2 py-1.5 transition-colors hover:bg-muted/50"
+                  >
+                    <span className="shrink-0 text-muted-foreground [font-variant-numeric:tabular-nums]">
+                      {formatClock(log.ts)}
+                    </span>
+                    <LevelTag level={log.level} />
+                    <span className="min-w-0 flex-1">{log.message}</span>
+                    <span className="shrink-0 text-muted-foreground [font-variant-numeric:tabular-nums]">
+                      {log.durationMs}ms
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </Panel>
+        )}
+
+        {tab === 'Configuration' && (
+          <Panel title="Configuration">
+            <dl className="grid gap-x-8 gap-y-4 sm:grid-cols-2">
+              {[
+                ['Runtime', fn.runtime],
+                ['Memory', `${fn.memoryMb} MB`],
+                ['Region', fn.region],
+                ['Current version', fn.version],
+                ['Endpoint', fn.url],
+                ['Last deployed', formatRelative(fn.lastDeployedAt)],
+              ].map(([label, value]) => (
+                <div key={label} className="flex flex-col gap-1 border-b border-border pb-3">
+                  <dt className="label-mono text-muted-foreground">{label}</dt>
+                  <dd className="font-mono text-sm">{value}</dd>
+                </div>
+              ))}
+            </dl>
+          </Panel>
+        )}
       </div>
     </div>
   );

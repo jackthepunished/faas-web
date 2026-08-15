@@ -13,7 +13,11 @@ export interface BuildStage {
 export const DEPLOY_STAGES: BuildStage[] = [
   {
     label: 'Resolving source',
-    lines: ['fetching repository tree', 'detected runtime from manifest', 'lockfile unchanged — reusing cache'],
+    lines: [
+      'fetching repository tree',
+      'detected runtime from manifest',
+      'lockfile unchanged — reusing cache',
+    ],
     durationMs: 1400,
   },
   {
@@ -23,7 +27,11 @@ export const DEPLOY_STAGES: BuildStage[] = [
   },
   {
     label: 'Booting microVM',
-    lines: ['allocating 512 MB on fra-metal-1', 'kernel handoff complete in 41ms', 'PID1 reported ready'],
+    lines: [
+      'allocating 512 MB on fra-metal-1',
+      'kernel handoff complete in 41ms',
+      'PID1 reported ready',
+    ],
     durationMs: 1600,
   },
   {
@@ -106,8 +114,7 @@ export function BuildLog({
     i < current ? 'done' : i === current ? 'active' : 'pending';
 
   const progress = Math.min(100, (current / stages.length) * 100);
-  const status =
-    current >= stages.length ? 'Deployed' : `${stages[current]?.label ?? 'Starting'}…`;
+  const status = current >= stages.length ? 'Deployed' : `${stages[current]?.label ?? 'Starting'}…`;
 
   return (
     <div className="overflow-hidden rounded-xl border border-border bg-card">

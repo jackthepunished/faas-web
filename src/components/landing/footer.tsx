@@ -89,11 +89,7 @@ function CopyCommand() {
           copied ? 'bg-brand-muted' : 'bg-muted group-hover:bg-secondary'
         }`}
       >
-        {copied ? (
-          <Check className="h-3.5 w-3.5 text-brand" />
-        ) : (
-          <Copy className="h-3.5 w-3.5" />
-        )}
+        {copied ? <Check className="h-3.5 w-3.5 text-brand" /> : <Copy className="h-3.5 w-3.5" />}
       </span>
       <span aria-live="polite" className="sr-only">
         {copied ? 'Copied to clipboard' : ''}
@@ -170,7 +166,12 @@ export function Footer() {
             </p>
 
             <div className="relative mt-9 flex flex-col items-center justify-center gap-3 sm:flex-row">
-              <Button asChild variant="cta" size="lg" className="group h-11 gap-2 rounded-full px-7">
+              <Button
+                asChild
+                variant="cta"
+                size="lg"
+                className="group h-11 gap-2 rounded-full px-7"
+              >
                 <SweepLink to="/signup">
                   Start deploying
                   <ArrowRight className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-0.5" />
@@ -220,7 +221,11 @@ export function Footer() {
 
           {/* Link groups */}
           {LINK_GROUPS.map((group) => (
-            <nav key={group.title} aria-label={group.title} className="md:border-l md:border-border md:pl-6">
+            <nav
+              key={group.title}
+              aria-label={group.title}
+              className="md:border-l md:border-border md:pl-6"
+            >
               <h3 className="label-mono text-muted-foreground">{group.title}</h3>
               <ul className="mt-4 flex flex-col gap-2.5">
                 {group.links.map((link) => (

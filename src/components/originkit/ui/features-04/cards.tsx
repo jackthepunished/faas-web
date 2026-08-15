@@ -1,6 +1,6 @@
-import type { ReactNode } from "react";
+import type { ReactNode } from 'react';
 
-import { AsciiArt } from "@/components/originkit/ui/features-04/ascii-art";
+import { AsciiArt } from '@/components/originkit/ui/features-04/ascii-art';
 
 /**
  * Figma "Frame 2147261828" / "Frame 2147257816" — every tile in the column is
@@ -13,16 +13,14 @@ import { AsciiArt } from "@/components/originkit/ui/features-04/ascii-art";
  */
 export const Plate = ({
   children,
-  outerClassName = "",
+  outerClassName = '',
   innerClassName,
 }: {
   children: ReactNode;
   outerClassName?: string;
   innerClassName: string;
 }) => (
-  <div
-    className={`flex flex-col rounded-[20px] bg-secondary p-[8px] ${outerClassName}`}
-  >
+  <div className={`flex flex-col rounded-[20px] bg-secondary p-[8px] ${outerClassName}`}>
     <div
       className={`flex rounded-[16px] bg-card drop-shadow-[0px_0px_6px_var(--border)] ${innerClassName}`}
     >
@@ -54,15 +52,7 @@ interface Art {
  * From tablet up the plate is pinned to 373px and the card fills it, which is
  * what lets the two stacks in a row come out level.
  */
-export const FeatureCard = ({
-  title,
-  body,
-  art,
-}: {
-  title: string;
-  body: string;
-  art: Art;
-}) => (
+export const FeatureCard = ({ title, body, art }: { title: string; body: string; art: Art }) => (
   <Plate
     outerClassName="ipad:h-[373px]"
     innerClassName="flex-col gap-[10px] px-[20px] pt-[12px] pb-[20px] ipad:min-h-px ipad:flex-1 ipad:justify-end"
@@ -81,15 +71,7 @@ export const FeatureCard = ({
  * other stacks' 481px and spreads its art and copy apart. Its top padding
  * walks 12 -> 20 -> 32 as it gets taller.
  */
-export const WideCard = ({
-  title,
-  body,
-  art,
-}: {
-  title: string;
-  body: string;
-  art: Art;
-}) => (
+export const WideCard = ({ title, body, art }: { title: string; body: string; art: Art }) => (
   <Plate
     outerClassName="desktop-sm:h-full"
     innerClassName="flex-col items-center gap-[10px] px-[20px] pt-[12px] pb-[20px] ipad:pt-[20px] desktop-sm:min-h-px desktop-sm:flex-1 desktop-sm:justify-between desktop-sm:pt-[32px]"

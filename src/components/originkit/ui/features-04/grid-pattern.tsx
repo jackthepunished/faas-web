@@ -41,7 +41,7 @@
  * than the page numbers: that band starts at -50.
  */
 const FADE =
-  "[mask-image:linear-gradient(to_bottom,#000_250px,transparent_330px)] [-webkit-mask-image:linear-gradient(to_bottom,#000_250px,transparent_330px)] ipad:[mask-image:linear-gradient(to_bottom,#000_260px,transparent_340px)] ipad:[-webkit-mask-image:linear-gradient(to_bottom,#000_260px,transparent_340px)] desktop-sm:[mask-image:linear-gradient(to_bottom,#000_300px,transparent_380px)] desktop-sm:[-webkit-mask-image:linear-gradient(to_bottom,#000_300px,transparent_380px)]";
+  '[mask-image:linear-gradient(to_bottom,#000_250px,transparent_330px)] [-webkit-mask-image:linear-gradient(to_bottom,#000_250px,transparent_330px)] ipad:[mask-image:linear-gradient(to_bottom,#000_260px,transparent_340px)] ipad:[-webkit-mask-image:linear-gradient(to_bottom,#000_260px,transparent_340px)] desktop-sm:[mask-image:linear-gradient(to_bottom,#000_300px,transparent_380px)] desktop-sm:[-webkit-mask-image:linear-gradient(to_bottom,#000_300px,transparent_380px)]';
 
 const ROWS = 18;
 
@@ -55,7 +55,7 @@ const WIDE_COLUMNS = 30;
 
 /** Centred through tablet, pinned to the left dot bar on desktop. */
 const BAND =
-  "left-[calc(50%-8.36px)] -translate-x-1/2 ipad:left-[calc(50%-0.29px)] desktop-sm:left-[72px] desktop-sm:translate-x-0";
+  'left-[calc(50%-8.36px)] -translate-x-1/2 ipad:left-[calc(50%-0.29px)] desktop-sm:left-[72px] desktop-sm:translate-x-0';
 
 export const GridRows = () => (
   <div
@@ -80,7 +80,7 @@ export const GridColumns = () => (
       <span
         key={`col-${i}`}
         className={`w-[0.674px] shrink-0 bg-border shadow-[0.674px_0px_0px_0px_var(--card)] ipad:w-px ipad:shadow-[1px_0px_0px_0px_var(--card)] ${
-          i < COLUMNS ? "" : "hidden desktop-sm:block"
+          i < COLUMNS ? '' : 'hidden desktop-sm:block'
         }`}
       />
     ))}

@@ -135,7 +135,10 @@ function Breadcrumbs() {
   const { workflows } = useData();
   const workspace = readWorkspace();
 
-  const segments = pathname.replace(/^\/dashboard\/?/, '').split('/').filter(Boolean);
+  const segments = pathname
+    .replace(/^\/dashboard\/?/, '')
+    .split('/')
+    .filter(Boolean);
   const [section, detail] = segments;
 
   const trail: { label: string }[] = [
@@ -170,10 +173,7 @@ function Breadcrumbs() {
             <ChevronRight className="h-3.5 w-3.5 shrink-0 text-muted-foreground/50" />
             <span
               aria-current={last ? 'page' : undefined}
-              className={cn(
-                'truncate px-1 py-0.5',
-                last ? 'font-medium' : 'text-muted-foreground'
-              )}
+              className={cn('truncate px-1 py-0.5', last ? 'font-medium' : 'text-muted-foreground')}
             >
               {crumb.label}
             </span>
@@ -273,12 +273,18 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
   const { toast } = useToast();
   const sweepNavigate = useSweepNavigate();
 
-  // ⌘K / Ctrl+K anywhere in the dashboard; Escape closes the mobile drawer.
+  // ⌘K / Ctrl+K anywhere in the dashboard; ⌘B toggles the rail, the same
+  // binding editors use; Escape closes the mobile drawer.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key.toLowerCase() === 'k' && (e.metaKey || e.ctrlKey)) {
+      const mod = e.metaKey || e.ctrlKey;
+      if (mod && e.key.toLowerCase() === 'k') {
         e.preventDefault();
         setPaletteOpen((v) => !v);
+      }
+      if (mod && e.key.toLowerCase() === 'b') {
+        e.preventDefault();
+        setCollapsed((v) => !v);
       }
       if (e.key === 'Escape') setMobileOpen(false);
     };
@@ -288,9 +294,19 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
 
   // Toasts render at the root, outside this tree, so the dark palette has to
   // reach them too: mirror `console` onto <html> while the shell is mounted.
+  // The same pass retunes `theme-color`, or mobile browser chrome stays the
+  // marketing site's paper white above a near-black page.
   useEffect(() => {
     document.documentElement.classList.add('console');
-    return () => document.documentElement.classList.remove('console');
+
+    const meta = document.querySelector<HTMLMetaElement>('meta[name="theme-color"]');
+    const previous = meta?.content;
+    if (meta) meta.content = '#090909';
+
+    return () => {
+      document.documentElement.classList.remove('console');
+      if (meta && previous !== undefined) meta.content = previous;
+    };
   }, []);
 
   // The drawer overlays the page, so the page beneath must not scroll.
@@ -357,7 +373,8 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
             type="button"
             onClick={toggleCollapsed}
             aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-            title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+            aria-keyshortcuts="Meta+B Control+B"
+            title={`${collapsed ? 'Expand' : 'Collapse'} sidebar (⌘B)`}
             className={cn(
               'flex w-full items-center gap-2.5 rounded-md py-2 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground',
               collapsed ? 'justify-center px-0' : 'px-2.5'
@@ -403,7 +420,12 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
         </div>
       )}
 
-      <div className={cn('transition-[padding] duration-200', collapsed ? 'lg:pl-[4.5rem]' : 'lg:pl-60')}>
+      <div
+        className={cn(
+          'transition-[padding] duration-200',
+          collapsed ? 'lg:pl-[4.5rem]' : 'lg:pl-60'
+        )}
+      >
         {/* Top bar */}
         <header className="sticky top-0 z-20 flex h-14 items-center gap-3 border-b border-border bg-background/85 px-4 backdrop-blur-md sm:px-6">
           <button

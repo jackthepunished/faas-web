@@ -1,6 +1,13 @@
 import type { ReactNode } from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
-import { AlertTriangle, CheckCircle2, CircleDashed, Loader2, TrendingDown, TrendingUp } from 'lucide-react';
+import {
+  AlertTriangle,
+  CheckCircle2,
+  CircleDashed,
+  Loader2,
+  TrendingDown,
+  TrendingUp,
+} from 'lucide-react';
 import type { LogLevel, RunState } from '@/lib/mock-data';
 import { Sparkline } from './charts';
 import {
@@ -15,15 +22,13 @@ import { cn } from '@/lib/utils';
  * never rests on hue alone.
  * ------------------------------------------------------------------ */
 
-const STATE_CONFIG: Record<
-  RunState,
-  { label: string; color: string; icon: typeof CheckCircle2 }
-> = {
-  running: { label: 'Running', color: 'var(--status-good)', icon: CheckCircle2 },
-  idle: { label: 'Idle', color: 'var(--chart-muted)', icon: CircleDashed },
-  error: { label: 'Error', color: 'var(--status-critical)', icon: AlertTriangle },
-  deploying: { label: 'Deploying', color: 'var(--status-warning)', icon: Loader2 },
-};
+const STATE_CONFIG: Record<RunState, { label: string; color: string; icon: typeof CheckCircle2 }> =
+  {
+    running: { label: 'Running', color: 'var(--status-good)', icon: CheckCircle2 },
+    idle: { label: 'Idle', color: 'var(--chart-muted)', icon: CircleDashed },
+    error: { label: 'Error', color: 'var(--status-critical)', icon: AlertTriangle },
+    deploying: { label: 'Deploying', color: 'var(--status-warning)', icon: Loader2 },
+  };
 
 export function StateBadge({ state, className }: { state: RunState; className?: string }) {
   const cfg = STATE_CONFIG[state];
@@ -119,8 +124,7 @@ export function StatTile({
             >
               <Arrow className="h-3 w-3" />
               {positive ? '+' : ''}
-              {delta.toFixed(1)}%
-              <span className="text-muted-foreground">vs prev period</span>
+              {delta.toFixed(1)}%<span className="text-muted-foreground">vs prev period</span>
             </p>
           )}
         </div>
@@ -241,7 +245,11 @@ export function RangeSelector<T extends string>({
   }
 
   return (
-    <div role="group" aria-label="Time range" className="flex rounded-md border border-border p-0.5">
+    <div
+      role="group"
+      aria-label="Time range"
+      className="flex rounded-md border border-border p-0.5"
+    >
       {options.map((opt) => (
         <button
           key={opt.key}

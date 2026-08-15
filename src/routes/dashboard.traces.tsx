@@ -23,7 +23,11 @@ const COLUMNS: Column<Trace>[] = [
       />
     ),
   },
-  { key: 'operation', label: 'Root operation', render: (t) => <span className="font-mono text-xs">{t.operation}</span> },
+  {
+    key: 'operation',
+    label: 'Root operation',
+    render: (t) => <span className="font-mono text-xs">{t.operation}</span>,
+  },
   {
     key: 'rootWorkflowId',
     label: 'Workflow',

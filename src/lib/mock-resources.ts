@@ -22,7 +22,7 @@ function mulberry32(seed: number) {
   };
 }
 
-const pick = <T,>(rand: () => number, arr: readonly T[]): T => arr[Math.floor(rand() * arr.length)];
+const pick = <T>(rand: () => number, arr: readonly T[]): T => arr[Math.floor(rand() * arr.length)];
 
 export const REGIONS = ['fra-metal-1', 'iad-metal-1', 'sin-metal-1'] as const;
 
@@ -161,7 +161,12 @@ export const WORKERS: Worker[] = (() => {
       id: `wrk_${i}`,
       name: `worker-${String(i + 1).padStart(2, '0')}`,
       region: REGIONS[i % REGIONS.length],
-      state: rand() > 0.12 ? ('online' as const) : rand() > 0.5 ? ('draining' as const) : ('offline' as const),
+      state:
+        rand() > 0.12
+          ? ('online' as const)
+          : rand() > 0.5
+            ? ('draining' as const)
+            : ('offline' as const),
       concurrency,
       activeTasks: Math.round(rand() * concurrency),
       cpuPct: Number((rand() * 92).toFixed(1)),
@@ -400,7 +405,8 @@ export const ALERT_RULES: AlertRule[] = (() => {
     ['Monthly spend over $500', 'spend', 500, 'USD'],
   ];
   return defs.map(([name, metric, threshold, unit], i) => {
-    const state = i === 2 ? ('firing' as const) : rand() > 0.8 ? ('paused' as const) : ('ok' as const);
+    const state =
+      i === 2 ? ('firing' as const) : rand() > 0.8 ? ('paused' as const) : ('ok' as const);
     return {
       id: `alr_${i}`,
       name,
