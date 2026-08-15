@@ -1,7 +1,13 @@
 import { useMemo, useState, type ReactNode } from 'react';
+import { motion, useReducedMotion } from 'framer-motion';
 import { ArrowDown, ArrowUp, Search } from 'lucide-react';
 import { EmptyState } from './primitives';
+import { EASE } from './motion';
 import { cn } from '@/lib/utils';
+
+/** Rows past this index appear together — a stagger that long reads as lag. */
+const STAGGER_CAP = 15;
+const STAGGER_STEP = 0.02;
 
 /**
  * The shape almost every resource page shares: a filter row, a sortable
@@ -48,6 +54,7 @@ export function ResourceTable<T extends { id: string }>({
 }: ResourceTableProps<T>) {
   const [query, setQuery] = useState('');
   const [sort, setSort] = useState(initialSort);
+  const reduce = useReducedMotion();
 
   // Callers pass `searchKeys` as an inline literal, so key the memo on its
   // contents rather than its identity.
@@ -153,9 +160,19 @@ export function ResourceTable<T extends { id: string }>({
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
-                {visible.map((row) => (
-                  <tr
+                {visible.map((row, i) => (
+                  // Keyed by id, so rows entering the filtered set rise in
+                  // and rows that stay put do not re-animate. No `layout` —
+                  // table cells and layout projection do not get along.
+                  <motion.tr
                     key={row.id}
+                    initial={reduce ? false : { opacity: 0, y: 4 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{
+                      duration: 0.28,
+                      ease: EASE,
+                      delay: reduce ? 0 : Math.min(i, STAGGER_CAP) * STAGGER_STEP,
+                    }}
                     onClick={onRowClick ? () => onRowClick(row) : undefined}
                     // Clickable rows are keyboard-operable too: Enter or Space
                     // on the row itself (not on a control inside it) activates.
@@ -189,7 +206,7 @@ export function ResourceTable<T extends { id: string }>({
                         {col.render ? col.render(row) : String(row[col.key] ?? '—')}
                       </td>
                     ))}
-                  </tr>
+                  </motion.tr>
                 ))}
               </tbody>
             </table>

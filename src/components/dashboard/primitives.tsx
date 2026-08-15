@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { motion, useReducedMotion } from 'framer-motion';
 import { AlertTriangle, CheckCircle2, CircleDashed, Loader2, TrendingDown, TrendingUp } from 'lucide-react';
 import type { LogLevel, RunState } from '@/lib/mock-data';
 import { Sparkline } from './charts';
@@ -27,17 +28,26 @@ const STATE_CONFIG: Record<
 export function StateBadge({ state, className }: { state: RunState; className?: string }) {
   const cfg = STATE_CONFIG[state];
   const Icon = cfg.icon;
+  const reduce = useReducedMotion();
+  // In-flight state breathes gently so it reads as live; every other state
+  // (and reduced motion) sits still.
+  const pulse = state === 'deploying' && !reduce;
   return (
-    <span
+    <motion.span
+      animate={pulse ? { opacity: [1, 0.6, 1] } : { opacity: 1 }}
+      transition={pulse ? { duration: 1.6, repeat: Infinity, ease: 'easeInOut' } : { duration: 0 }}
       className={cn(
         'inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-xs',
         className
       )}
-      style={{ borderColor: `color-mix(in oklab, ${cfg.color} 35%, transparent)`, color: cfg.color }}
+      style={{
+        borderColor: `color-mix(in oklab, ${cfg.color} 35%, transparent)`,
+        color: cfg.color,
+      }}
     >
       <Icon className={cn('h-3 w-3', state === 'deploying' && 'animate-spin')} />
       {cfg.label}
-    </span>
+    </motion.span>
   );
 }
 
@@ -171,7 +181,12 @@ export function Panel({
   className?: string;
 }) {
   return (
-    <section className={cn('rounded-xl border border-border bg-card', className)}>
+    <section
+      className={cn(
+        'rounded-xl border border-border bg-card transition-colors hover:border-border-secondary',
+        className
+      )}
+    >
       {(title || actions) && (
         <header className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-5 py-4">
           <div>

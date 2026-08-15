@@ -1,6 +1,8 @@
 import { useMemo, useState } from 'react';
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router';
+import { motion, useReducedMotion } from 'framer-motion';
 import { ArrowUpRight, Plus } from 'lucide-react';
+import { EASE, Item, ItemLi, Stagger, StaggerUl } from '@/components/dashboard/motion';
 import {
   Area,
   AreaChart,
@@ -50,6 +52,7 @@ function deltaOf(values: number[]): number {
 function OverviewPage() {
   const [range, setRange] = useState<RangeKey>('24h');
   const navigate = useNavigate();
+  const reduce = useReducedMotion();
   const series = useMemo(() => buildSeries(range), [range]);
   const { workflows, deployments, workflowsForProject, getWorkflow } = useData();
 
@@ -75,7 +78,7 @@ function OverviewPage() {
   const busiestMax = Math.max(1, busiest[0]?.invocations24h ?? 1);
 
   return (
-    <div className="flex flex-col gap-8">
+    <Stagger className="flex flex-col gap-8">
       <PageHeader
         title="Overview"
         description="Traffic, latency, and spend across every project in this workspace."
@@ -104,23 +107,23 @@ function OverviewPage() {
       />
 
       {/* KPI row — stat tiles, not a grouped bar chart */}
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <StatTile
+      <Stagger step={0.06} className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <Item><StatTile
           label="Invocations"
           value={formatCompact(totalInvocations)}
           delta={deltaOf(invocations)}
           series={invocations}
           tone="green"
-        />
-        <StatTile
+        /></Item>
+        <Item><StatTile
           label="Median latency"
           value={formatMs(avgP50)}
           delta={deltaOf(series.map((s) => s.p50))}
           deltaGood={false}
           series={series.map((s) => s.p50)}
           tone="blue"
-        />
-        <StatTile
+        /></Item>
+        <Item><StatTile
           label="Error rate"
           value={errorRate.toFixed(2)}
           unit="%"
@@ -128,18 +131,18 @@ function OverviewPage() {
           deltaGood={false}
           series={errors}
           tone="orange"
-        />
-        <StatTile
+        /></Item>
+        <Item><StatTile
           label="Compute"
           value={formatCompact(Math.round(gbSeconds))}
           unit="GB-s"
           delta={deltaOf(series.map((s) => s.gbSeconds))}
           series={series.map((s) => s.gbSeconds)}
           tone="purple"
-        />
-      </div>
+        /></Item>
+      </Stagger>
 
-      <Panel title="Invocations" description={RANGES.find((r) => r.key === range)?.label}>
+      <Item><Panel title="Invocations" description={RANGES.find((r) => r.key === range)?.label}>
         <AreaChart
           data={rows}
           config={INVOCATIONS_CONFIG}
@@ -152,16 +155,16 @@ function OverviewPage() {
           <Area dataKey="invocations" variant="gradient" />
           <Tooltip labelKey="time" valueFormatter={(v) => formatCompact(v)} />
         </AreaChart>
-      </Panel>
+      </Panel></Item>
 
       <div className="grid gap-6 lg:grid-cols-2">
-        <Panel title="Projects" description={`${PROJECTS.length} projects`}>
-          <ul className="flex flex-col gap-2">
+        <Item><Panel title="Projects" description={`${PROJECTS.length} projects`}>
+          <StaggerUl step={0.05} className="flex flex-col gap-2">
             {PROJECTS.map((project) => {
               const fns = workflowsForProject(project.id);
               const unhealthy = fns.filter((f) => f.state === 'error').length;
               return (
-                <li key={project.id}>
+                <ItemLi key={project.id}>
                   <div className="flex items-center justify-between gap-4 rounded-lg border border-border bg-background p-4">
                     <div className="min-w-0">
                       <p className="font-mono text-sm">{project.name}</p>
@@ -172,13 +175,13 @@ function OverviewPage() {
                     </div>
                     <StateBadge state={unhealthy > 0 ? 'error' : 'running'} />
                   </div>
-                </li>
+                </ItemLi>
               );
             })}
-          </ul>
-        </Panel>
+          </StaggerUl>
+        </Panel></Item>
 
-        <Panel
+        <Item><Panel
           title="Recent deployments"
           actions={
             <Link
@@ -190,11 +193,11 @@ function OverviewPage() {
             </Link>
           }
         >
-          <ul className="flex flex-col divide-y divide-border">
+          <StaggerUl step={0.04} className="flex flex-col divide-y divide-border">
             {recentDeployments.map((dep) => {
               const fn = getWorkflow(dep.workflowId);
               return (
-                <li key={dep.id} className="flex items-center gap-3 py-3 first:pt-0 last:pb-0">
+                <ItemLi key={dep.id} className="flex items-center gap-3 py-3 first:pt-0 last:pb-0">
                   <span
                     className="h-1.5 w-1.5 shrink-0 rounded-full"
                     style={{
@@ -216,19 +219,20 @@ function OverviewPage() {
                   <span className="shrink-0 text-xs text-muted-foreground [font-variant-numeric:tabular-nums]">
                     {formatRelative(dep.createdAt)}
                   </span>
-                </li>
+                </ItemLi>
               );
             })}
-          </ul>
-        </Panel>
+          </StaggerUl>
+        </Panel></Item>
       </div>
 
-      <Panel title="Busiest workflows" description="By invocations in the last 24 hours">
-        <ul className="flex flex-col divide-y divide-border">
-          {busiest.map((fn) => {
+      <Item><Panel title="Busiest workflows" description="By invocations in the last 24 hours">
+        <StaggerUl step={0.05} className="flex flex-col divide-y divide-border">
+          {busiest.map((fn, i) => {
               const share = fn.invocations24h / busiestMax;
+              const width = `${Math.max(4, share * 100)}%`;
               return (
-                <li key={fn.id} className="py-3 first:pt-0 last:pb-0">
+                <ItemLi key={fn.id} className="py-3 first:pt-0 last:pb-0">
                   <Link
                     to="/dashboard/workflows/$workflowId"
                     params={{ workflowId: fn.id }}
@@ -238,23 +242,25 @@ function OverviewPage() {
                       {fn.name}
                     </span>
                     <span className="h-1.5 flex-1 overflow-hidden rounded-full bg-muted">
-                      <span
+                      {/* Bars grow from the left once the row has landed —
+                          the one place a "chart" here gets to move. */}
+                      <motion.span
                         className="block h-full rounded-full"
-                        style={{
-                          width: `${Math.max(4, share * 100)}%`,
-                          background: 'var(--chart-1)',
-                        }}
+                        style={{ background: 'var(--chart-1)' }}
+                        initial={reduce ? { width } : { width: 0 }}
+                        animate={{ width }}
+                        transition={{ duration: 0.7, delay: 0.25 + i * 0.05, ease: EASE }}
                       />
                     </span>
                     <span className="w-16 shrink-0 text-right text-sm text-muted-foreground [font-variant-numeric:tabular-nums]">
                       {formatCompact(fn.invocations24h)}
                     </span>
                   </Link>
-                </li>
+                </ItemLi>
               );
             })}
-        </ul>
-      </Panel>
-    </div>
+        </StaggerUl>
+      </Panel></Item>
+    </Stagger>
   );
 }

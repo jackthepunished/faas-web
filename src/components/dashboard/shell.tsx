@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link, useRouterState } from '@tanstack/react-router';
+import { AnimatePresence, LayoutGroup, motion, useReducedMotion } from 'framer-motion';
 import {
   ChevronDown,
   ChevronRight,
@@ -30,14 +31,19 @@ function readCollapsed(): boolean {
 }
 
 function SidebarBody({
+  id,
   onNavigate,
   collapsed = false,
 }: {
+  /** Namespaces the shared active pill — the desktop rail and the mobile
+   * drawer each get their own, so one never tries to fly to the other. */
+  id: string;
   onNavigate?: () => void;
   collapsed?: boolean;
 }) {
+  const reduce = useReducedMotion();
   return (
-    <>
+    <LayoutGroup id={id}>
       <Link
         to="/"
         className={cn('flex items-center gap-2.5 py-1', collapsed ? 'justify-center' : 'px-2.5')}
@@ -68,20 +74,52 @@ function SidebarBody({
                   onClick={onNavigate}
                   title={collapsed ? label : undefined}
                   className={cn(
-                    'flex items-center gap-2.5 rounded-md py-2 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand',
+                    'relative isolate flex items-center gap-2.5 rounded-md py-2 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand',
                     collapsed ? 'justify-center px-0' : 'px-2.5'
                   )}
-                  activeProps={{ className: 'bg-muted !text-foreground', 'aria-current': 'page' }}
+                  activeProps={{
+                    // Reduced motion keeps the plain static fill; otherwise
+                    // the shared pill below carries the background.
+                    className: cn('!text-foreground', reduce && 'bg-muted'),
+                    'aria-current': 'page',
+                  }}
                 >
-                  <Icon className="h-4 w-4 shrink-0" />
-                  {!collapsed && <span className="truncate">{label}</span>}
+                  {({ isActive }) => (
+                    <>
+                      {isActive && !reduce && (
+                        <motion.span
+                          aria-hidden="true"
+                          layoutId="sidebar-active"
+                          className="absolute inset-0 -z-10 rounded-md bg-muted"
+                          transition={{
+                            type: 'spring',
+                            stiffness: 500,
+                            damping: 40,
+                          }}
+                        />
+                      )}
+                      <Icon className="h-4 w-4 shrink-0" />
+                      <AnimatePresence initial={false}>
+                        {!collapsed && (
+                          <motion.span
+                            className="truncate"
+                            initial={reduce ? false : { opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            transition={{ duration: 0.12 }}
+                          >
+                            {label}
+                          </motion.span>
+                        )}
+                      </AnimatePresence>
+                    </>
+                  )}
                 </Link>
               ))}
             </nav>
           </div>
         ))}
       </div>
-    </>
+    </LayoutGroup>
   );
 }
 
@@ -289,7 +327,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
           collapsed ? 'w-[4.5rem] px-2' : 'w-60 px-3'
         )}
       >
-        <SidebarBody collapsed={collapsed} />
+        <SidebarBody id="desktop" collapsed={collapsed} />
 
         {/* Identity and sign-out live in the top bar's account menu, so the
             sidebar footer carries context instead of duplicating them. */}
@@ -360,7 +398,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
             >
               <X className="h-4 w-4" />
             </button>
-            <SidebarBody onNavigate={() => setMobileOpen(false)} />
+            <SidebarBody id="mobile" onNavigate={() => setMobileOpen(false)} />
           </aside>
         </div>
       )}
