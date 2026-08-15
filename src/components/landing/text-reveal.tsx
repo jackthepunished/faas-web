@@ -1,5 +1,5 @@
-import { motion, useReducedMotion } from 'framer-motion';
-import { Fragment, type ElementType } from 'react';
+import { motion, useInView, useReducedMotion } from 'framer-motion';
+import { Fragment, useRef, type ElementType } from 'react';
 import { EASE } from './reveal';
 
 /**
@@ -28,6 +28,9 @@ interface TextRevealProps {
   stagger?: number;
 }
 
+const HIDDEN = { y: '115%', opacity: 0, filter: 'blur(6px)' };
+const SHOWN = { y: '0%', opacity: 1, filter: 'blur(0px)' };
+
 export function TextReveal({
   segments,
   className = '',
@@ -36,6 +39,15 @@ export function TextReveal({
   stagger = 0.032,
 }: TextRevealProps) {
   const reduceMotion = useReducedMotion();
+
+  // One observer on the heading itself, not one per word. The words start
+  // translated fully outside their overflow-hidden clip boxes, and
+  // IntersectionObserver clips a target by its ancestors' overflow — so a
+  // per-word `whileInView` never sees the word intersect and the heading
+  // stays parked at opacity 0 (selectable, invisible). Watching the block
+  // element side-steps that entirely.
+  const ref = useRef<HTMLElement>(null);
+  const inView = useInView(ref, { once: true, margin: '-80px 0px' });
 
   const words = segments.flatMap((segment) =>
     segment.text
@@ -59,7 +71,7 @@ export function TextReveal({
   }
 
   return (
-    <Tag className={className}>
+    <Tag ref={ref} className={className}>
       {words.map(({ word, className: wordClass }, i) => (
         <Fragment key={i}>
           <span
@@ -69,14 +81,8 @@ export function TextReveal({
           >
             <motion.span
               className={`inline-block ${wordClass}`}
-              initial={{ y: '115%', opacity: 0, filter: 'blur(6px)' }}
-              whileInView={{ y: '0%', opacity: 1, filter: 'blur(0px)' }}
-              // Pixels, not percentages. With a percentage margin these words
-              // never received an in-view callback, so they stayed parked at
-              // y:115% — outside the clip box above — and the heading rendered
-              // as nothing while still occupying its full height. Every other
-              // reveal on this page uses a px margin and fires correctly.
-              viewport={{ once: true, margin: '-80px 0px' }}
+              initial={HIDDEN}
+              animate={inView ? SHOWN : HIDDEN}
               transition={{
                 duration: 0.85,
                 delay: delay + i * stagger,
