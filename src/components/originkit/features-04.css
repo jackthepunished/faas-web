@@ -12,8 +12,7 @@
 }
 
 @theme {
-  --animate-hero-reveal: ok-f04-hero-reveal 300ms cubic-bezier(0.215, 0.61, 0.355, 1)
-    both;
+  --animate-hero-reveal: ok-f04-hero-reveal 300ms cubic-bezier(0.215, 0.61, 0.355, 1) both;
 }
 
 @media (prefers-reduced-motion: reduce) {

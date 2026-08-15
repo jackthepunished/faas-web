@@ -69,7 +69,11 @@ export function ResourceTable<T extends { id: string }>({
     const filtered =
       q && stableSearchKeys.length
         ? rows.filter((row) =>
-            stableSearchKeys.some((k) => String(row[k] ?? '').toLowerCase().includes(q))
+            stableSearchKeys.some((k) =>
+              String(row[k] ?? '')
+                .toLowerCase()
+                .includes(q)
+            )
           )
         : rows;
 
@@ -251,9 +255,7 @@ export function Pill({ label, color }: { label: string; color?: string }) {
         !color && 'border-border text-muted-foreground'
       )}
       style={
-        color
-          ? { borderColor: `color-mix(in oklab, ${color} 35%, transparent)`, color }
-          : undefined
+        color ? { borderColor: `color-mix(in oklab, ${color} 35%, transparent)`, color } : undefined
       }
     >
       {label}

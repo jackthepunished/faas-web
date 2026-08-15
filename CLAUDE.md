@@ -26,7 +26,7 @@ should not add to that count, and does not need to reduce it.
 - **Sign in with any email and the code `123456`** to reach the console.
 - **Do not add `dark:` variants or literal hex to components.** The two
   polarities are token-driven in `index.css`; a component that needs a new
-  colour needs a new token defined in *both* `:root` and `.console`.
+  colour needs a new token defined in _both_ `:root` and `.console`.
 - **Do not reformat files you did not otherwise change.** Prettier was adopted
   late and applied in one isolated commit; drive-by reformatting buries real
   diffs.

@@ -133,11 +133,7 @@ const STEP: Record<Edge, [number, number]> = { N: [0, -1], S: [0, 1], E: [1, 0],
  * neighbour, repeat. Stops at the grid boundary or when the route closes on
  * itself — Truchet routes are either loops or run edge to edge, never dead ends.
  */
-function trace(
-  startCol: number,
-  startRow: number,
-  startEdge: Edge
-): { d: string; arcs: string[] } {
+function trace(startCol: number, startRow: number, startEdge: Edge): { d: string; arcs: string[] } {
   const segments: string[] = [];
   const arcs: string[] = [];
   const seen = new Set<string>();

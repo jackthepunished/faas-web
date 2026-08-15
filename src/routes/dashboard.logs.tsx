@@ -78,10 +78,7 @@ function LogsPage() {
   const errorCount = rows.filter((l) => l.level === 'error').length;
 
   // One lookup table instead of a `.find` per rendered row.
-  const workflowById = useMemo(
-    () => new Map(workflows.map((fn) => [fn.id, fn])),
-    [workflows]
-  );
+  const workflowById = useMemo(() => new Map(workflows.map((fn) => [fn.id, fn])), [workflows]);
 
   return (
     <div className="flex flex-col gap-6">

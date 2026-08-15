@@ -23,10 +23,7 @@ const COLUMNS: Column<CronJob>[] = [
     label: 'State',
     width: 'w-28',
     render: (c) => (
-      <Pill
-        label={c.state}
-        color={c.state === 'active' ? 'var(--status-good)' : undefined}
-      />
+      <Pill label={c.state} color={c.state === 'active' ? 'var(--status-good)' : undefined} />
     ),
   },
   {

@@ -18,15 +18,15 @@ the console, sign in with any email address and the demo code **`123456`**
 
 ## Scripts
 
-| Command                | What it does                                            |
-| ---------------------- | ------------------------------------------------------- |
-| `npm run dev`          | Vite dev server on port 3000                            |
-| `npm run build`        | Typecheck, then production build to `dist/`             |
-| `npm run preview`      | Serve the built `dist/` locally                         |
-| `npm run typecheck`    | `tsc --noEmit` — types only, no build                   |
-| `npm run lint`         | ESLint                                                  |
-| `npm run format`       | Prettier, write in place                                |
-| `npm run check`        | typecheck + lint + format check — run before a PR       |
+| Command             | What it does                                      |
+| ------------------- | ------------------------------------------------- |
+| `npm run dev`       | Vite dev server on port 3000                      |
+| `npm run build`     | Typecheck, then production build to `dist/`       |
+| `npm run preview`   | Serve the built `dist/` locally                   |
+| `npm run typecheck` | `tsc --noEmit` — types only, no build             |
+| `npm run lint`      | ESLint                                            |
+| `npm run format`    | Prettier, write in place                          |
+| `npm run check`     | typecheck + lint + format check — run before a PR |
 
 ## Architecture
 
@@ -96,8 +96,8 @@ at the top of `index.css`.
   from `framer-motion` and pass `initial={reduce ? false : …}`; for CSS
   animations, add a `@media (prefers-reduced-motion: reduce)` rule. This is
   consistent across the codebase and worth keeping that way.
-- **Colour is never the only signal.** Status is always colour *plus* an icon
-  *plus* a text label — see `StateBadge` in `components/dashboard/primitives.tsx`.
+- **Colour is never the only signal.** Status is always colour _plus_ an icon
+  _plus_ a text label — see `StateBadge` in `components/dashboard/primitives.tsx`.
 - **Comments explain why, not what.** The existing comments carry real design
   reasoning; match that register rather than narrating the code.
 - **Reuse the shared primitives.** `PageHeader`, `Panel`, `StatTile`,
@@ -111,12 +111,12 @@ at the top of `index.css`.
 
 ## Keyboard
 
-| Key      | Action                    |
-| -------- | ------------------------- |
-| `⌘K`     | Command palette           |
-| `⌘B`     | Collapse / expand sidebar |
-| `↑` `↓`  | Move through results      |
-| `Esc`    | Close, or clear a filter  |
+| Key     | Action                    |
+| ------- | ------------------------- |
+| `⌘K`    | Command palette           |
+| `⌘B`    | Collapse / expand sidebar |
+| `↑` `↓` | Move through results      |
+| `Esc`   | Close, or clear a filter  |
 
 ## Notes
 

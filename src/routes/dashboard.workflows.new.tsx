@@ -19,9 +19,24 @@ const EASE: [number, number, number, number] = [0.16, 1, 0.3, 1];
 const STEPS = ['Source', 'Configure', 'Review'] as const;
 
 const SOURCES = [
-  { id: 'git', name: 'Import from Git', desc: 'Connect a repository and deploy on every push.', icon: Github },
-  { id: 'template', name: 'Start from a template', desc: 'A working handler you can edit after deploy.', icon: Package },
-  { id: 'upload', name: 'Upload a bundle', desc: 'Ship a prebuilt archive straight to metal.', icon: Upload },
+  {
+    id: 'git',
+    name: 'Import from Git',
+    desc: 'Connect a repository and deploy on every push.',
+    icon: Github,
+  },
+  {
+    id: 'template',
+    name: 'Start from a template',
+    desc: 'A working handler you can edit after deploy.',
+    icon: Package,
+  },
+  {
+    id: 'upload',
+    name: 'Upload a bundle',
+    desc: 'Ship a prebuilt archive straight to metal.',
+    icon: Upload,
+  },
 ];
 
 const RUNTIMES: { id: Runtime; label: string }[] = [
@@ -102,7 +117,11 @@ function NewFunctionPage() {
               https://{name}.gregale.run
             </a>
             <div className="flex gap-2">
-              <Button variant="outline" size="sm" onClick={() => navigate({ to: '/dashboard/workflows' })}>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => navigate({ to: '/dashboard/workflows' })}
+              >
                 All workflows
               </Button>
               <Button
@@ -155,7 +174,9 @@ function NewFunctionPage() {
             >
               {i < step ? <Check className="h-3 w-3" /> : i + 1}
             </span>
-            <span className={cn('text-sm', i === step ? 'text-foreground' : 'text-muted-foreground')}>
+            <span
+              className={cn('text-sm', i === step ? 'text-foreground' : 'text-muted-foreground')}
+            >
               {label}
             </span>
             {i < STEPS.length - 1 && <span className="mx-1 h-px w-6 bg-border sm:w-10" />}
@@ -238,7 +259,9 @@ function NewFunctionPage() {
                     aria-invalid={!nameValid || undefined}
                     className={cn(
                       'h-10 rounded-lg border bg-background px-3 font-mono text-sm outline-none focus:ring-2 focus:ring-brand/25',
-                      nameValid ? 'border-border focus:border-brand' : 'border-[color:var(--status-critical)]'
+                      nameValid
+                        ? 'border-border focus:border-brand'
+                        : 'border-[color:var(--status-critical)]'
                     )}
                   />
                   {!nameValid && (
@@ -364,7 +387,10 @@ function NewFunctionPage() {
                 {[
                   ['Name', name],
                   ['Project', PROJECTS.find((p) => p.id === projectId)?.name ?? ''],
-                  ['Source', source === 'git' ? repo : SOURCES.find((s) => s.id === source)?.name ?? ''],
+                  [
+                    'Source',
+                    source === 'git' ? repo : (SOURCES.find((s) => s.id === source)?.name ?? ''),
+                  ],
                   ['Runtime', runtime],
                   ['Memory', `${memoryMb} MB`],
                   ['Region', region],

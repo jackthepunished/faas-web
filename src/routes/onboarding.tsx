@@ -28,10 +28,30 @@ const REGIONS = [
 ];
 
 const TEMPLATES = [
-  { id: 'http', name: 'HTTP endpoint', desc: 'A request handler behind a managed domain.', runtime: 'node22' },
-  { id: 'cron', name: 'Scheduled job', desc: 'Runs on a cron expression, scales to zero between runs.', runtime: 'go1.23' },
-  { id: 'queue', name: 'Queue consumer', desc: 'Drains a queue and wakes only when messages land.', runtime: 'python3.12' },
-  { id: 'blank', name: 'Empty function', desc: 'Start from nothing and wire it up yourself.', runtime: 'node22' },
+  {
+    id: 'http',
+    name: 'HTTP endpoint',
+    desc: 'A request handler behind a managed domain.',
+    runtime: 'node22',
+  },
+  {
+    id: 'cron',
+    name: 'Scheduled job',
+    desc: 'Runs on a cron expression, scales to zero between runs.',
+    runtime: 'go1.23',
+  },
+  {
+    id: 'queue',
+    name: 'Queue consumer',
+    desc: 'Drains a queue and wakes only when messages land.',
+    runtime: 'python3.12',
+  },
+  {
+    id: 'blank',
+    name: 'Empty function',
+    desc: 'Start from nothing and wire it up yourself.',
+    runtime: 'node22',
+  },
 ];
 
 function StepRail({ current }: { current: number }) {
@@ -144,7 +164,9 @@ function OnboardingPage() {
                   Workspace slug
                 </label>
                 <div className="mt-2 flex items-center rounded-lg border border-border bg-card focus-within:border-brand focus-within:ring-2 focus-within:ring-brand/25">
-                  <span className="pl-3.5 font-mono text-sm text-muted-foreground">gregale.run/</span>
+                  <span className="pl-3.5 font-mono text-sm text-muted-foreground">
+                    gregale.run/
+                  </span>
                   <input
                     id="workspace"
                     autoFocus
@@ -232,7 +254,11 @@ function OnboardingPage() {
                     <ArrowLeft className="h-4 w-4" />
                     Back
                   </Button>
-                  <Button variant="cta" onClick={() => setStep(2)} className="h-10 gap-2 rounded-lg">
+                  <Button
+                    variant="cta"
+                    onClick={() => setStep(2)}
+                    className="h-10 gap-2 rounded-lg"
+                  >
                     Continue
                     <ArrowRight className="h-4 w-4" />
                   </Button>
@@ -249,7 +275,9 @@ function OnboardingPage() {
                 exit={{ opacity: 0, y: -10 }}
                 transition={{ duration: 0.25, ease: EASE }}
               >
-                <h1 className="text-2xl font-semibold tracking-tight">Deploy your first function</h1>
+                <h1 className="text-2xl font-semibold tracking-tight">
+                  Deploy your first function
+                </h1>
                 <p className="mt-2 text-sm text-muted-foreground">
                   Pick a starting point. It deploys to {region} and scales to zero when idle.
                 </p>

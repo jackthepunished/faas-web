@@ -113,16 +113,76 @@ const WORKFLOW_SEED: {
   memoryMb: number;
   state: RunState;
 }[] = [
-  { name: 'image-resize', projectId: 'proj_storefront', runtime: 'go1.23', memoryMb: 512, state: 'running' },
-  { name: 'checkout-hook', projectId: 'proj_storefront', runtime: 'node22', memoryMb: 256, state: 'running' },
-  { name: 'catalog-search', projectId: 'proj_storefront', runtime: 'rust1.80', memoryMb: 1024, state: 'running' },
-  { name: 'thumbnail-gen', projectId: 'proj_storefront', runtime: 'go1.23', memoryMb: 512, state: 'idle' },
-  { name: 'nightly-etl', projectId: 'proj_analytics', runtime: 'python3.12', memoryMb: 2048, state: 'idle' },
-  { name: 'event-enrich', projectId: 'proj_analytics', runtime: 'node22', memoryMb: 512, state: 'running' },
-  { name: 'warehouse-sync', projectId: 'proj_analytics', runtime: 'python3.12', memoryMb: 1024, state: 'error' },
-  { name: 'webhook-router', projectId: 'proj_internal', runtime: 'node22', memoryMb: 256, state: 'running' },
-  { name: 'auth-callback', projectId: 'proj_internal', runtime: 'go1.23', memoryMb: 128, state: 'running' },
-  { name: 'pdf-render', projectId: 'proj_internal', runtime: 'node22', memoryMb: 1024, state: 'deploying' },
+  {
+    name: 'image-resize',
+    projectId: 'proj_storefront',
+    runtime: 'go1.23',
+    memoryMb: 512,
+    state: 'running',
+  },
+  {
+    name: 'checkout-hook',
+    projectId: 'proj_storefront',
+    runtime: 'node22',
+    memoryMb: 256,
+    state: 'running',
+  },
+  {
+    name: 'catalog-search',
+    projectId: 'proj_storefront',
+    runtime: 'rust1.80',
+    memoryMb: 1024,
+    state: 'running',
+  },
+  {
+    name: 'thumbnail-gen',
+    projectId: 'proj_storefront',
+    runtime: 'go1.23',
+    memoryMb: 512,
+    state: 'idle',
+  },
+  {
+    name: 'nightly-etl',
+    projectId: 'proj_analytics',
+    runtime: 'python3.12',
+    memoryMb: 2048,
+    state: 'idle',
+  },
+  {
+    name: 'event-enrich',
+    projectId: 'proj_analytics',
+    runtime: 'node22',
+    memoryMb: 512,
+    state: 'running',
+  },
+  {
+    name: 'warehouse-sync',
+    projectId: 'proj_analytics',
+    runtime: 'python3.12',
+    memoryMb: 1024,
+    state: 'error',
+  },
+  {
+    name: 'webhook-router',
+    projectId: 'proj_internal',
+    runtime: 'node22',
+    memoryMb: 256,
+    state: 'running',
+  },
+  {
+    name: 'auth-callback',
+    projectId: 'proj_internal',
+    runtime: 'go1.23',
+    memoryMb: 128,
+    state: 'running',
+  },
+  {
+    name: 'pdf-render',
+    projectId: 'proj_internal',
+    runtime: 'node22',
+    memoryMb: 1024,
+    state: 'deploying',
+  },
 ];
 
 const REGIONS = ['fra-metal-1', 'iad-metal-1', 'sin-metal-1'];
@@ -305,8 +365,20 @@ export interface UsageLine {
 
 export function buildUsage(): UsageLine[] {
   const lines: Omit<UsageLine, 'cost'>[] = [
-    { label: 'Compute', quantity: 812_400, unit: 'GB-seconds', unitPrice: 0.000012, included: 400_000 },
-    { label: 'Invocations', quantity: 24_310_000, unit: 'requests', unitPrice: 0.0000002, included: 1_000_000 },
+    {
+      label: 'Compute',
+      quantity: 812_400,
+      unit: 'GB-seconds',
+      unitPrice: 0.000012,
+      included: 400_000,
+    },
+    {
+      label: 'Invocations',
+      quantity: 24_310_000,
+      unit: 'requests',
+      unitPrice: 0.0000002,
+      included: 1_000_000,
+    },
     { label: 'Egress', quantity: 1_284, unit: 'GB', unitPrice: 0.01, included: 100 },
   ];
   return lines.map((line) => ({
@@ -354,11 +426,14 @@ export function formatAxisTime(ts: number, range: RangeKey): string {
   const d = new Date(ts);
   if (range === '30d')
     return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' });
-  if (range === '7d')
-    return d.toLocaleDateString('en-US', { weekday: 'short', timeZone: 'UTC' });
+  if (range === '7d') return d.toLocaleDateString('en-US', { weekday: 'short', timeZone: 'UTC' });
   return `${String(d.getUTCHours()).padStart(2, '0')}:00`;
 }
 
 export function formatUsd(n: number): string {
-  return n.toLocaleString('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 2 });
+  return n.toLocaleString('en-US', {
+    style: 'currency',
+    currency: 'USD',
+    maximumFractionDigits: 2,
+  });
 }

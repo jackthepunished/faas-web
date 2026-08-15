@@ -1,6 +1,6 @@
-import { motion, useReducedMotion } from "framer-motion";
-import { useEffect, useState, type ReactNode } from "react";
-import WaveBg from "@/components/originkit/ui/hero-05/pulse-line";
+import { motion, useReducedMotion } from 'framer-motion';
+import { useEffect, useState, type ReactNode } from 'react';
+import WaveBg from '@/components/originkit/ui/hero-05/pulse-line';
 
 /** ease-out-cubic */
 const EASE_OUT = [0.215, 0.61, 0.355, 1] as const;
@@ -26,7 +26,7 @@ const usePulseConfig = () => {
       setConfig(
         isMobile
           ? { gap: GAP_MOBILE, speed: SPEED_MOBILE }
-          : { gap: GAP_IPAD_UP, speed: SPEED_IPAD_UP },
+          : { gap: GAP_IPAD_UP, speed: SPEED_IPAD_UP }
       );
     };
 
@@ -40,9 +40,9 @@ const usePulseConfig = () => {
         update();
       });
     };
-    window.addEventListener("resize", onResize, { passive: true });
+    window.addEventListener('resize', onResize, { passive: true });
     return () => {
-      window.removeEventListener("resize", onResize);
+      window.removeEventListener('resize', onResize);
       if (raf) cancelAnimationFrame(raf);
     };
   }, []);
@@ -57,10 +57,10 @@ export const PulseStage = ({ children }: { children?: ReactNode }) => {
   const reveal = reduceMotion
     ? { initial: { opacity: 1 }, animate: { opacity: 1 } }
     : {
-        initial: { opacity: 0, y: 14, filter: "blur(4px)" },
-        animate: { opacity: 1, y: 0, filter: "blur(0px)" },
+        initial: { opacity: 0, y: 14, filter: 'blur(4px)' },
+        animate: { opacity: 1, y: 0, filter: 'blur(0px)' },
         transition: {
-          type: "tween" as const,
+          type: 'tween' as const,
           duration: 0.45,
           ease: EASE_OUT,
           delay: 0.4,

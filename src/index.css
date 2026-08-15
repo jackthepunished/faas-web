@@ -1,6 +1,6 @@
 /* IBM Plex type system — see index.html for the font loads. */
 @import 'tailwindcss';
-@import "./originkit-section-theme.css";
+@import './originkit-section-theme.css';
 @import 'tw-animate-css';
 
 @custom-variant dark (&:is(.dark *));

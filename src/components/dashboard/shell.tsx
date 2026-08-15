@@ -135,7 +135,10 @@ function Breadcrumbs() {
   const { workflows } = useData();
   const workspace = readWorkspace();
 
-  const segments = pathname.replace(/^\/dashboard\/?/, '').split('/').filter(Boolean);
+  const segments = pathname
+    .replace(/^\/dashboard\/?/, '')
+    .split('/')
+    .filter(Boolean);
   const [section, detail] = segments;
 
   const trail: { label: string }[] = [
@@ -170,10 +173,7 @@ function Breadcrumbs() {
             <ChevronRight className="h-3.5 w-3.5 shrink-0 text-muted-foreground/50" />
             <span
               aria-current={last ? 'page' : undefined}
-              className={cn(
-                'truncate px-1 py-0.5',
-                last ? 'font-medium' : 'text-muted-foreground'
-              )}
+              className={cn('truncate px-1 py-0.5', last ? 'font-medium' : 'text-muted-foreground')}
             >
               {crumb.label}
             </span>
@@ -420,7 +420,12 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
         </div>
       )}
 
-      <div className={cn('transition-[padding] duration-200', collapsed ? 'lg:pl-[4.5rem]' : 'lg:pl-60')}>
+      <div
+        className={cn(
+          'transition-[padding] duration-200',
+          collapsed ? 'lg:pl-[4.5rem]' : 'lg:pl-60'
+        )}
+      >
         {/* Top bar */}
         <header className="sticky top-0 z-20 flex h-14 items-center gap-3 border-b border-border bg-background/85 px-4 backdrop-blur-md sm:px-6">
           <button

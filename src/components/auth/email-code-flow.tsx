@@ -168,12 +168,18 @@ export function EmailCodeFlow({ mode }: { mode: 'signin' | 'signup' }) {
               aria-describedby={showEmailError ? 'email-error' : undefined}
               placeholder="you@company.com"
               className={`mt-2 h-11 w-full rounded-lg border bg-card px-3.5 text-sm outline-none transition-all placeholder:text-muted-foreground focus:ring-2 focus:ring-brand/25 ${
-                showEmailError ? 'border-[color:var(--status-critical)]' : 'border-border focus:border-brand'
+                showEmailError
+                  ? 'border-[color:var(--status-critical)]'
+                  : 'border-border focus:border-brand'
               }`}
             />
 
             {showEmailError && (
-              <p id="email-error" className="mt-2 text-xs" style={{ color: 'var(--status-critical)' }}>
+              <p
+                id="email-error"
+                className="mt-2 text-xs"
+                style={{ color: 'var(--status-critical)' }}
+              >
                 Enter a valid email address.
               </p>
             )}

@@ -1,7 +1,7 @@
-import { motion, useReducedMotion } from "framer-motion";
-import { SweepLink } from "@/components/sweep-link";
+import { motion, useReducedMotion } from 'framer-motion';
+import { SweepLink } from '@/components/sweep-link';
 // The site-wide button, so the hero's primary action matches the closing CTA.
-import { Button } from "@/components/ui/button";
+import { Button } from '@/components/ui/button';
 
 /** Public asset URLs — use a function so preview rewriters stay stable. */
 function asset(file: string) {
@@ -41,10 +41,10 @@ export const HeroContent = () => {
     reduceMotion
       ? { initial: { opacity: 1 }, animate: { opacity: 1 } }
       : {
-          initial: { opacity: 0, y: 14, filter: "blur(4px)" },
-          animate: { opacity: 1, y: 0, filter: "blur(0px)" },
+          initial: { opacity: 0, y: 14, filter: 'blur(4px)' },
+          animate: { opacity: 1, y: 0, filter: 'blur(0px)' },
           transition: {
-            type: "tween" as const,
+            type: 'tween' as const,
             duration: 0.45,
             ease: EASE_OUT,
             delay,
@@ -60,7 +60,7 @@ export const HeroContent = () => {
           className="pointer-events-auto relative inline-flex h-8 w-auto items-center justify-center gap-2.5 overflow-hidden rounded-[32px] border border-mint-4 bg-mint-2 py-1.5 pr-[23px] pl-[15px] backdrop-blur-[0.5px]"
         >
           <img
-            src={asset("badge-sparkle.svg")}
+            src={asset('badge-sparkle.svg')}
             alt=""
             width={24}
             height={24}
@@ -77,16 +77,15 @@ export const HeroContent = () => {
             {...reveal(0.08)}
             className="pointer-events-auto w-full text-[42px] font-semibold ipad:text-[58px] desktop-sm:text-[66px] leading-[1.06] tracking-[-0.034em] text-foreground text-balance"
           >
-            The Serverless Cloud for Humans and{' '}
-            <span className="text-brand">Agents</span>.
+            The Serverless Cloud for Humans and <span className="text-brand">Agents</span>.
           </motion.h1>
 
           <motion.p
             {...reveal(0.16)}
             className="pointer-events-auto w-full max-w-[306px] desktop-sm:max-w-[533px] font-aeonik text-[16px] ipad:text-[18px] ipad:max-w-none leading-[1.4] tracking-[-0.32px] text-muted-foreground text-pretty"
           >
-            Deploy functions to real microVMs on bare metal — they scale to
-            zero when idle and wake from a snapshot in under 350ms.
+            Deploy functions to real microVMs on bare metal — they scale to zero when idle and wake
+            from a snapshot in under 350ms.
           </motion.p>
         </div>
       </div>

@@ -167,7 +167,9 @@ export function Sparkline({
       const y = h - 2 - ((v - min) / span) * (h - 4);
       return [x, y] as const;
     });
-    const d = pts.map(([x, y], i) => `${i === 0 ? 'M' : 'L'}${x.toFixed(1)},${y.toFixed(1)}`).join('');
+    const d = pts
+      .map(([x, y], i) => `${i === 0 ? 'M' : 'L'}${x.toFixed(1)},${y.toFixed(1)}`)
+      .join('');
     return { line: d, area: `${d}L${w},${h}L0,${h}Z` };
   }, [values]);
 
@@ -344,7 +346,9 @@ export function PercentileChart({
 
           {PERCENTILES.map((p) => {
             const d = data
-              .map((pt, i) => `${i === 0 ? 'M' : 'L'}${xOf(i).toFixed(1)},${yOf(pt[p.key]).toFixed(1)}`)
+              .map(
+                (pt, i) => `${i === 0 ? 'M' : 'L'}${xOf(i).toFixed(1)},${yOf(pt[p.key]).toFixed(1)}`
+              )
               .join('');
             return (
               <path

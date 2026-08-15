@@ -35,7 +35,10 @@ export function Stagger({
       className={className}
       initial={reduce ? false : 'hidden'}
       animate="show"
-      variants={{ hidden: {}, show: { transition: { staggerChildren: step, delayChildren: delay } } }}
+      variants={{
+        hidden: {},
+        show: { transition: { staggerChildren: step, delayChildren: delay } },
+      }}
       {...rest}
     >
       {children}
@@ -57,7 +60,10 @@ export function StaggerUl({
       className={className}
       initial={reduce ? false : 'hidden'}
       animate="show"
-      variants={{ hidden: {}, show: { transition: { staggerChildren: step, delayChildren: delay } } }}
+      variants={{
+        hidden: {},
+        show: { transition: { staggerChildren: step, delayChildren: delay } },
+      }}
       {...rest}
     >
       {children}

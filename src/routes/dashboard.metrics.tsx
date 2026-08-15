@@ -1,19 +1,8 @@
 import { useMemo, useState } from 'react';
 import { createFileRoute } from '@tanstack/react-router';
 import { AreaChart, PercentileChart, UsageBars } from '@/components/dashboard/charts';
-import {
-  PageHeader,
-  Panel,
-  RangeSelector,
-  StatTile,
-} from '@/components/dashboard/primitives';
-import {
-  RANGES,
-  buildSeries,
-  formatCompact,
-  formatMs,
-  type RangeKey,
-} from '@/lib/mock-data';
+import { PageHeader, Panel, RangeSelector, StatTile } from '@/components/dashboard/primitives';
+import { RANGES, buildSeries, formatCompact, formatMs, type RangeKey } from '@/lib/mock-data';
 
 export const Route = createFileRoute('/dashboard/metrics')({ component: MetricsPage });
 

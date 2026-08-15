@@ -16,13 +16,13 @@ export const GlowBackground = () => {
         Desktop 1440: mirrored pair, ~299×885, inset ~10.7% from each edge.
       */}
       <img
-        src={asset("glow-left.svg")}
+        src={asset('glow-left.svg')}
         alt=""
         className="absolute top-[12.76%] left-[-11%] h-[53.7%] w-[42.5%] max-w-none mix-blend-multiply ipad:top-[12%] ipad:left-[-5.9%] ipad:h-[51.9%] ipad:w-[23.6%] desktop-sm:top-[15.69%] desktop-sm:left-[10.69%] desktop-sm:h-[96.4%] desktop-sm:w-[20.76%]"
         aria-hidden="true"
       />
       <img
-        src={asset("glow-right.svg")}
+        src={asset('glow-right.svg')}
         alt=""
         className="absolute top-[12.76%] right-[-11%] h-[64.4%] w-[42.5%] max-w-none -scale-x-100 mix-blend-multiply ipad:top-[12%] ipad:right-[-5.9%] ipad:h-[51.9%] ipad:w-[23.6%] desktop-sm:top-[15.69%] desktop-sm:right-[10.69%] desktop-sm:h-[96.4%] desktop-sm:w-[20.76%]"
         aria-hidden="true"
