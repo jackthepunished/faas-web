@@ -11,6 +11,8 @@ import { createContext, useCallback, useContext, useMemo, useState, type ReactNo
 
 const SESSION_KEY = 'gregale.session';
 const ONBOARDED_KEY = 'gregale.onboarded';
+const WORKSPACE_KEY = 'gregale.workspace';
+export const DEFAULT_WORKSPACE = 'acme-corp';
 
 /** The code the mock backend accepts. Surfaced in the UI as a demo hint. */
 export const DEMO_CODE = '123456';
@@ -56,6 +58,22 @@ export function markOnboarded() {
   window.localStorage.setItem(ONBOARDED_KEY, 'true');
 }
 
+/** Workspace slug chosen during onboarding; falls back to the demo default. */
+export function readWorkspace(): string {
+  if (typeof window === 'undefined') return DEFAULT_WORKSPACE;
+  return window.localStorage.getItem(WORKSPACE_KEY)?.trim() || DEFAULT_WORKSPACE;
+}
+
+export function saveWorkspace(slug: string) {
+  window.localStorage.setItem(WORKSPACE_KEY, slug.trim());
+}
+
+/** Explicit workspace deletion wipes account state, not just the session. */
+export function clearWorkspace() {
+  window.localStorage.removeItem(WORKSPACE_KEY);
+  window.localStorage.removeItem(ONBOARDED_KEY);
+}
+
 const delay = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 export function isValidEmail(value: string): boolean {
@@ -99,9 +117,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return next;
   }, []);
 
+  // Onboarding is account state, not session state, so it survives sign-out.
   const signOut = useCallback(() => {
     window.localStorage.removeItem(SESSION_KEY);
-    window.localStorage.removeItem(ONBOARDED_KEY);
     setUser(null);
   }, []);
 

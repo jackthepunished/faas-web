@@ -1,6 +1,3 @@
-// Delivered by Originkit · stack: nextjs · styling: tailwind
-"use client";
-
 import type { ReactNode } from "react";
 
 import { AsciiArt } from "@/components/originkit/ui/features-04/ascii-art";

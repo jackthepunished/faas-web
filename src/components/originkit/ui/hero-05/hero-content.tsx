@@ -1,9 +1,4 @@
-// Delivered by Originkit · stack: nextjs · styling: tailwind
-"use client";
-
-"use client";
-
-import { motion, useReducedMotion } from "motion/react";
+import { motion, useReducedMotion } from "framer-motion";
 import { SweepLink } from "@/components/sweep-link";
 // The site-wide button, so the hero's primary action matches the closing CTA.
 import { Button } from "@/components/ui/button";
@@ -15,8 +10,6 @@ function asset(file: string) {
 
 /** ease-out-cubic */
 const EASE_OUT = [0.215, 0.61, 0.355, 1] as const;
-
-type HeroContentProps = Record<string, never>;
 
 const ArrowIcon = () => (
   <span
@@ -41,7 +34,7 @@ const ArrowIcon = () => (
   </span>
 );
 
-export const HeroContent = ({}: HeroContentProps) => {
+export const HeroContent = () => {
   const reduceMotion = useReducedMotion();
 
   const reveal = (delay: number) =>

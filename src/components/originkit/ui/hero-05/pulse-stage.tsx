@@ -1,9 +1,4 @@
-// Delivered by Originkit · stack: nextjs · styling: tailwind
-"use client";
-
-"use client";
-
-import { motion, useReducedMotion } from "motion/react";
+import { motion, useReducedMotion } from "framer-motion";
 import { useEffect, useState, type ReactNode } from "react";
 import WaveBg from "@/components/originkit/ui/hero-05/pulse-line";
 
@@ -36,8 +31,20 @@ const usePulseConfig = () => {
     };
 
     update();
-    window.addEventListener("resize", update);
-    return () => window.removeEventListener("resize", update);
+    // Coalesce the resize storm onto one animation frame.
+    let raf = 0;
+    const onResize = () => {
+      if (raf) return;
+      raf = requestAnimationFrame(() => {
+        raf = 0;
+        update();
+      });
+    };
+    window.addEventListener("resize", onResize, { passive: true });
+    return () => {
+      window.removeEventListener("resize", onResize);
+      if (raf) cancelAnimationFrame(raf);
+    };
   }, []);
 
   return config;

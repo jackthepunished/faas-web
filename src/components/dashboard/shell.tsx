@@ -14,12 +14,13 @@ import {
   X,
 } from 'lucide-react';
 import { useData } from '@/lib/store';
-import { useAuth } from '@/lib/auth';
+import { readWorkspace, useAuth } from '@/lib/auth';
 import { useSweepNavigate } from '@/components/sweep-link';
 import { useToast } from '@/components/ui/toast';
 import { CommandPalette } from './command-palette';
 import { NAV_GROUPS, SECTION_LABELS } from './nav-config';
 import { cn } from '@/lib/utils';
+import { useFocusTrap } from '@/lib/use-focus-trap';
 
 const COLLAPSE_KEY = 'gregale.sidebar.collapsed';
 
@@ -58,7 +59,7 @@ function SidebarBody({
                 not fit — a hairline carries the same grouping. */}
             {group.title && collapsed && <div className="mx-2 mb-2 h-px bg-border" />}
 
-            <nav className="flex flex-col gap-0.5">
+            <nav aria-label={group.title ?? 'Main'} className="flex flex-col gap-0.5">
               {group.items.map(({ to, label, icon: Icon, exact }) => (
                 <Link
                   key={to}
@@ -94,6 +95,7 @@ function SidebarBody({
 function Breadcrumbs() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const { workflows } = useData();
+  const workspace = readWorkspace();
 
   const segments = pathname.replace(/^\/dashboard\/?/, '').split('/').filter(Boolean);
   const [section, detail] = segments;
@@ -117,10 +119,10 @@ function Breadcrumbs() {
         to="/dashboard"
         className="flex shrink-0 items-center gap-2 rounded-md px-1.5 py-1 transition-colors hover:bg-muted"
       >
-        <span className="flex h-5 w-5 items-center justify-center rounded bg-brand/20 text-[9px] font-semibold text-brand">
-          A
+        <span className="flex h-5 w-5 items-center justify-center rounded bg-brand/20 text-[9px] font-semibold uppercase text-brand">
+          {workspace.charAt(0)}
         </span>
-        <span className="hidden font-medium sm:inline">acme-corp</span>
+        <span className="hidden font-medium sm:inline">{workspace}</span>
       </Link>
 
       {trail.map((crumb, i) => {
@@ -222,12 +224,13 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
   const [paletteOpen, setPaletteOpen] = useState(false);
   // Persisted, so the sidebar keeps its width across navigations and reloads.
   const [collapsed, setCollapsed] = useState(readCollapsed);
+  const drawerRef = useRef<HTMLElement>(null);
+  useFocusTrap(drawerRef, mobileOpen);
 
-  const toggleCollapsed = () =>
-    setCollapsed((v) => {
-      window.localStorage.setItem(COLLAPSE_KEY, v ? '0' : '1');
-      return !v;
-    });
+  const toggleCollapsed = () => setCollapsed((v) => !v);
+  useEffect(() => {
+    window.localStorage.setItem(COLLAPSE_KEY, collapsed ? '1' : '0');
+  }, [collapsed]);
   const { signOut } = useAuth();
   const { toast } = useToast();
   const sweepNavigate = useSweepNavigate();
@@ -243,6 +246,13 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
+  }, []);
+
+  // Toasts render at the root, outside this tree, so the dark palette has to
+  // reach them too: mirror `console` onto <html> while the shell is mounted.
+  useEffect(() => {
+    document.documentElement.classList.add('console');
+    return () => document.documentElement.classList.remove('console');
   }, []);
 
   // The drawer overlays the page, so the page beneath must not scroll.
@@ -266,6 +276,12 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
   // nothing below this line knows the marketing site is now light.
   return (
     <div className="console min-h-screen bg-background text-foreground">
+      <a
+        href="#main"
+        className="sr-only focus:not-sr-only focus:absolute focus:left-2 focus:top-2 focus:z-50 focus:rounded-md focus:bg-background focus:px-3 focus:py-2 focus:text-sm focus:ring-2 focus:ring-ring"
+      >
+        Skip to content
+      </a>
       {/* Desktop sidebar */}
       <aside
         className={cn(
@@ -325,11 +341,18 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
       {mobileOpen && (
         <div className="fixed inset-0 z-50 lg:hidden">
           <button
-            aria-label="Close navigation"
+            aria-hidden="true"
+            tabIndex={-1}
             className="absolute inset-0 bg-mint-12/50 backdrop-blur-sm"
             onClick={() => setMobileOpen(false)}
           />
-          <aside className="absolute inset-y-0 left-0 flex w-64 flex-col border-r border-border bg-card px-3 py-5">
+          <aside
+            ref={drawerRef}
+            role="dialog"
+            aria-modal="true"
+            aria-label="Navigation"
+            className="absolute inset-y-0 left-0 flex w-64 flex-col border-r border-border bg-card px-3 py-5"
+          >
             <button
               aria-label="Close navigation"
               className="absolute right-3 top-4 rounded-md p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground"
@@ -385,7 +408,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
           </div>
         </header>
 
-        <main id="main" className={cn('px-4 py-8 sm:px-6 lg:px-8')}>
+        <main id="main" tabIndex={-1} className="px-4 py-8 outline-none sm:px-6 lg:px-8">
           <div className="mx-auto max-w-7xl">{children}</div>
         </main>
       </div>

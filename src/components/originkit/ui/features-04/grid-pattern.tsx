@@ -1,6 +1,3 @@
-// Delivered by Originkit · stack: nextjs · styling: tailwind
-"use client";
-
 /**
  * Figma "Group 2147241484" (2356:55 / 2356:207 / 2356:339) — the ruled graph
  * paper the section sits on.

@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useId, useMemo, useState } from 'react';
 import {
   formatAxisTime,
   formatCompact,
@@ -51,7 +51,7 @@ function Tooltip({ x, children }: TooltipProps) {
     <div
       className="pointer-events-none absolute top-2 z-10 whitespace-nowrap rounded-lg border border-border bg-popover/95 px-3 py-2 text-xs shadow-xl backdrop-blur-sm"
       style={{
-        left: `${PAD.left / 10 + x * ((VB_W - PAD.left - PAD.right) / VB_W) * 100}%`,
+        left: `${(PAD.left / VB_W) * 100 + x * ((VB_W - PAD.left - PAD.right) / VB_W) * 100}%`,
         transform: flip ? 'translateX(calc(-100% - 12px))' : 'translateX(12px)',
       }}
     >
@@ -171,7 +171,7 @@ export function Sparkline({
     return { line: d, area: `${d}L${w},${h}L0,${h}Z` };
   }, [values]);
 
-  const gid = useMemo(() => `spark-${Math.round(values[0] ?? 0)}-${values.length}`, [values]);
+  const gid = useId();
 
   return (
     <svg viewBox="0 0 120 32" preserveAspectRatio="none" className={className} aria-hidden="true">
@@ -208,25 +208,31 @@ export function AreaChart({
   color?: string;
 }) {
   const hover = useHover(data.length);
-  const values = data.map((d) => d[metric]);
-  const max = niceMax(Math.max(...values));
-  const ticks = [0, max / 2, max];
-  const plotW = VB_W - PAD.left - PAD.right;
+  const gid = useId();
   const plotH = height - PAD.top - PAD.bottom;
 
-  const pts = values.map((v, i) => {
-    const x = PAD.left + (i / (values.length - 1)) * plotW;
-    const y = PAD.top + plotH - (v / max) * plotH;
-    return [x, y] as const;
-  });
-  const line = pts.map(([x, y], i) => `${i === 0 ? 'M' : 'L'}${x.toFixed(1)},${y.toFixed(1)}`).join('');
-  const area = `${line}L${PAD.left + plotW},${PAD.top + plotH}L${PAD.left},${PAD.top + plotH}Z`;
+  // Geometry only depends on the data, so pointer moves reuse it.
+  const { values, ticks, pts, line, area } = useMemo(() => {
+    const values = data.map((d) => d[metric]);
+    const max = niceMax(Math.max(...values));
+    const plotW = VB_W - PAD.left - PAD.right;
+    const pts = values.map((v, i) => {
+      const x = PAD.left + (i / (values.length - 1)) * plotW;
+      const y = PAD.top + plotH - (v / max) * plotH;
+      return [x, y] as const;
+    });
+    const line = pts
+      .map(([x, y], i) => `${i === 0 ? 'M' : 'L'}${x.toFixed(1)},${y.toFixed(1)}`)
+      .join('');
+    const area = `${line}L${PAD.left + plotW},${PAD.top + plotH}L${PAD.left},${PAD.top + plotH}Z`;
+    return { values, max, ticks: [0, max / 2, max], pts, line, area };
+  }, [data, metric, plotH]);
 
   const active = hover.index !== null ? data[hover.index] : null;
 
   return (
     <div
-      className="relative touch-none"
+      className="relative touch-pan-y"
       onPointerMove={hover.onMove}
       onPointerLeave={hover.onLeave}
     >
@@ -237,7 +243,7 @@ export function AreaChart({
         aria-label={`${label} over ${range}. Peak ${formatNumber(Math.max(...values))}.`}
       >
         <defs>
-          <linearGradient id={`area-${metric}`} x1="0" y1="0" x2="0" y2="1">
+          <linearGradient id={gid} x1="0" y1="0" x2="0" y2="1">
             <stop offset="0%" stopColor={color} stopOpacity={0.3} />
             <stop offset="100%" stopColor={color} stopOpacity={0.02} />
           </linearGradient>
@@ -247,7 +253,7 @@ export function AreaChart({
         <YAxisLabels ticks={ticks} height={height} format={formatCompact} />
         <XAxisLabels data={data} range={range} height={height} />
 
-        <path d={area} fill={`url(#area-${metric})`} />
+        <path d={area} fill={`url(#${gid})`} />
         <path d={line} fill="none" stroke={color} strokeWidth={2} strokeLinejoin="round" />
 
         {hover.index !== null && (
@@ -322,7 +328,7 @@ export function PercentileChart({
   return (
     <div>
       <div
-        className="relative touch-none"
+        className="relative touch-pan-y"
         onPointerMove={hover.onMove}
         onPointerLeave={hover.onLeave}
       >
@@ -450,7 +456,7 @@ export function UsageBars({
 
   return (
     <div
-      className="relative touch-none"
+      className="relative touch-pan-y"
       onPointerMove={hover.onMove}
       onPointerLeave={hover.onLeave}
     >

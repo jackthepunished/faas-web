@@ -16,15 +16,18 @@ function LandingPage() {
   return (
     <MotionConfig reducedMotion="user">
       <div className="min-h-screen bg-background text-foreground">
+        <a href="#main" className="skip-link">
+          Skip to content
+        </a>
         <Nav />
-        <main>
+        <main id="main">
           <OriginkitHero />
           <OriginkitFeatures />
           <ComponentsGrid />
           <CustomComponents />
           <Pricing />
-          <Footer />
         </main>
+        <Footer />
       </div>
     </MotionConfig>
   );

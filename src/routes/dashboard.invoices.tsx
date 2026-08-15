@@ -13,6 +13,28 @@ const STATUS_COLOR: Record<Invoice['status'], string | undefined> = {
   void: undefined,
 };
 
+/** Client-side export of the row — the mock has no PDF to serve. */
+function downloadInvoice(invoice: Invoice) {
+  const rows = [
+    ['invoice', 'status', 'period_start', 'period_end', 'issued_at', 'amount_usd'],
+    [
+      invoice.number,
+      invoice.status,
+      new Date(invoice.periodStart).toISOString().slice(0, 10),
+      new Date(invoice.periodEnd).toISOString().slice(0, 10),
+      new Date(invoice.issuedAt).toISOString().slice(0, 10),
+      invoice.amountUsd.toFixed(2),
+    ],
+  ];
+  const csv = rows.map((r) => r.join(',')).join('\n');
+  const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `${invoice.number}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
 const COLUMNS: Column<Invoice>[] = [
   {
     key: 'number',
@@ -47,10 +69,15 @@ const COLUMNS: Column<Invoice>[] = [
     sortable: false,
     numeric: true,
     width: 'w-16',
-    render: () => (
-      <span className="inline-flex text-muted-foreground transition-colors hover:text-foreground">
+    render: (i) => (
+      <button
+        type="button"
+        aria-label={`Download invoice ${i.number}`}
+        onClick={() => downloadInvoice(i)}
+        className="inline-flex rounded-md p-1 text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
+      >
         <Download className="h-3.5 w-3.5" />
-      </span>
+      </button>
     ),
   },
 ];

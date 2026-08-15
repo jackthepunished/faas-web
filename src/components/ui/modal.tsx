@@ -2,12 +2,13 @@ import { useEffect, useRef, type ReactNode } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { X } from 'lucide-react';
 import { Button } from './button';
+import { useFocusTrap } from '@/lib/use-focus-trap';
 
 const EASE: [number, number, number, number] = [0.16, 1, 0.3, 1];
 
 /**
  * Dialog primitive. Locks page scroll, closes on Escape or backdrop click,
- * moves focus in on open and restores it on close.
+ * traps focus while open and restores it on close.
  */
 export function Modal({
   open,
@@ -27,31 +28,21 @@ export function Modal({
   width?: string;
 }) {
   const panelRef = useRef<HTMLDivElement>(null);
-  const restoreFocus = useRef<HTMLElement | null>(null);
+  // Focus in on open, Tab wraps inside, focus restored on close.
+  useFocusTrap(panelRef, open);
 
   useEffect(() => {
     if (!open) return;
 
-    restoreFocus.current = document.activeElement as HTMLElement | null;
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
 
     const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
     document.addEventListener('keydown', onKey);
 
-    // Focus the first control, or the panel itself if it has none.
-    const id = requestAnimationFrame(() => {
-      const first = panelRef.current?.querySelector<HTMLElement>(
-        'input, select, textarea, button, [href], [tabindex]:not([tabindex="-1"])'
-      );
-      (first ?? panelRef.current)?.focus();
-    });
-
     return () => {
-      cancelAnimationFrame(id);
       document.body.style.overflow = previousOverflow;
       document.removeEventListener('keydown', onKey);
-      restoreFocus.current?.focus?.();
     };
   }, [open, onClose]);
 

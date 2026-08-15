@@ -1,35 +1,16 @@
-import { useState } from 'react';
-import { createFileRoute, useNavigate } from '@tanstack/react-router';
-import { AlertTriangle, Check, Copy, Eye, EyeOff, Loader2, Trash2 } from 'lucide-react';
+import { useRef, useState } from 'react';
+import { Link, createFileRoute, useNavigate } from '@tanstack/react-router';
+import { AlertTriangle, ArrowRight, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/components/ui/toast';
 import { PageHeader, Panel } from '@/components/dashboard/primitives';
-import { NOW, formatRelative } from '@/lib/mock-data';
-import { useAuth } from '@/lib/auth';
+import { clearWorkspace, readWorkspace, useAuth } from '@/lib/auth';
+import { useFocusTrap } from '@/lib/use-focus-trap';
 
 export const Route = createFileRoute('/dashboard/settings')({
   component: SettingsPage,
 });
-
-interface ApiKey {
-  id: string;
-  label: string;
-  value: string;
-  createdAt: number;
-}
-
-const INITIAL_KEYS: ApiKey[] = [
-  { id: 'key_prod', label: 'Production', value: 'grg_live_7f2a91c4e8b34d05a6f1', createdAt: NOW - 86_400_000 * 86 },
-  { id: 'key_ci', label: 'CI pipeline', value: 'grg_live_2c8d40fa19be7c63d902', createdAt: NOW - 86_400_000 * 23 },
-];
-
-/** 20 hex chars, matching the shape of the seeded keys. */
-function generateKey(): string {
-  const bytes = new Uint8Array(10);
-  crypto.getRandomValues(bytes);
-  const hex = Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('');
-  return `grg_live_${hex}`;
-}
 
 const TOGGLES = [
   {
@@ -52,63 +33,6 @@ const TOGGLES = [
   },
 ];
 
-function KeyRow({ apiKey, onRevoke }: { apiKey: ApiKey; onRevoke: (id: string) => void }) {
-  const [revealed, setRevealed] = useState(false);
-  const [copied, setCopied] = useState(false);
-
-  const copy = async () => {
-    try {
-      await navigator.clipboard.writeText(apiKey.value);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 1600);
-    } catch {
-      // Clipboard unavailable — the value stays selectable when revealed.
-    }
-  };
-
-  return (
-    <li className="flex flex-wrap items-center gap-3 py-3 first:pt-0 last:pb-0">
-      <div className="min-w-0 flex-1">
-        <p className="text-sm font-medium">{apiKey.label}</p>
-        <p className="mt-1 font-mono text-xs text-muted-foreground">
-          {revealed ? apiKey.value : `${apiKey.value.slice(0, 9)}${'•'.repeat(16)}`}
-        </p>
-      </div>
-      <span className="text-xs text-muted-foreground">
-        Created {formatRelative(apiKey.createdAt)}
-      </span>
-      <button
-        type="button"
-        onClick={() => setRevealed((v) => !v)}
-        aria-label={revealed ? 'Hide key' : 'Reveal key'}
-        className="rounded-md border border-border p-1.5 text-muted-foreground transition-colors hover:text-foreground"
-      >
-        {revealed ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
-      </button>
-      <button
-        type="button"
-        onClick={copy}
-        aria-label="Copy key"
-        className="rounded-md border border-border p-1.5 text-muted-foreground transition-colors hover:text-foreground"
-      >
-        {copied ? (
-          <Check className="h-3.5 w-3.5" style={{ color: 'var(--status-good)' }} />
-        ) : (
-          <Copy className="h-3.5 w-3.5" />
-        )}
-      </button>
-      <button
-        type="button"
-        onClick={() => onRevoke(apiKey.id)}
-        aria-label={`Revoke ${apiKey.label} key`}
-        className="rounded-md border border-border p-1.5 text-muted-foreground transition-colors hover:border-[color:var(--status-critical)] hover:text-[color:var(--status-critical)]"
-      >
-        <Trash2 className="h-3.5 w-3.5" />
-      </button>
-    </li>
-  );
-}
-
 /** Type-to-confirm dialog for the irreversible action. */
 function DeleteWorkspaceDialog({
   workspace,
@@ -121,15 +45,22 @@ function DeleteWorkspaceDialog({
 }) {
   const [typed, setTyped] = useState('');
   const matches = typed === workspace;
+  const dialogRef = useRef<HTMLDivElement>(null);
+  useFocusTrap(dialogRef, true);
 
   return (
-    <div className="fixed inset-0 z-[90] flex items-center justify-center p-4">
+    <div
+      className="fixed inset-0 z-[90] flex items-center justify-center p-4"
+      onKeyDown={(e) => e.key === 'Escape' && onCancel()}
+    >
       <button
-        aria-label="Cancel"
+        aria-hidden="true"
+        tabIndex={-1}
         onClick={onCancel}
         className="absolute inset-0 bg-mint-12/50 backdrop-blur-sm"
       />
       <div
+        ref={dialogRef}
         role="dialog"
         aria-modal="true"
         aria-labelledby="delete-title"
@@ -183,9 +114,8 @@ function SettingsPage() {
   const [toggles, setToggles] = useState(() =>
     Object.fromEntries(TOGGLES.map((t) => [t.id, t.on]))
   );
-  const [workspace, setWorkspace] = useState('acme-corp');
+  const [workspace, setWorkspace] = useState(readWorkspace);
   const [region, setRegion] = useState('fra-metal-1');
-  const [keys, setKeys] = useState<ApiKey[]>(INITIAL_KEYS);
   const [saving, setSaving] = useState(false);
   const [showDelete, setShowDelete] = useState(false);
 
@@ -196,28 +126,9 @@ function SettingsPage() {
     toast({ kind: 'success', title: 'Settings saved', description: `${workspace} · ${region}` });
   };
 
-  const handleCreateKey = () => {
-    const created: ApiKey = {
-      id: `key_${Date.now()}`,
-      label: `Key ${keys.length + 1}`,
-      value: generateKey(),
-      createdAt: Date.now(),
-    };
-    setKeys((prev) => [...prev, created]);
-    toast({
-      kind: 'success',
-      title: 'API key created',
-      description: 'Copy it now — this is the only time it is shown in full.',
-    });
-  };
-
-  const handleRevoke = (id: string) => {
-    setKeys((prev) => prev.filter((k) => k.id !== id));
-    toast({ kind: 'info', title: 'Key revoked' });
-  };
-
   const handleDelete = () => {
     setShowDelete(false);
+    clearWorkspace();
     signOut();
     toast({ kind: 'info', title: 'Workspace deleted', description: 'You have been signed out.' });
     navigate({ to: '/' });
@@ -268,39 +179,28 @@ function SettingsPage() {
                   {t.description}
                 </p>
               </div>
-              <button
-                type="button"
-                role="switch"
-                aria-checked={toggles[t.id]}
+              <Switch
+                checked={toggles[t.id]}
+                onCheckedChange={(on) => setToggles((prev) => ({ ...prev, [t.id]: on }))}
                 aria-label={t.label}
-                onClick={() => setToggles((prev) => ({ ...prev, [t.id]: !prev[t.id] }))}
-                className="relative mt-1 h-5 w-9 shrink-0 rounded-full border border-border transition-colors"
-                style={{ background: toggles[t.id] ? 'var(--brand)' : 'var(--muted)' }}
-              >
-                <span
-                  className="absolute top-0.5 h-3.5 w-3.5 rounded-full bg-background transition-transform"
-                  style={{ transform: toggles[t.id] ? 'translateX(18px)' : 'translateX(3px)' }}
-                />
-              </button>
+                className="mt-1 data-[state=checked]:bg-brand"
+              />
             </li>
           ))}
         </ul>
       </Panel>
 
-      <Panel
-        title="API keys"
-        description="Used by the CLI and the deployment API"
-        actions={
-          <Button variant="outline" size="sm" onClick={handleCreateKey}>
-            Create key
-          </Button>
-        }
-      >
-        <ul className="flex flex-col divide-y divide-border">
-          {keys.map((k) => (
-            <KeyRow key={k.id} apiKey={k} onRevoke={handleRevoke} />
-          ))}
-        </ul>
+      <Panel title="API keys" description="Used by the CLI and the deployment API">
+        <p className="text-sm text-muted-foreground">
+          API keys are managed on the Keys page, alongside their scopes and last-used times.
+        </p>
+        <Link
+          to="/dashboard/keys"
+          className="mt-3 inline-flex items-center gap-1.5 text-sm font-medium text-brand hover:underline"
+        >
+          Manage API keys
+          <ArrowRight className="h-3.5 w-3.5" />
+        </Link>
       </Panel>
 
       <Panel title="Danger zone" className="border-destructive/30">

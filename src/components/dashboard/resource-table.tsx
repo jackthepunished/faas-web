@@ -49,12 +49,20 @@ export function ResourceTable<T extends { id: string }>({
   const [query, setQuery] = useState('');
   const [sort, setSort] = useState(initialSort);
 
+  // Callers pass `searchKeys` as an inline literal, so key the memo on its
+  // contents rather than its identity.
+  const searchKeysSig = searchKeys?.join('|') ?? '';
+  const stableSearchKeys = useMemo(
+    () => (searchKeysSig ? (searchKeysSig.split('|') as (keyof T & string)[]) : []),
+    [searchKeysSig]
+  );
+
   const visible = useMemo(() => {
     const q = query.trim().toLowerCase();
     const filtered =
-      q && searchKeys?.length
+      q && stableSearchKeys.length
         ? rows.filter((row) =>
-            searchKeys.some((k) => String(row[k] ?? '').toLowerCase().includes(q))
+            stableSearchKeys.some((k) => String(row[k] ?? '').toLowerCase().includes(q))
           )
         : rows;
 
@@ -66,7 +74,7 @@ export function ResourceTable<T extends { id: string }>({
       if (typeof av === 'number' && typeof bv === 'number') return (av - bv) * factor;
       return String(av).localeCompare(String(bv)) * factor;
     });
-  }, [rows, query, sort, searchKeys]);
+  }, [rows, query, sort, stableSearchKeys]);
 
   const toggleSort = (col: Column<T>) => {
     if (col.sortable === false) return;
@@ -149,9 +157,25 @@ export function ResourceTable<T extends { id: string }>({
                   <tr
                     key={row.id}
                     onClick={onRowClick ? () => onRowClick(row) : undefined}
+                    // Clickable rows are keyboard-operable too: Enter or Space
+                    // on the row itself (not on a control inside it) activates.
+                    tabIndex={onRowClick ? 0 : undefined}
+                    role={onRowClick ? 'button' : undefined}
+                    onKeyDown={
+                      onRowClick
+                        ? (e) => {
+                            if (e.target !== e.currentTarget) return;
+                            if (e.key === 'Enter' || e.key === ' ') {
+                              e.preventDefault();
+                              onRowClick(row);
+                            }
+                          }
+                        : undefined
+                    }
                     className={cn(
                       'transition-colors hover:bg-muted/40',
-                      onRowClick && 'cursor-pointer'
+                      onRowClick &&
+                        'cursor-pointer outline-none focus-visible:bg-muted/40 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring'
                     )}
                   >
                     {columns.map((col) => (

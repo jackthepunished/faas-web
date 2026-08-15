@@ -60,7 +60,8 @@ function FunctionsPage() {
     const filtered = workflows.filter((fn) => {
       if (state !== 'all' && fn.state !== state) return false;
       if (projectId !== 'all' && fn.projectId !== projectId) return false;
-      if (q && !fn.name.includes(q) && !fn.runtime.includes(q)) return false;
+      if (q && !fn.name.toLowerCase().includes(q) && !fn.runtime.toLowerCase().includes(q))
+        return false;
       return true;
     });
 
@@ -210,6 +211,8 @@ function FunctionsPage() {
                       <Link
                         to="/dashboard/workflows/$workflowId"
                         params={{ workflowId: fn.id }}
+                        // The link navigates on its own; do not let the row fire a second time.
+                        onClick={(e) => e.stopPropagation()}
                         className="font-mono group-hover:text-brand"
                       >
                         {fn.name}
