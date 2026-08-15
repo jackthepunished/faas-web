@@ -242,9 +242,11 @@ export function Footer() {
         </div>
       </div>
 
-      {/* Oversized wordmark, clipped by the footer's bottom edge */}
-      <div aria-hidden className="pointer-events-none relative select-none overflow-hidden">
-        <p className="translate-y-[22%] bg-gradient-to-b from-foreground/[0.11] to-foreground/0 bg-clip-text text-center text-[19vw] font-semibold leading-[0.75] tracking-[-0.055em] text-transparent">
+      {/* Oversized wordmark, clipped by the footer's bottom edge. It sits in
+          front of the dissolve, so it needs real ink: dark where it meets the
+          link band, easing off as it drops out of the frame. */}
+      <div aria-hidden className="pointer-events-none relative z-10 select-none overflow-hidden">
+        <p className="translate-y-[22%] bg-gradient-to-b from-foreground via-[#0f3d2b] to-brand bg-clip-text text-center text-[19vw] font-semibold leading-[0.75] tracking-[-0.055em] text-transparent">
           GREGALE
         </p>
       </div>
