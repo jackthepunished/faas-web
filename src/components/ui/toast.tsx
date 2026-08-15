@@ -2,12 +2,13 @@ import {
   createContext,
   useCallback,
   useContext,
+  useEffect,
   useMemo,
   useRef,
   useState,
   type ReactNode,
 } from 'react';
-import { AnimatePresence, motion } from 'framer-motion';
+import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import { AlertTriangle, CheckCircle2, Info, X } from 'lucide-react';
 
 type ToastKind = 'success' | 'error' | 'info';
@@ -18,6 +19,13 @@ interface Toast {
   title: string;
   description?: string;
 }
+
+/** Errors linger — they usually carry something the user has to act on. */
+const DISMISS_MS: Record<ToastKind, number> = {
+  success: 5000,
+  info: 5000,
+  error: 9000,
+};
 
 const KIND = {
   success: { icon: CheckCircle2, color: 'var(--status-good)' },
@@ -32,8 +40,25 @@ const ToastContext = createContext<{
 export function ToastProvider({ children }: { children: ReactNode }) {
   const [toasts, setToasts] = useState<Toast[]>([]);
   const nextId = useRef(0);
+  const reduce = useReducedMotion();
+
+  // Auto-dismiss timers, tracked so a provider that unmounts with toasts
+  // still on screen does not fire setState into a torn-down tree.
+  const timers = useRef(new Map<number, ReturnType<typeof setTimeout>>());
+  useEffect(() => {
+    const pending = timers.current;
+    return () => {
+      pending.forEach(clearTimeout);
+      pending.clear();
+    };
+  }, []);
 
   const dismiss = useCallback((id: number) => {
+    const timer = timers.current.get(id);
+    if (timer) {
+      clearTimeout(timer);
+      timers.current.delete(id);
+    }
     setToasts((prev) => prev.filter((t) => t.id !== id));
   }, []);
 
@@ -41,32 +66,42 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     (t: Omit<Toast, 'id'>) => {
       const id = nextId.current++;
       setToasts((prev) => [...prev, { ...t, id }]);
-      setTimeout(() => dismiss(id), 5000);
+      const timer = setTimeout(() => {
+        timers.current.delete(id);
+        setToasts((prev) => prev.filter((x) => x.id !== id));
+      }, DISMISS_MS[t.kind]);
+      timers.current.set(id, timer);
     },
-    [dismiss]
+    []
   );
 
   const value = useMemo(() => ({ toast }), [toast]);
 
+
   return (
     <ToastContext.Provider value={value}>
       {children}
-      <div
-        aria-live="polite"
-        aria-atomic="false"
-        className="pointer-events-none fixed bottom-4 right-4 z-[100] flex w-[min(22rem,calc(100vw-2rem))] flex-col gap-2"
-      >
+      {/* No live region on the container: each toast carries its own role, so
+          an error interrupts (`alert`) while a success waits its turn
+          (`status`). A wrapping `aria-live` on top of those would announce
+          every toast twice. */}
+      <div className="pointer-events-none fixed bottom-4 right-4 z-[100] flex w-[min(22rem,calc(100vw-2rem))] flex-col gap-2">
         <AnimatePresence initial={false}>
           {toasts.map((t) => {
             const { icon: Icon, color } = KIND[t.kind];
             return (
               <motion.div
                 key={t.id}
-                layout
-                initial={{ opacity: 0, y: 12, scale: 0.97 }}
+                role={t.kind === 'error' ? 'alert' : 'status'}
+                layout={!reduce}
+                initial={reduce ? false : { opacity: 0, y: 12, scale: 0.97 }}
                 animate={{ opacity: 1, y: 0, scale: 1 }}
-                exit={{ opacity: 0, x: 16, scale: 0.97 }}
-                transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
+                exit={
+                  reduce
+                    ? { opacity: 0, transition: { duration: 0 } }
+                    : { opacity: 0, x: 16, scale: 0.97 }
+                }
+                transition={{ duration: reduce ? 0 : 0.22, ease: [0.16, 1, 0.3, 1] }}
                 className="pointer-events-auto flex items-start gap-3 rounded-xl border border-border bg-popover/95 p-3.5 shadow-2xl backdrop-blur-sm"
               >
                 <Icon className="mt-0.5 h-4 w-4 shrink-0" style={{ color }} />

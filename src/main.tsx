@@ -2,9 +2,30 @@ import { StrictMode } from 'react';
 import ReactDOM from 'react-dom/client';
 import { RouterProvider, createRouter } from '@tanstack/react-router';
 import { routeTree } from './routeTree.gen';
+import { RouteError, RoutePending } from './components/route-status';
 import './index.css';
 
-const router = createRouter({ routeTree });
+/**
+ * `defaultPreload: 'intent'` warms a route's code-split chunk and loaders on
+ * hover or focus, so by the time the click lands the page is usually already
+ * there. The delay keeps a cursor merely crossing a nav item from fetching
+ * twenty chunks; `preloadStaleTime` stops a re-hover from refetching what we
+ * just pulled.
+ */
+const router = createRouter({
+  routeTree,
+  defaultPreload: 'intent',
+  defaultPreloadDelay: 80,
+  defaultPreloadStaleTime: 30_000,
+  // Every route inherits these, so a route that throws degrades to a scoped
+  // error panel instead of a blank document. `defaultPendingMs` swallows the
+  // fast cases entirely: a chunk that arrives inside 200ms never flashes a
+  // loader, and one that does show stays up long enough not to strobe.
+  defaultErrorComponent: RouteError,
+  defaultPendingComponent: RoutePending,
+  defaultPendingMs: 200,
+  defaultPendingMinMs: 400,
+});
 
 declare module '@tanstack/react-router' {
   interface Register {

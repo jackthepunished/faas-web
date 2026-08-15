@@ -273,12 +273,18 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
   const { toast } = useToast();
   const sweepNavigate = useSweepNavigate();
 
-  // ⌘K / Ctrl+K anywhere in the dashboard; Escape closes the mobile drawer.
+  // ⌘K / Ctrl+K anywhere in the dashboard; ⌘B toggles the rail, the same
+  // binding editors use; Escape closes the mobile drawer.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key.toLowerCase() === 'k' && (e.metaKey || e.ctrlKey)) {
+      const mod = e.metaKey || e.ctrlKey;
+      if (mod && e.key.toLowerCase() === 'k') {
         e.preventDefault();
         setPaletteOpen((v) => !v);
+      }
+      if (mod && e.key.toLowerCase() === 'b') {
+        e.preventDefault();
+        setCollapsed((v) => !v);
       }
       if (e.key === 'Escape') setMobileOpen(false);
     };
@@ -288,9 +294,19 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
 
   // Toasts render at the root, outside this tree, so the dark palette has to
   // reach them too: mirror `console` onto <html> while the shell is mounted.
+  // The same pass retunes `theme-color`, or mobile browser chrome stays the
+  // marketing site's paper white above a near-black page.
   useEffect(() => {
     document.documentElement.classList.add('console');
-    return () => document.documentElement.classList.remove('console');
+
+    const meta = document.querySelector<HTMLMetaElement>('meta[name="theme-color"]');
+    const previous = meta?.content;
+    if (meta) meta.content = '#090909';
+
+    return () => {
+      document.documentElement.classList.remove('console');
+      if (meta && previous !== undefined) meta.content = previous;
+    };
   }, []);
 
   // The drawer overlays the page, so the page beneath must not scroll.
@@ -357,7 +373,8 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
             type="button"
             onClick={toggleCollapsed}
             aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-            title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+            aria-keyshortcuts="Meta+B Control+B"
+            title={`${collapsed ? 'Expand' : 'Collapse'} sidebar (⌘B)`}
             className={cn(
               'flex w-full items-center gap-2.5 rounded-md py-2 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground',
               collapsed ? 'justify-center px-0' : 'px-2.5'

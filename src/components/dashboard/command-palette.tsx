@@ -8,6 +8,7 @@ import { useData } from '@/lib/store';
 import { formatCompact } from '@/lib/mock-data';
 import { cn } from '@/lib/utils';
 import { useFocusTrap } from '@/lib/use-focus-trap';
+import { fuzzyMatch, highlightSegments } from '@/lib/fuzzy';
 
 /**
  * ⌘K command palette. Navigation, every function by name, and the actions
@@ -21,6 +22,12 @@ interface Command {
   hint?: string;
   icon: typeof Search;
   run: () => void;
+}
+
+/** A command plus where the query matched its label, for highlighting. */
+interface Result {
+  command: Command;
+  indices: number[];
 }
 
 export function CommandPalette({
@@ -84,11 +91,34 @@ export function CommandPalette({
     ];
   }, [workflows, navigate, close]);
 
-  const results = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    if (!q) return commands;
-    return commands.filter(
-      (c) => c.label.toLowerCase().includes(q) || c.group.toLowerCase().includes(q)
+  const results = useMemo<Result[]>(() => {
+    const q = query.trim();
+    if (!q) return commands.map((command) => ({ command, indices: [] }));
+
+    return (
+      commands
+        .map((command) => {
+          // The label is what the user is aiming at, so only its match drives
+          // highlighting. Group and hint still *find* a command — searching
+          // "workflows" should surface them all — but at a discount, so a
+          // label hit always outranks an incidental group hit.
+          const onLabel = fuzzyMatch(command.label, q);
+          const onGroup = fuzzyMatch(command.group, q);
+          const onHint = command.hint ? fuzzyMatch(command.hint, q) : null;
+
+          const best = Math.max(
+            onLabel?.score ?? -Infinity,
+            (onGroup?.score ?? -Infinity) - 20,
+            (onHint?.score ?? -Infinity) - 30
+          );
+          if (best === -Infinity) return null;
+
+          return { command, indices: onLabel?.indices ?? [], score: best };
+        })
+        .filter((r): r is Result & { score: number } => r !== null)
+        // Stable within a score, so equally-good matches keep the source
+        // order that groups them ("Go to", then "Actions", then workflows).
+        .sort((a, b) => b.score - a.score)
     );
   }, [commands, query]);
 
@@ -133,11 +163,23 @@ export function CommandPalette({
     }
     if (e.key === 'Enter') {
       e.preventDefault();
-      results[active]?.run();
+      results[active]?.command.run();
+    }
+    // Long result lists are faster to cross end-to-end than by arrow-holding.
+    if (e.key === 'Home') {
+      e.preventDefault();
+      setActive(0);
+    }
+    if (e.key === 'End') {
+      e.preventDefault();
+      setActive(Math.max(0, results.length - 1));
     }
   };
 
-  // Group headers are rendered inline, so track when the group changes.
+  // Group headers only make sense in source order. Once a query ranks results
+  // by score they interleave, so searching drops the headers entirely rather
+  // than repeating "Workflows" every third row.
+  const grouped = query.trim() === '';
   let lastGroup = '';
 
   // The dialog mounts the instant `open` flips (so the focus trap and the
@@ -190,7 +232,9 @@ export function CommandPalette({
                 aria-expanded={results.length > 0}
                 aria-controls={listId}
                 aria-autocomplete="list"
-                aria-activedescendant={results[active] ? `cmd-${results[active].id}` : undefined}
+                aria-activedescendant={
+                  results[active] ? `cmd-${results[active].command.id}` : undefined
+                }
                 className="h-12 flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
               />
               <kbd className="label-mono rounded border border-border px-1.5 py-0.5 text-muted-foreground">
@@ -210,9 +254,9 @@ export function CommandPalette({
                 aria-label="Results"
                 className="max-h-80 overflow-y-auto p-2"
               >
-                {results.map((cmd, i) => {
+                {results.map(({ command: cmd, indices }, i) => {
                   const Icon = cmd.icon;
-                  const newGroup = cmd.group !== lastGroup;
+                  const newGroup = grouped && cmd.group !== lastGroup;
                   lastGroup = cmd.group;
                   return [
                     newGroup && (
@@ -254,7 +298,27 @@ export function CommandPalette({
                         />
                       )}
                       <Icon className="h-3.5 w-3.5 shrink-0" />
-                      <span className="flex-1 truncate">{cmd.label}</span>
+                      <span className="flex-1 truncate">
+                        {highlightSegments(cmd.label, indices).map((seg, si) =>
+                          seg.match ? (
+                            <mark
+                              key={si}
+                              className="bg-transparent font-medium text-brand underline decoration-brand/40 underline-offset-2"
+                            >
+                              {seg.text}
+                            </mark>
+                          ) : (
+                            <span key={si}>{seg.text}</span>
+                          )
+                        )}
+                      </span>
+                      {/* Searching drops the group headers, so each row has to
+                          say where it came from on its own. */}
+                      {!grouped && !cmd.hint && (
+                        <span className="shrink-0 text-xs text-muted-foreground/70">
+                          {cmd.group}
+                        </span>
+                      )}
                       {cmd.hint && (
                         <span className="shrink-0 text-xs text-muted-foreground">{cmd.hint}</span>
                       )}
