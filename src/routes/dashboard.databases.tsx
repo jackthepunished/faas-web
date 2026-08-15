@@ -4,8 +4,12 @@ import { Button } from '@/components/ui/button';
 import { PageHeader } from '@/components/dashboard/primitives';
 import { Pill, ResourceTable, type Column } from '@/components/dashboard/resource-table';
 import { DATABASES, formatBytes, type Database } from '@/lib/mock-resources';
+import { consoleHead } from '@/lib/seo';
 
-export const Route = createFileRoute('/dashboard/databases')({ component: DatabasesPage });
+export const Route = createFileRoute('/dashboard/databases')({
+  component: DatabasesPage,
+  head: () => consoleHead('databases'),
+});
 
 const STATE_COLOR: Record<Database['state'], string> = {
   available: 'var(--status-good)',

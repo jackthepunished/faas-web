@@ -9,8 +9,10 @@ import { BuildLog } from '@/components/dashboard/build-log';
 import { PixelBeams } from '@/components/landing/shaders/pixel-beams';
 import { DEFAULT_WORKSPACE, markOnboarded, readSession, saveWorkspace, useAuth } from '@/lib/auth';
 import { cn } from '@/lib/utils';
+import { pageHead } from '@/lib/seo';
 
 export const Route = createFileRoute('/onboarding')({
+  head: () => pageHead({ title: 'Get started' }),
   beforeLoad: () => {
     if (!readSession()) throw redirect({ to: '/login' });
   },

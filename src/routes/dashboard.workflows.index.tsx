@@ -6,8 +6,10 @@ import { EmptyState, PageHeader, StateBadge } from '@/components/dashboard/primi
 import { PROJECTS, formatCompact, formatMs, formatRelative, type RunState } from '@/lib/mock-data';
 import { useData } from '@/lib/store';
 import { cn } from '@/lib/utils';
+import { consoleHead } from '@/lib/seo';
 
 export const Route = createFileRoute('/dashboard/workflows/')({
+  head: () => consoleHead('workflows'),
   component: FunctionsPage,
 });
 

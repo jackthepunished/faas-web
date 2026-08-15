@@ -5,8 +5,12 @@ import { PageHeader } from '@/components/dashboard/primitives';
 import { Pill, ResourceTable, type Column } from '@/components/dashboard/resource-table';
 import { API_ROUTES, type ApiRoute } from '@/lib/mock-resources';
 import { formatCompact, formatMs, getWorkflow } from '@/lib/mock-data';
+import { consoleHead } from '@/lib/seo';
 
-export const Route = createFileRoute('/dashboard/apis')({ component: ApisPage });
+export const Route = createFileRoute('/dashboard/apis')({
+  component: ApisPage,
+  head: () => consoleHead('apis'),
+});
 
 const METHOD_COLOR: Record<string, string> = {
   GET: 'var(--chart-1)',

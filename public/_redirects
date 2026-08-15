@@ -1,0 +1,9 @@
+# SPA fallback for Netlify and Cloudflare Pages.
+#
+# Routing happens in the browser, so only `/` exists as a real file. Without
+# this, refreshing on /dashboard/logs — or opening a shared link to it — asks
+# the host for a file that was never built and gets a 404 before the router
+# ever runs. Serve index.html for everything and let the router resolve it.
+#
+# 200, not 302: the URL must survive so the router can read it.
+/*    /index.html   200

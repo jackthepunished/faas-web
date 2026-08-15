@@ -31,8 +31,10 @@ import {
   type RangeKey,
 } from '@/lib/mock-data';
 import { useData } from '@/lib/store';
+import { pageHead } from '@/lib/seo';
 
 export const Route = createFileRoute('/dashboard/')({
+  head: () => pageHead({ title: 'Overview' }),
   component: OverviewPage,
 });
 

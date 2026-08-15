@@ -5,8 +5,12 @@ import { PageHeader } from '@/components/dashboard/primitives';
 import { Pill, ResourceTable, type Column } from '@/components/dashboard/resource-table';
 import { ENV_VARS, type EnvVar } from '@/lib/mock-resources';
 import { formatRelative, getWorkflow } from '@/lib/mock-data';
+import { consoleHead } from '@/lib/seo';
 
-export const Route = createFileRoute('/dashboard/env')({ component: EnvPage });
+export const Route = createFileRoute('/dashboard/env')({
+  component: EnvPage,
+  head: () => consoleHead('env'),
+});
 
 const ENV_COLOR: Record<EnvVar['environment'], string | undefined> = {
   production: 'var(--status-good)',

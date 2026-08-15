@@ -5,8 +5,12 @@ import { PageHeader } from '@/components/dashboard/primitives';
 import { Pill, ResourceTable, type Column } from '@/components/dashboard/resource-table';
 import { CRON_JOBS, type CronJob } from '@/lib/mock-resources';
 import { formatMs, formatRelative, getWorkflow, NOW } from '@/lib/mock-data';
+import { consoleHead } from '@/lib/seo';
 
-export const Route = createFileRoute('/dashboard/crons')({ component: CronsPage });
+export const Route = createFileRoute('/dashboard/crons')({
+  component: CronsPage,
+  head: () => consoleHead('crons'),
+});
 
 /** Relative label for a timestamp in the future. */
 function formatIn(ts: number): string {

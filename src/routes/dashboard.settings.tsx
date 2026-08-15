@@ -7,8 +7,10 @@ import { useToast } from '@/components/ui/toast';
 import { PageHeader, Panel } from '@/components/dashboard/primitives';
 import { clearWorkspace, readWorkspace, useAuth } from '@/lib/auth';
 import { useFocusTrap } from '@/lib/use-focus-trap';
+import { consoleHead } from '@/lib/seo';
 
 export const Route = createFileRoute('/dashboard/settings')({
+  head: () => consoleHead('settings'),
   component: SettingsPage,
 });
 
