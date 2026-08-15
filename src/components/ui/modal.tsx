@@ -1,10 +1,9 @@
 import { useEffect, useRef, type ReactNode } from 'react';
-import { AnimatePresence, motion } from 'framer-motion';
+import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import { X } from 'lucide-react';
 import { Button } from './button';
 import { useFocusTrap } from '@/lib/use-focus-trap';
-
-const EASE: [number, number, number, number] = [0.16, 1, 0.3, 1];
+import { EASE } from '@/components/dashboard/motion';
 
 /**
  * Dialog primitive. Locks page scroll, closes on Escape or backdrop click,
@@ -28,6 +27,7 @@ export function Modal({
   width?: string;
 }) {
   const panelRef = useRef<HTMLDivElement>(null);
+  const reduce = useReducedMotion();
   // Focus in on open, Tab wraps inside, focus restored on close.
   useFocusTrap(panelRef, open);
 
@@ -54,10 +54,10 @@ export function Modal({
             aria-label="Close dialog"
             tabIndex={-1}
             onClick={onClose}
-            initial={{ opacity: 0 }}
+            initial={reduce ? false : { opacity: 0 }}
             animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.18 }}
+            exit={{ opacity: 0, transition: { duration: reduce ? 0 : 0.12 } }}
+            transition={{ duration: reduce ? 0 : 0.15 }}
             className="absolute inset-0 bg-mint-12/35 backdrop-blur-sm"
           />
 
@@ -67,10 +67,19 @@ export function Modal({
             role="dialog"
             aria-modal="true"
             aria-label={title}
-            initial={{ opacity: 0, scale: 0.97, y: 8 }}
+            initial={reduce ? false : { opacity: 0, scale: 0.98, y: -6 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.97, y: 8 }}
-            transition={{ duration: 0.22, ease: EASE }}
+            exit={
+              reduce
+                ? { opacity: 0, transition: { duration: 0 } }
+                : {
+                    opacity: 0,
+                    scale: 0.98,
+                    y: -6,
+                    transition: { duration: 0.12, ease: EASE },
+                  }
+            }
+            transition={{ duration: reduce ? 0 : 0.18, ease: EASE }}
             className={`relative w-full ${width} overflow-hidden rounded-xl border border-border bg-popover shadow-2xl outline-none`}
           >
             <header className="flex items-start justify-between gap-4 border-b border-border px-5 py-4">
