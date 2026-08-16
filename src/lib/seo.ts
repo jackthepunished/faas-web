@@ -44,6 +44,9 @@ export function pageHead({ title, description }: { title?: string; description?:
       { name: 'description', content: desc },
       { property: 'og:title', content: full },
       { property: 'og:description', content: desc },
+      // Names the source in a preview card, so a shared link reads as coming
+      // from Gregale rather than from a bare URL.
+      { property: 'og:site_name', content: SITE_NAME },
     ],
   };
 }

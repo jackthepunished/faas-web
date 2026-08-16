@@ -82,4 +82,36 @@ describeBuilt('prerendered pages', () => {
   it('does not ship the SSR bundle', () => {
     expect(existsSync('dist-ssr')).toBe(false);
   });
+
+  describe('robots.txt', () => {
+    const robots =
+      built && existsSync('dist/robots.txt') ? readFileSync('dist/robots.txt', 'utf8') : '';
+
+    it('is written', () => {
+      expect(robots).toContain('User-agent: *');
+    });
+
+    it('keeps crawlers out of the auth-gated console', () => {
+      // Following these only ever reaches a login screen.
+      expect(robots).toContain('Disallow: /dashboard');
+      expect(robots).toContain('Disallow: /onboarding');
+    });
+
+    it('leaves the marketing site crawlable', () => {
+      expect(robots).toContain('Allow: /');
+    });
+  });
+
+  describe('indexing directives', () => {
+    it('lets the landing page be indexed', () => {
+      expect(readFileSync('dist/index.html', 'utf8')).not.toContain('name="robots"');
+    });
+
+    it('keeps the auth pages out of search results', () => {
+      // Prerendered for link previews, but they are not search results.
+      for (const file of ['dist/login/index.html', 'dist/signup/index.html']) {
+        expect(readFileSync(file, 'utf8')).toContain('content="noindex, follow"');
+      }
+    });
+  });
 });

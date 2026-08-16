@@ -160,6 +160,36 @@ is aimed at consumers that never run the bundle at all.
 no metadata stranded in the body, and real copy rather than an empty mount
 point.
 
+### Crawler directives
+
+The same script writes `robots.txt` and `sitemap.xml`, generated rather than
+committed so the route list has one source of truth — adding a route cannot
+leave the sitemap stale. `/dashboard` and `/onboarding` are disallowed: a
+crawler following them only ever reaches a login screen. `/login` and
+`/signup` are prerendered so their link previews are right, but carry
+`noindex, follow` — they are not search results.
+
+### SITE_URL
+
+Canonical links, `og:url`, and the sitemap need an absolute base URL, and the
+build cannot derive one. Set it in the deploy environment:
+
+```bash
+SITE_URL=https://your-domain.example npm run build
+```
+
+**Unset, those tags are omitted rather than guessed.** A canonical pointing at
+the wrong host is worse than none — it tells search engines the real page is
+somewhere else. Everything else (titles, descriptions, `og:title`, prerendered
+markup, `robots.txt`) works without it.
+
+### og:image
+
+Wired but inactive: drop a 1200×630 `og.png` into `public/` and it is picked
+up automatically on the next build with `SITE_URL` set. Until then previews
+render as a text-only card. This wants a designed asset rather than a
+generated placeholder.
+
 ## Tests
 
 [Vitest](https://vitest.dev) with jsdom and React Testing Library. Tests sit

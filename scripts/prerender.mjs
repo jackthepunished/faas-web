@@ -1,4 +1,4 @@
-import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 
 /**
@@ -21,8 +21,31 @@ import { dirname, join } from 'node:path';
 
 const ROUTES = ['/', '/login', '/signup'];
 
+/** Routes worth indexing. /login and /signup are prerendered so their link
+ *  previews are right, but they are not search results. */
+const INDEXABLE = ['/'];
+
 const DIST = 'dist';
 const TEMPLATE = join(DIST, 'index.html');
+
+/**
+ * Absolute base URL, e.g. `https://gregale.dev`. Canonical links, `og:url`,
+ * and the sitemap all need one, and there is no way to derive it from the
+ * build.
+ *
+ * Deliberately omitted rather than guessed when unset: a canonical pointing at
+ * the wrong host is worse than none at all — it tells search engines the real
+ * page lives somewhere else. Set `SITE_URL` in the deploy environment to turn
+ * these on.
+ */
+const SITE_URL = (process.env.SITE_URL ?? '').replace(/\/$/, '');
+
+/** Social preview card, if one has been added to `public/`. */
+const OG_IMAGE = 'og.png';
+
+// `SITE_URL` has its trailing slash stripped and every route starts with one,
+// so the home page canonicalises to `https://host/` rather than the bare host.
+const absolute = (path) => SITE_URL + path;
 
 const { render } = await import('../dist-ssr/prerender.js');
 
@@ -73,6 +96,25 @@ for (const route of ROUTES) {
   let doc = stripStaticHead(template);
   doc = doc.replace('</head>', `  ${tags}\n  </head>`);
 
+  // Canonical and og:url can only be written here — the router knows the
+  // route, but not the host it will be served from.
+  const perRoute = [];
+  if (SITE_URL) {
+    perRoute.push(`<link rel="canonical" href="${attr(absolute(route))}" />`);
+    perRoute.push(`<meta property="og:url" content="${attr(absolute(route))}" />`);
+    if (existsSync(join('public', OG_IMAGE))) {
+      perRoute.push(`<meta property="og:image" content="${attr(SITE_URL + '/' + OG_IMAGE)}" />`);
+    }
+  }
+  // Keeps a non-indexable page out of results without hiding it from the
+  // unfurler, which ignores robots meta.
+  if (!INDEXABLE.includes(route)) {
+    perRoute.push('<meta name="robots" content="noindex, follow" />');
+  }
+  if (perRoute.length) {
+    doc = doc.replace('</head>', `  ${perRoute.join('\n    ')}\n  </head>`);
+  }
+
   // `HeadContent` renders its tags as real elements wherever it sits in the
   // tree, so `renderToString` emits them inline at the top of #root. They are
   // already hoisted into <head> above, and a second <title> in the body is
@@ -107,6 +149,43 @@ for (const route of ROUTES) {
   const text = html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
   console.log(`  prerendered ${route.padEnd(9)} ${text.length} chars of text`);
   written++;
+}
+
+/* ------------------------------------------------------------------ *
+ * robots.txt and sitemap.xml
+ *
+ * Generated here rather than committed to `public/`, so the route list has
+ * one source of truth: adding a route to ROUTES above cannot leave the
+ * sitemap stale.
+ * ------------------------------------------------------------------ */
+
+// The console is behind auth — a crawler following these gets a login screen
+// and nothing else, so keep them out of the index and out of the budget.
+const robots = [
+  'User-agent: *',
+  'Disallow: /dashboard',
+  'Disallow: /onboarding',
+  'Allow: /',
+  ...(SITE_URL ? ['', `Sitemap: ${SITE_URL}/sitemap.xml`] : []),
+  '',
+].join('\n');
+
+writeFileSync(join(DIST, 'robots.txt'), robots);
+console.log('  wrote robots.txt');
+
+if (SITE_URL) {
+  const urls = INDEXABLE.map(
+    (route) => `  <url>\n    <loc>${absolute(route)}</loc>\n  </url>`
+  ).join('\n');
+
+  writeFileSync(
+    join(DIST, 'sitemap.xml'),
+    `<?xml version="1.0" encoding="UTF-8"?>\n` +
+      `<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls}\n</urlset>\n`
+  );
+  console.log(`  wrote sitemap.xml (${INDEXABLE.length} urls)`);
+} else {
+  console.log('  skipped sitemap.xml and canonical tags — set SITE_URL to emit them');
 }
 
 // The SSR bundle is a build artifact, not something to deploy.
