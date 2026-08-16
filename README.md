@@ -18,15 +18,17 @@ the console, sign in with any email address and the demo code **`123456`**
 
 ## Scripts
 
-| Command             | What it does                                      |
-| ------------------- | ------------------------------------------------- |
-| `npm run dev`       | Vite dev server on port 3000                      |
-| `npm run build`     | Typecheck, then production build to `dist/`       |
-| `npm run preview`   | Serve the built `dist/` locally                   |
-| `npm run typecheck` | `tsc --noEmit` — types only, no build             |
-| `npm run lint`      | ESLint                                            |
-| `npm run format`    | Prettier, write in place                          |
-| `npm run check`     | typecheck + lint + format check — run before a PR |
+| Command              | What it does                                        |
+| -------------------- | --------------------------------------------------- |
+| `npm run dev`        | Vite dev server on port 3000                        |
+| `npm run build`      | Typecheck, then production build to `dist/`         |
+| `npm run preview`    | Serve the built `dist/` locally                     |
+| `npm run typecheck`  | `tsc --noEmit` — types only, no build               |
+| `npm run lint`       | ESLint                                              |
+| `npm run test`       | Vitest, once                                        |
+| `npm run test:watch` | Vitest in watch mode                                |
+| `npm run format`     | Prettier, write in place                            |
+| `npm run check`      | typecheck + lint + format + tests — run before a PR |
 
 ## Architecture
 
@@ -132,10 +134,89 @@ by `<HeadContent />` in the root layout. Helpers live in `src/lib/seo.ts`:
 A new route with no `head` inherits the root's, so it degrades to the brand
 title rather than keeping the previous page's.
 
-The app is client-rendered with no prerender step, so this fixes tabs, history,
-and bookmarks, and covers crawlers that execute JS. Social unfurlers (Slack,
-Twitter) do not run JS and still read the static tags in `index.html` — giving
-them per-route previews would need prerendering.
+## Prerendering
+
+Public routes are rendered to real HTML at build time by
+`scripts/prerender.mjs`, so `/`, `/login`, and `/signup` each ship a document
+with their own title, meta, and copy already in it. Without this, every URL
+served the same empty `index.html`: fine for browsers and for crawlers that run
+JS, but social unfurlers (Slack, Twitter, iMessage) do not, so every shared
+link previewed as the home page.
+
+`npm run build` runs it automatically — a second `vite build --ssr` compiles
+`src/prerender.tsx`, the script renders each route through the router, hoists
+the resolved head tags into `<head>`, and deletes the SSR bundle afterwards.
+
+Only public routes are listed. Everything under `/dashboard` is behind auth and
+has nothing to say to a crawler; the SPA fallback still serves it.
+
+**The client mounts with `createRoot`, not `hydrateRoot`.** Hydration was tried
+and does not reconcile — the router wraps matches in Suspense on the client, so
+React finds a boundary where the server wrote markup and bails out with a
+mismatch. Mounting fresh is the same result without the warning. The prerender
+is aimed at consumers that never run the bundle at all.
+
+`src/prerender.test.ts` asserts the built pages: one title each, in the head,
+no metadata stranded in the body, and real copy rather than an empty mount
+point.
+
+### Crawler directives
+
+The same script writes `robots.txt` and `sitemap.xml`, generated rather than
+committed so the route list has one source of truth — adding a route cannot
+leave the sitemap stale. `/dashboard` and `/onboarding` are disallowed: a
+crawler following them only ever reaches a login screen. `/login` and
+`/signup` are prerendered so their link previews are right, but carry
+`noindex, follow` — they are not search results.
+
+### SITE_URL
+
+Canonical links, `og:url`, and the sitemap need an absolute base URL, and the
+build cannot derive one. Set it in the deploy environment:
+
+```bash
+SITE_URL=https://your-domain.example npm run build
+```
+
+**Unset, those tags are omitted rather than guessed.** A canonical pointing at
+the wrong host is worse than none — it tells search engines the real page is
+somewhere else. Everything else (titles, descriptions, `og:title`, prerendered
+markup, `robots.txt`) works without it.
+
+### og:image
+
+Wired but inactive: drop a 1200×630 `og.png` into `public/` and it is picked
+up automatically on the next build with `SITE_URL` set. Until then previews
+render as a text-only card. This wants a designed asset rather than a
+generated placeholder.
+
+## Tests
+
+[Vitest](https://vitest.dev) with jsdom and React Testing Library. Tests sit
+next to what they cover as `*.test.ts(x)`, and CI runs `npm run check` plus a
+build on every PR.
+
+```bash
+npm run test          # once
+npm run test:watch    # while working
+```
+
+Coverage is deliberately weighted toward logic that is easy to break silently
+and annoying to catch by hand:
+
+- `lib/fuzzy` — palette match ranking and highlight segmentation
+- `lib/seo` — title composition, and that console titles really do resolve
+  through the nav config
+- `lib/auth` — email validation, and that a corrupt session payload cannot
+  throw inside a route guard
+- `lib/store` — workflow creation, and the redeploy timer: version bumps only
+  on landing, and nothing sets state after the provider unmounts
+- `dashboard/resource-table` — the sort/filter/empty behaviour that ~20
+  console pages inherit
+
+Note that `vitest` does not typecheck. `npm run check` runs `tsc` separately,
+and it catches things the tests cannot — a test that passes can still be
+calling a function with the wrong type.
 
 ## Conventions
 

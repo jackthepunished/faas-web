@@ -1,0 +1,36 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# A force-push or a quick follow-up commit makes the in-flight run pointless;
+# cancel it rather than queue behind it.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      # `ci` over `install`: fails on a lockfile that disagrees with
+      # package.json rather than silently resolving something new.
+      - run: npm ci
+
+      # Build first. The prerender tests assert against `dist/`, and skip
+      # themselves when it is absent — running `check` before this would let
+      # them quietly no-op in the one place they most need to run.
+      - run: npm run build
+
+      # Typecheck, lint, format, tests. Kept as one script so `npm run check`
+      # locally and CI can never drift apart.
+      - run: npm run check
