@@ -5,8 +5,9 @@ import { describe, expect, it } from 'vitest';
  * Guards the prerendered output.
  *
  * These read `dist/`, so they only run after a build. Skipped otherwise
- * rather than failing, so `npm run test` on a clean checkout is still green —
- * CI runs the build, so the assertions do execute there.
+ * rather than failing, so `npm run test` on a clean checkout is still green.
+ * CI builds *before* running `check` precisely so these do not skip there —
+ * see the ordering note in .github/workflows/ci.yml.
  */
 
 const PAGES = [
