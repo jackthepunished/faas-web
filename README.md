@@ -18,15 +18,17 @@ the console, sign in with any email address and the demo code **`123456`**
 
 ## Scripts
 
-| Command             | What it does                                      |
-| ------------------- | ------------------------------------------------- |
-| `npm run dev`       | Vite dev server on port 3000                      |
-| `npm run build`     | Typecheck, then production build to `dist/`       |
-| `npm run preview`   | Serve the built `dist/` locally                   |
-| `npm run typecheck` | `tsc --noEmit` — types only, no build             |
-| `npm run lint`      | ESLint                                            |
-| `npm run format`    | Prettier, write in place                          |
-| `npm run check`     | typecheck + lint + format check — run before a PR |
+| Command              | What it does                                        |
+| -------------------- | --------------------------------------------------- |
+| `npm run dev`        | Vite dev server on port 3000                        |
+| `npm run build`      | Typecheck, then production build to `dist/`         |
+| `npm run preview`    | Serve the built `dist/` locally                     |
+| `npm run typecheck`  | `tsc --noEmit` — types only, no build               |
+| `npm run lint`       | ESLint                                              |
+| `npm run test`       | Vitest, once                                        |
+| `npm run test:watch` | Vitest in watch mode                                |
+| `npm run format`     | Prettier, write in place                            |
+| `npm run check`      | typecheck + lint + format + tests — run before a PR |
 
 ## Architecture
 
@@ -136,6 +138,34 @@ The app is client-rendered with no prerender step, so this fixes tabs, history,
 and bookmarks, and covers crawlers that execute JS. Social unfurlers (Slack,
 Twitter) do not run JS and still read the static tags in `index.html` — giving
 them per-route previews would need prerendering.
+
+## Tests
+
+[Vitest](https://vitest.dev) with jsdom and React Testing Library. Tests sit
+next to what they cover as `*.test.ts(x)`, and CI runs `npm run check` plus a
+build on every PR.
+
+```bash
+npm run test          # once
+npm run test:watch    # while working
+```
+
+Coverage is deliberately weighted toward logic that is easy to break silently
+and annoying to catch by hand:
+
+- `lib/fuzzy` — palette match ranking and highlight segmentation
+- `lib/seo` — title composition, and that console titles really do resolve
+  through the nav config
+- `lib/auth` — email validation, and that a corrupt session payload cannot
+  throw inside a route guard
+- `lib/store` — workflow creation, and the redeploy timer: version bumps only
+  on landing, and nothing sets state after the provider unmounts
+- `dashboard/resource-table` — the sort/filter/empty behaviour that ~20
+  console pages inherit
+
+Note that `vitest` does not typecheck. `npm run check` runs `tsc` separately,
+and it catches things the tests cannot — a test that passes can still be
+calling a function with the wrong type.
 
 ## Conventions
 

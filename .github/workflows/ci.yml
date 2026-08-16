@@ -1,0 +1,35 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# A force-push or a quick follow-up commit makes the in-flight run pointless;
+# cancel it rather than queue behind it.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      # `ci` over `install`: fails on a lockfile that disagrees with
+      # package.json rather than silently resolving something new.
+      - run: npm ci
+
+      # Typecheck, lint, format, tests. Kept as one script so `npm run check`
+      # locally and CI can never drift apart.
+      - run: npm run check
+
+      # The build runs `tsc` again, but it is the only step that proves the
+      # thing actually bundles — a type-clean app can still fail to build.
+      - run: npm run build
