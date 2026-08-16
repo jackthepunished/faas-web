@@ -134,10 +134,31 @@ by `<HeadContent />` in the root layout. Helpers live in `src/lib/seo.ts`:
 A new route with no `head` inherits the root's, so it degrades to the brand
 title rather than keeping the previous page's.
 
-The app is client-rendered with no prerender step, so this fixes tabs, history,
-and bookmarks, and covers crawlers that execute JS. Social unfurlers (Slack,
-Twitter) do not run JS and still read the static tags in `index.html` — giving
-them per-route previews would need prerendering.
+## Prerendering
+
+Public routes are rendered to real HTML at build time by
+`scripts/prerender.mjs`, so `/`, `/login`, and `/signup` each ship a document
+with their own title, meta, and copy already in it. Without this, every URL
+served the same empty `index.html`: fine for browsers and for crawlers that run
+JS, but social unfurlers (Slack, Twitter, iMessage) do not, so every shared
+link previewed as the home page.
+
+`npm run build` runs it automatically — a second `vite build --ssr` compiles
+`src/prerender.tsx`, the script renders each route through the router, hoists
+the resolved head tags into `<head>`, and deletes the SSR bundle afterwards.
+
+Only public routes are listed. Everything under `/dashboard` is behind auth and
+has nothing to say to a crawler; the SPA fallback still serves it.
+
+**The client mounts with `createRoot`, not `hydrateRoot`.** Hydration was tried
+and does not reconcile — the router wraps matches in Suspense on the client, so
+React finds a boundary where the server wrote markup and bails out with a
+mismatch. Mounting fresh is the same result without the warning. The prerender
+is aimed at consumers that never run the bundle at all.
+
+`src/prerender.test.ts` asserts the built pages: one title each, in the head,
+no metadata stranded in the body, and real copy rather than an empty mount
+point.
 
 ## Tests
 
