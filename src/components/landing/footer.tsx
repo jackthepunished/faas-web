@@ -19,14 +19,15 @@ const REPO = 'https://github.com/poyrazK/faas';
  * Containers. A dead link in a footer is worse than a missing one: it reads as
  * a real page right up until someone clicks it.
  *
- * Destinations are limited to what actually exists today: the two landing
- * anchors, the app's own routes, the source repository, and the OpenAPI
- * document the API serves. Following `nav.tsx`, the repository stands in for a
- * docs site — there isn't one yet, and `docs.gregale.dev` does not answer.
+ * Destinations are limited to what actually exists: the landing anchors, the
+ * app's own routes, `/docs`, the source repository, and the OpenAPI document
+ * the API serves.
  *
- * Deliberately absent: Privacy, Terms, and a DPA. Those are real pages this
- * product needs before it takes paying customers — the API already exposes a
- * GDPR export — but they have to be written, not linked into existence.
+ * Still absent: Privacy and Terms. Those remain unwritten, and linking a page
+ * into existence is the thing this comment exists to prevent. The DPA and the
+ * sub-processor list *were* written all along — they sat in the upstream
+ * repository and are now published under `/docs`.
+ *
  * Changelog is absent too: the repository has no releases to point at.
  */
 interface FooterLink {
@@ -34,8 +35,10 @@ interface FooterLink {
   href: string;
   /** Leaves the site. Gets an icon and the usual rel hardening. */
   external?: boolean;
-  /** An in-app route rather than an anchor, so the router handles it. */
+  /** An app route rather than an anchor, so the router handles it. */
   route?: '/login' | '/signup' | '/dashboard';
+  /** A docs page. `true` is the docs index; a string is that page's slug. */
+  doc?: true | string;
 }
 
 const LINK_GROUPS: { title: string; links: FooterLink[] }[] = [
@@ -52,18 +55,28 @@ const LINK_GROUPS: { title: string; links: FooterLink[] }[] = [
   {
     title: 'Developers',
     links: [
-      { label: 'Source', href: REPO, external: true },
+      { label: 'Documentation', href: '/docs', doc: true },
       // Served by apid on this same origin, so it needs no absolute URL.
       { label: 'API reference', href: '/v1/openapi.yaml' },
+      { label: 'Source', href: REPO, external: true },
       { label: 'Issues', href: `${REPO}/issues`, external: true },
       { label: 'Contributing', href: `${REPO}/blob/main/CONTRIBUTING.md`, external: true },
     ],
   },
   {
+    // These used to be absent because the pages did not exist. They do —
+    // upstream had a DPA and a sub-processor list all along, now published at
+    // /docs. Privacy and Terms are still genuinely unwritten.
     title: 'Trust',
     links: [
+      { label: 'Data Processing Agreement', href: '/docs/dpa', doc: 'dpa' },
+      { label: 'Sub-processors', href: '/docs/subprocessors', doc: 'subprocessors' },
+      {
+        label: 'Responsible disclosure',
+        href: '/docs/responsible-disclosure',
+        doc: 'responsible-disclosure',
+      },
       { label: 'Security policy', href: `${REPO}/blob/main/SECURITY.md`, external: true },
-      { label: 'Report a vulnerability', href: '/.well-known/security.txt' },
       { label: 'License', href: `${REPO}/blob/main/LICENSE`, external: true },
     ],
   },
@@ -129,6 +142,24 @@ function FooterAnchor({ link }: { link: FooterLink }) {
   const icon = link.external && (
     <ArrowUpRight className="h-3 w-3 -translate-x-0.5 opacity-0 transition-all duration-200 group-hover:translate-x-0 group-hover:opacity-100" />
   );
+
+  // Docs are lateral navigation, so they get a plain router link. The sweep is
+  // reserved for the hand-off from marketing into the product.
+  if (link.doc === true) {
+    return (
+      <Link to="/docs" className={LINK_CLASS}>
+        {link.label}
+      </Link>
+    );
+  }
+
+  if (typeof link.doc === 'string') {
+    return (
+      <Link to="/docs/$slug" params={{ slug: link.doc }} className={LINK_CLASS}>
+        {link.label}
+      </Link>
+    );
+  }
 
   if (link.route) {
     return (

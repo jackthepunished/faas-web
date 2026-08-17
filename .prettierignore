@@ -13,6 +13,10 @@ src/lib/api/schema.d.ts
 # Vendored verbatim from poyrazK/faas so the diff against upstream stays readable.
 api/openapi.yaml
 
+# Vendored docs, pulled by `npm run docs:pull`. Reformatting them would make
+# every refresh look like a rewrite and hide the upstream change.
+content/docs
+
 # Vendored component manifests, kept byte-identical to their source.
 dither-kit.json
 components.json

@@ -43,6 +43,13 @@ should not add to that count, and does not need to reduce it.
   account-wide read. Use `useSelectedApp` + `AppSelect`.
 - **Logs are SSE, not JSON.** They use `EventSource` in `lib/api/logs.ts`, not
   the `openapi-fetch` client and not TanStack Query.
+- **`content/docs/*.md` is vendored**, pulled by `npm run docs:pull` from
+  `poyrazK/faas`. Never hand-edit it — fix it upstream and re-pull. It is
+  Prettier-ignored for the same reason `api/openapi.yaml` is.
+- **The docs are a curated subset, and the curation is a security boundary.**
+  Runbooks, ADRs, and `docs/ops/*` stay unpublished; the reasoning is in
+  `src/lib/docs-manifest.ts` and a test enforces it. Adding a page means adding
+  a manifest entry, not dropping a file into `content/docs/`.
 - **Tests are Vitest + React Testing Library**, in `*.test.ts(x)` beside the
   code. `npm run test`. Vitest does not typecheck, so a green test run does
   not mean `npm run check` passes — run the latter before claiming done.
