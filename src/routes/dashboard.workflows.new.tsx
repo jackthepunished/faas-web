@@ -7,7 +7,8 @@ import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/components/ui/toast';
 import { BuildLog } from '@/components/dashboard/build-log';
 import { PageHeader, Panel } from '@/components/dashboard/primitives';
-import { PROJECTS, type Runtime } from '@/lib/mock-data';
+import { type Runtime } from '@/lib/mock-data';
+import { errorMessage } from '@/lib/api/errors';
 import { useData } from '@/lib/store';
 import { cn } from '@/lib/utils';
 import { pageHead } from '@/lib/seo';
@@ -41,15 +42,22 @@ const SOURCES = [
   },
 ];
 
+/** The set `apid` accepts on `POST /v1/apps`; anything else is a 400. */
 const RUNTIMES: { id: Runtime; label: string }[] = [
   { id: 'node22', label: 'Node 22' },
-  { id: 'python3.12', label: 'Python 3.12' },
-  { id: 'go1.23', label: 'Go 1.23' },
-  { id: 'rust1.80', label: 'Rust 1.80' },
+  { id: 'node24', label: 'Node 24' },
+  { id: 'python312', label: 'Python 3.12' },
+  { id: 'python313', label: 'Python 3.13' },
+  { id: 'go124', label: 'Go 1.24' },
+  { id: 'go124-alpine', label: 'Go 1.24 (Alpine)' },
+];
+
+const APP_TYPES: { id: 'function' | 'app'; label: string; desc: string }[] = [
+  { id: 'function', label: 'Function', desc: 'Source built against a managed runtime.' },
+  { id: 'app', label: 'App', desc: 'Your own container image.' },
 ];
 
 const MEMORY = [128, 256, 512, 1024, 2048];
-const REGIONS = ['fra-metal-1', 'iad-metal-1', 'sin-metal-1'];
 
 function NewFunctionPage() {
   const navigate = useNavigate();
@@ -61,10 +69,9 @@ function NewFunctionPage() {
   const [source, setSource] = useState('git');
   const [repo, setRepo] = useState('acme-corp/checkout-service');
   const [name, setName] = useState('checkout-service');
-  const [projectId, setProjectId] = useState(PROJECTS[0].id);
+  const [appType, setAppType] = useState<'function' | 'app'>('function');
   const [runtime, setRuntime] = useState<Runtime>('node22');
   const [memoryMb, setMemoryMb] = useState(512);
-  const [region, setRegion] = useState(REGIONS[0]);
   const [scaleToZero, setScaleToZero] = useState(true);
 
   const [deploying, setDeploying] = useState(false);
@@ -79,29 +86,34 @@ function NewFunctionPage() {
           title={deployed ? 'Deployed' : 'Deploying'}
           description={
             deployed
-              ? `${name} is live on ${region} and already scaled to zero.`
+              ? `${name} is live and already scaled to zero.`
               : `Building ${name} and capturing its snapshot.`
           }
         />
 
         <BuildLog
           onComplete={() => {
-            // The function only enters the workspace once the build lands.
-            const created = addWorkflow({
-              name,
-              projectId,
-              runtime,
-              memoryMb,
-              region,
-              source: source === 'git' ? repo : source,
-            });
-            setCreatedId(created.id);
-            setDeployed(true);
-            toast({
-              kind: 'success',
-              title: 'Deployment succeeded',
-              description: `${name} is serving traffic on ${region}.`,
-            });
+            // `addWorkflow` is a real `POST /v1/apps` now, so it can fail —
+            // most often 409 on a slug already in use, or 403 when the plan's
+            // app limit is reached.
+            void addWorkflow({ name, runtime, memoryMb, type: appType })
+              .then((created) => {
+                setCreatedId(created.id);
+                setDeployed(true);
+                toast({
+                  kind: 'success',
+                  title: 'App created',
+                  description: `${name} is ready. Push a deployment to serve traffic.`,
+                });
+              })
+              .catch((err: unknown) => {
+                setDeploying(false);
+                toast({
+                  kind: 'error',
+                  title: 'Could not create the app',
+                  description: errorMessage(err),
+                });
+              });
           }}
         />
 
@@ -274,18 +286,21 @@ function NewFunctionPage() {
                 </label>
 
                 <label className="flex flex-col gap-1.5">
-                  <span className="label-mono text-muted-foreground">Project</span>
+                  <span className="label-mono text-muted-foreground">Type</span>
                   <select
-                    value={projectId}
-                    onChange={(e) => setProjectId(e.target.value)}
+                    value={appType}
+                    onChange={(e) => setAppType(e.target.value as 'function' | 'app')}
                     className="h-10 rounded-lg border border-border bg-background px-3 text-sm outline-none focus:border-brand"
                   >
-                    {PROJECTS.map((p) => (
-                      <option key={p.id} value={p.id}>
-                        {p.name}
+                    {APP_TYPES.map((t) => (
+                      <option key={t.id} value={t.id}>
+                        {t.label}
                       </option>
                     ))}
                   </select>
+                  <span className="text-xs text-muted-foreground">
+                    {APP_TYPES.find((t) => t.id === appType)?.desc}
+                  </span>
                 </label>
 
                 <label className="flex flex-col gap-1.5">
@@ -303,20 +318,8 @@ function NewFunctionPage() {
                   </select>
                 </label>
 
-                <label className="flex flex-col gap-1.5">
-                  <span className="label-mono text-muted-foreground">Region</span>
-                  <select
-                    value={region}
-                    onChange={(e) => setRegion(e.target.value)}
-                    className="h-10 rounded-lg border border-border bg-background px-3 text-sm outline-none focus:border-brand"
-                  >
-                    {REGIONS.map((r) => (
-                      <option key={r} value={r}>
-                        {r}
-                      </option>
-                    ))}
-                  </select>
-                </label>
+                {/* No region picker: this is a one-box platform and the API
+                    exposes no region to choose. */}
               </div>
 
               <div className="mt-6">
@@ -388,14 +391,13 @@ function NewFunctionPage() {
               <dl className="grid gap-x-8 gap-y-4 sm:grid-cols-2">
                 {[
                   ['Name', name],
-                  ['Project', PROJECTS.find((p) => p.id === projectId)?.name ?? ''],
+                  ['Type', APP_TYPES.find((t) => t.id === appType)?.label ?? ''],
                   [
                     'Source',
                     source === 'git' ? repo : (SOURCES.find((s) => s.id === source)?.name ?? ''),
                   ],
                   ['Runtime', runtime],
                   ['Memory', `${memoryMb} MB`],
-                  ['Region', region],
                   ['Scale to zero', scaleToZero ? 'Enabled' : 'Disabled'],
                   ['Endpoint', `${name}.gregale.run`],
                 ].map(([label, value]) => (

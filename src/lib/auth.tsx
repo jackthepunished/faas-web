@@ -1,12 +1,34 @@
-import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from 'react';
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from 'react';
+import { api, setUnauthorizedHandler, unwrap } from './api/client';
+import type { components } from './api/schema';
 
 /**
- * Mock session layer. Persists to localStorage so route guards can read it
- * synchronously in `beforeLoad`, and simulates network latency so every flow
- * exercises its real pending / error / success states.
+ * The real session layer, against `apid`'s cookie auth.
  *
- * Swap the three `simulate*` functions for real API calls; the hook surface
- * and the guards stay unchanged.
+ * **The session itself is not readable from JavaScript.** `POST /login` sets
+ * `faas_sid` as `HttpOnly; Secure; SameSite=Lax`, which is the right call — it
+ * means an XSS cannot exfiltrate the session — but it also means this module
+ * cannot answer "is the user signed in?" without asking the server.
+ *
+ * Route guards run in `beforeLoad`, which is synchronous and must decide
+ * instantly. So we keep a *hint* in localStorage: the email, written on a
+ * successful sign-in and cleared on sign-out or on any 401. The hint is not a
+ * credential and forging it grants nothing — every actual request is authorised
+ * by the cookie, server-side. It exists purely so the guard can route without a
+ * round-trip, and so a reload does not flash the sign-in screen at someone who
+ * is signed in.
+ *
+ * The hint is then verified: `AuthProvider` calls `GET /v1/account` on mount,
+ * and a 401 anywhere in the app clears it (see `setUnauthorizedHandler`).
  */
 
 const SESSION_KEY = 'gregale.session';
@@ -14,8 +36,11 @@ const ONBOARDED_KEY = 'gregale.onboarded';
 const WORKSPACE_KEY = 'gregale.workspace';
 export const DEFAULT_WORKSPACE = 'acme-corp';
 
-/** The code the mock backend accepts. Surfaced in the UI as a demo hint. */
-export const DEMO_CODE = '123456';
+/** The server's floor: NIST-style length rule, no complexity theatre. */
+export const MIN_PASSWORD_LENGTH = 12;
+
+export type Account = components['schemas']['AccountResponse'];
+export type Plan = Account['plan'];
 
 export interface User {
   email: string;
@@ -39,14 +64,36 @@ function nameFor(email: string): string {
     .join(' ');
 }
 
+/** The API knows an email, not a display name; derive the rest for the shell. */
+function userFor(email: string): User {
+  const trimmed = email.trim();
+  return {
+    email: trimmed,
+    name: nameFor(trimmed) || 'Gregale User',
+    initials: initialsFor(trimmed),
+  };
+}
+
+/**
+ * The synchronous half of the guard — see the note at the top of this file.
+ * A stale hint costs one redirect; it never grants access to data.
+ */
 export function readSession(): User | null {
   if (typeof window === 'undefined') return null;
   try {
     const raw = window.localStorage.getItem(SESSION_KEY);
-    return raw ? (JSON.parse(raw) as User) : null;
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as Partial<User>;
+    return typeof parsed?.email === 'string' ? userFor(parsed.email) : null;
   } catch {
     return null;
   }
+}
+
+function writeSession(user: User | null) {
+  if (typeof window === 'undefined') return;
+  if (user) window.localStorage.setItem(SESSION_KEY, JSON.stringify({ email: user.email }));
+  else window.localStorage.removeItem(SESSION_KEY);
 }
 
 export function hasOnboarded(): boolean {
@@ -74,58 +121,140 @@ export function clearWorkspace() {
   window.localStorage.removeItem(ONBOARDED_KEY);
 }
 
-const delay = (ms: number) => new Promise((r) => setTimeout(r, ms));
-
 export function isValidEmail(value: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(value.trim());
 }
 
 interface AuthValue {
   user: User | null;
-  /** Sends the one-time code. Rejects on an unroutable address. */
-  requestCode: (email: string) => Promise<void>;
-  /** Verifies the code and opens a session. */
-  verifyCode: (email: string, code: string) => Promise<User>;
-  signOut: () => void;
+  /** Plan, quota limits, and usage. Null until `GET /v1/account` resolves. */
+  account: Account | null;
+  /** True while the initial session check is in flight. */
+  loading: boolean;
+  signIn: (email: string, password: string) => Promise<User>;
+  signUp: (email: string, password: string) => Promise<User>;
+  signOut: () => Promise<void>;
+  /** Always resolves — the server answers identically whether or not the address exists. */
+  requestPasswordReset: (email: string) => Promise<void>;
+  refreshAccount: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthValue | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(() => readSession());
+  const [account, setAccount] = useState<Account | null>(null);
+  // Only the boot check blocks; later refreshes happen behind the current UI.
+  const [loading, setLoading] = useState<boolean>(() => readSession() !== null);
 
-  const requestCode = useCallback(async (email: string) => {
-    await delay(700);
-    // One address is reserved to demonstrate the failure path.
-    if (email.trim().toLowerCase() === 'blocked@gregale.dev') {
-      throw new Error('That address is not allowed in the private beta.');
-    }
-  }, []);
-
-  const verifyCode = useCallback(async (email: string, code: string) => {
-    await delay(800);
-    if (code !== DEMO_CODE) {
-      throw new Error("That code doesn't match. Check the digits and try again.");
-    }
-    const next: User = {
-      email: email.trim(),
-      name: nameFor(email) || 'Gregale User',
-      initials: initialsFor(email),
-    };
-    window.localStorage.setItem(SESSION_KEY, JSON.stringify(next));
+  const setSession = useCallback((next: User | null) => {
+    writeSession(next);
     setUser(next);
-    return next;
+    if (!next) setAccount(null);
   }, []);
 
-  // Onboarding is account state, not session state, so it survives sign-out.
-  const signOut = useCallback(() => {
-    window.localStorage.removeItem(SESSION_KEY);
-    setUser(null);
+  const refreshAccount = useCallback(async () => {
+    const next = await unwrap(api.GET('/v1/account', {}));
+    setAccount(next);
+    // The server is authoritative on the address; a hint written from a typo'd
+    // or since-changed email gets corrected here.
+    if (next.email) setSession(userFor(next.email));
+  }, [setSession]);
+
+  /**
+   * Any 401 from anywhere means the cookie is gone or expired. Drop the hint so
+   * the guards send the user to sign in, rather than leaving every panel
+   * showing an error it cannot explain.
+   */
+  useEffect(() => {
+    setUnauthorizedHandler(() => {
+      writeSession(null);
+      setUser(null);
+      setAccount(null);
+    });
+    return () => setUnauthorizedHandler(null);
+  }, []);
+
+  // Verify the hint once on mount. StrictMode double-invokes effects in dev, and
+  // this one is a network call, so it is guarded.
+  const checked = useRef(false);
+  useEffect(() => {
+    if (checked.current) return;
+    checked.current = true;
+    if (!readSession()) {
+      setLoading(false);
+      return;
+    }
+    void refreshAccount()
+      .catch(() => {
+        // A 401 has already cleared the session via the handler above. Anything
+        // else — the box is down, the network dropped — should not sign the
+        // user out; the next real request will surface it properly.
+      })
+      .finally(() => setLoading(false));
+  }, [refreshAccount]);
+
+  const signIn = useCallback(
+    async (email: string, password: string) => {
+      await unwrap(api.POST('/login', { body: { email: email.trim(), password } }));
+      const next = userFor(email);
+      setSession(next);
+      // Fire and forget: the plan and quota banner can arrive a beat later
+      // rather than holding up the redirect into the console.
+      void refreshAccount().catch(() => {});
+      return next;
+    },
+    [refreshAccount, setSession]
+  );
+
+  const signUp = useCallback(
+    async (email: string, password: string) => {
+      await unwrap(api.POST('/signup', { body: { email: email.trim(), password } }));
+      const next = userFor(email);
+      setSession(next);
+      void refreshAccount().catch(() => {});
+      return next;
+    },
+    [refreshAccount, setSession]
+  );
+
+  /**
+   * Clears locally *first*, then tells the server.
+   *
+   * Order matters: callers sign out and navigate to `/login` in the same tick,
+   * and the route guard reads the hint synchronously. Awaiting the round-trip
+   * before clearing would let the guard still see a session and bounce the user
+   * straight back into the console.
+   *
+   * The server call is best-effort for the same reason — a failed logout leaves
+   * a cookie the server expires on its own, and refusing to sign someone out
+   * because the network blipped is the worse failure.
+   */
+  const signOut = useCallback(async () => {
+    setSession(null);
+    try {
+      await unwrap(api.POST('/v1/auth/logout', {}));
+    } catch {
+      // Intentionally ignored — see above.
+    }
+  }, [setSession]);
+
+  const requestPasswordReset = useCallback(async (email: string) => {
+    await unwrap(api.POST('/login/forgot', { body: { email: email.trim() } }));
   }, []);
 
   const value = useMemo(
-    () => ({ user, requestCode, verifyCode, signOut }),
-    [user, requestCode, verifyCode, signOut]
+    () => ({
+      user,
+      account,
+      loading,
+      signIn,
+      signUp,
+      signOut,
+      requestPasswordReset,
+      refreshAccount,
+    }),
+    [user, account, loading, signIn, signUp, signOut, requestPasswordReset, refreshAccount]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

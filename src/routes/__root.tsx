@@ -1,8 +1,10 @@
 import { createRootRoute, HeadContent, Link, Outlet } from '@tanstack/react-router';
 import { accentChain } from 'glimm';
 import { GlimmProvider } from 'glimm/react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AuthProvider } from '@/lib/auth';
 import { DataProvider } from '@/lib/store';
+import { retryPolicy } from '@/lib/api/queries';
 import { ToastProvider } from '@/components/ui/toast';
 import { pageHead } from '@/lib/seo';
 
@@ -24,31 +26,54 @@ export const Route = createRootRoute({
  */
 const MINT_SWEEP = accentChain(['#d3fae8', '#00ce91', '#006f40']);
 
+/**
+ * Created once at module scope rather than per render, so a re-render never
+ * throws away the cache.
+ *
+ * `staleTime` of 30s matches the router's own preload staleness: the console is
+ * an operations surface, so data should be fresh when you come back to a tab,
+ * but not refetch on every incidental focus change.
+ */
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 30_000,
+      retry: retryPolicy,
+      // The metrics rollup is a Prometheus query; refetching it every time the
+      // window regains focus is a cost with little payoff at this cadence.
+      refetchOnWindowFocus: false,
+    },
+    mutations: { retry: false },
+  },
+});
+
 function RootLayout() {
   return (
-    <AuthProvider>
-      <DataProvider>
-        {/* Tuned for a paper page: the sweep now has to read as a darkening
-            band rather than a glow, so brightness comes up toward neutral —
-            pulling it down was what kept it from blowing out against the old
-            near-black surface, and on white that only made it muddy. */}
-        <GlimmProvider
-          palette={MINT_SWEEP}
-          brightness={0.94}
-          sweepMs={950}
-          outroMs={620}
-          easing="easeInOutCubic"
-          waveAmount={0.6}
-          swellAmount={0.6}
-        >
-          <ToastProvider>
-            {/* Applies each route's `head` to the document. */}
-            <HeadContent />
-            <Outlet />
-          </ToastProvider>
-        </GlimmProvider>
-      </DataProvider>
-    </AuthProvider>
+    <QueryClientProvider client={queryClient}>
+      <AuthProvider>
+        <DataProvider>
+          {/* Tuned for a paper page: the sweep now has to read as a darkening
+              band rather than a glow, so brightness comes up toward neutral —
+              pulling it down was what kept it from blowing out against the old
+              near-black surface, and on white that only made it muddy. */}
+          <GlimmProvider
+            palette={MINT_SWEEP}
+            brightness={0.94}
+            sweepMs={950}
+            outroMs={620}
+            easing="easeInOutCubic"
+            waveAmount={0.6}
+            swellAmount={0.6}
+          >
+            <ToastProvider>
+              {/* Applies each route's `head` to the document. */}
+              <HeadContent />
+              <Outlet />
+            </ToastProvider>
+          </GlimmProvider>
+        </DataProvider>
+      </AuthProvider>
+    </QueryClientProvider>
   );
 }
 

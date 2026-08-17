@@ -5,7 +5,9 @@ import { Button } from '@/components/ui/button';
 import { AreaChart, PercentileChart } from '@/components/dashboard/charts';
 import {
   EmptyState,
+  ErrorState,
   LevelTag,
+  LoadingState,
   PageHeader,
   Panel,
   RangeSelector,
@@ -20,11 +22,11 @@ import {
   formatCompact,
   formatMs,
   formatRelative,
-  getProject,
   type RangeKey,
 } from '@/lib/mock-data';
 import { useData } from '@/lib/store';
 import { useToast } from '@/components/ui/toast';
+import { errorMessage } from '@/lib/api/errors';
 import { cn } from '@/lib/utils';
 import { pageHead, useDocumentTitle } from '@/lib/seo';
 
@@ -63,7 +65,7 @@ function FunctionDetailPage() {
     setTab(TABS[next]);
   };
   const [range, setRange] = useState<RangeKey>('24h');
-  const { getWorkflow, deploymentsFor, redeploy } = useData();
+  const { getWorkflow, deploymentsFor, redeploy, loading, error, refresh } = useData();
   const { toast } = useToast();
 
   const fn = getWorkflow(workflowId);
@@ -77,6 +79,27 @@ function FunctionDetailPage() {
   );
   const series = useMemo(() => buildSeries(range, seedOffset, 0.12), [range, seedOffset]);
 
+  // Order matters: the app list arrives over the network now, so "not in the
+  // list" means "not loaded yet" until the request settles. Claiming 404 first
+  // would flash a wrong answer on every cold navigation.
+  if (error) {
+    return (
+      <div className="flex flex-col gap-6">
+        <PageHeader title={workflowId} />
+        <ErrorState error={error} onRetry={refresh} />
+      </div>
+    );
+  }
+
+  if (loading) {
+    return (
+      <div className="flex flex-col gap-6">
+        <PageHeader title={workflowId} />
+        <LoadingState />
+      </div>
+    );
+  }
+
   if (!fn) {
     return (
       <div className="flex flex-col gap-6">
@@ -86,7 +109,6 @@ function FunctionDetailPage() {
     );
   }
 
-  const project = getProject(fn.projectId);
   const deployments = deploymentsFor(fn.id);
   const isDeploying = fn.state === 'deploying';
   const logs = LOGS.filter((l) => l.workflowId === fn.id).slice(0, 40);
@@ -105,7 +127,7 @@ function FunctionDetailPage() {
 
       <PageHeader
         title={fn.name}
-        description={`${project?.name} · ${fn.runtime} · ${fn.memoryMb} MB · ${fn.region}`}
+        description={[fn.runtime, `${fn.memoryMb} MB`, fn.url].filter(Boolean).join(' · ')}
         actions={
           <>
             <StateBadge state={fn.state} />
@@ -115,16 +137,27 @@ function FunctionDetailPage() {
               className="gap-1.5"
               disabled={isDeploying}
               onClick={() => {
-                redeploy(fn.id);
-                toast({
-                  kind: 'info',
-                  title: 'Redeploy started',
-                  description: `Rebuilding ${fn.name} and recapturing its snapshot.`,
-                });
+                // `POST /v1/apps/{slug}/rollback` — a real write, so the toast
+                // reports what happened rather than announcing it up front.
+                void redeploy(fn.id)
+                  .then(() =>
+                    toast({
+                      kind: 'success',
+                      title: 'Rolled back',
+                      description: `${fn.name} is serving its previous deployment.`,
+                    })
+                  )
+                  .catch((err: unknown) =>
+                    toast({
+                      kind: 'error',
+                      title: 'Rollback failed',
+                      description: errorMessage(err),
+                    })
+                  );
               }}
             >
               <RotateCw className={cn('h-3.5 w-3.5', isDeploying && 'animate-spin')} />
-              {isDeploying ? 'Deploying…' : 'Redeploy'}
+              {isDeploying ? 'Deploying…' : 'Roll back'}
             </Button>
           </>
         }
@@ -286,8 +319,9 @@ function FunctionDetailPage() {
               {[
                 ['Runtime', fn.runtime],
                 ['Memory', `${fn.memoryMb} MB`],
-                ['Region', fn.region],
-                ['Current version', fn.version],
+                // The image digest of the live deployment — the API has no
+                // version string, and the digest is what actually identifies it.
+                ['Current image', fn.version || '—'],
                 ['Endpoint', fn.url],
                 ['Last deployed', formatRelative(fn.lastDeployedAt)],
               ].map(([label, value]) => (

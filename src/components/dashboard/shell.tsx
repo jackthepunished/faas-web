@@ -320,7 +320,9 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
   }, [mobileOpen]);
 
   const handleSignOut = () => {
-    signOut();
+    // Clears the local session synchronously; the server call settles behind
+    // the navigation. See `signOut` in `lib/auth.tsx`.
+    void signOut();
     toast({ kind: 'info', title: 'Signed out' });
     sweepNavigate('/login');
   };

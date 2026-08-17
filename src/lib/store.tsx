@@ -1,166 +1,143 @@
+import { createContext, useContext, useMemo, type ReactNode } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import {
-  createContext,
-  useCallback,
-  useContext,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-  type ReactNode,
-} from 'react';
-import {
-  DEPLOYMENTS,
-  WORKFLOWS,
-  NOW,
-  type Deployment,
-  type Workflow,
-  type Runtime,
-} from './mock-data';
+  keys,
+  useApps,
+  useAppsMetrics,
+  useCreateApp,
+  useDeployments,
+  useRollback,
+  type Deployment as ApiDeployment,
+  type MetricsRange,
+} from './api/queries';
+import { slugIndex, toDeployment, toWorkflow } from './api/adapters';
+import { NOW, type Deployment, type Runtime, type Workflow } from './mock-data';
 
 /**
- * In-memory workspace store.
+ * The workspace, backed by the real API.
  *
- * `mock-data` supplies the seeded starting fixtures; everything the user
- * creates during a session lives here so the app behaves like it persists.
- * State resets on reload by design — swap this provider for real queries and
- * the consuming components stay as they are.
+ * This was an in-memory fixture store. It now reads `/v1/apps`,
+ * `/v1/apps/metrics`, and `/v1/deployments` through TanStack Query and projects
+ * them onto the view models the console already renders (see `api/adapters.ts`).
+ *
+ * The hook surface is deliberately close to what it replaced, so the pages that
+ * consume it kept working — but two things genuinely changed and callers have to
+ * deal with them:
+ *
+ * - **`loading` and `error` are real.** There is a network in the way now.
+ * - **`addWorkflow` and `redeploy` are async and can fail.** They were
+ *   fire-and-forget against local state; they are HTTP writes now, and the
+ *   caller has to await them and show what happened.
  */
 
 export interface NewWorkflowInput {
   name: string;
-  projectId: string;
   runtime: Runtime;
   memoryMb: number;
-  region: string;
-  source: string;
+  /** `function` runs a runtime; `app` runs a container image. */
+  type?: 'app' | 'function';
 }
 
 interface DataValue {
   workflows: Workflow[];
   deployments: Deployment[];
+  loading: boolean;
+  error: Error | null;
   getWorkflow: (id: string) => Workflow | undefined;
   deploymentsFor: (id: string) => Deployment[];
   workflowsForProject: (projectId: string) => Workflow[];
-  addWorkflow: (input: NewWorkflowInput) => Workflow;
-  /** Flips the function to `deploying`, then back to `running` when it lands. */
-  redeploy: (id: string) => void;
+  addWorkflow: (input: NewWorkflowInput) => Promise<Workflow>;
+  /** Rolls the app back to its previous deployment. */
+  redeploy: (id: string) => Promise<void>;
+  /** Refetches apps, metrics, and deployments. */
+  refresh: () => void;
 }
 
 const DataContext = createContext<DataValue | null>(null);
 
-function bumpPatch(version: string): string {
-  const [major, minor, patch] = version.replace(/^v/, '').split('.');
-  return `v${major}.${minor}.${Number(patch ?? 0) + 1}`;
-}
+/** Matches the console's default dashboard window. */
+const DEFAULT_RANGE: MetricsRange = '24h';
 
 export function DataProvider({ children }: { children: ReactNode }) {
-  const [workflows, setFunctions] = useState<Workflow[]>(WORKFLOWS);
-  const [deployments, setDeployments] = useState<Deployment[]>(DEPLOYMENTS);
+  const qc = useQueryClient();
 
-  const addWorkflow = useCallback((input: NewWorkflowInput) => {
-    const id = `fn_${input.name.replace(/-/g, '_')}_${Math.abs(hash(input.name))}`;
-    const created: Workflow = {
-      id,
-      projectId: input.projectId,
-      name: input.name,
-      runtime: input.runtime,
-      memoryMb: input.memoryMb,
-      state: 'running',
-      region: input.region,
-      url: `https://${input.name}.gregale.run`,
-      // A function that just went live has no traffic history yet.
-      invocations24h: 0,
-      avgDurationMs: 0,
-      coldStartP50Ms: 0,
-      errorRatePct: 0,
-      lastDeployedAt: Date.now(),
-      version: 'v0.1.0',
-    };
+  const appsQuery = useApps();
+  const deploymentsQuery = useDeployments();
+  // Metrics are a separate query on purpose: a degraded Prometheus zeroes this
+  // response without taking the app list down with it, and the list is what the
+  // console is actually for.
+  const metricsQuery = useAppsMetrics(DEFAULT_RANGE);
 
-    const deployment: Deployment = {
-      id: `dep_${id}_0`,
-      workflowId: id,
-      version: 'v0.1.0',
-      state: 'succeeded',
-      commit: Math.abs(hash(input.name + input.region))
-        .toString(16)
-        .padStart(7, '0')
-        .slice(0, 7),
-      message: `Initial deploy from ${input.source}`,
-      author: 'you',
-      createdAt: Date.now(),
-      durationMs: 8200,
-    };
+  const createApp = useCreateApp();
+  const rollback = useRollback();
 
-    setFunctions((prev) => [created, ...prev]);
-    setDeployments((prev) => [deployment, ...prev]);
-    return created;
-  }, []);
+  const apps = useMemo(() => appsQuery.data ?? [], [appsQuery.data]);
 
-  // Pending redeploy timers, cleared on unmount so a torn-down provider never
-  // sets state. Version bumps read the latest workflows through a ref rather
-  // than the closure, so a workflow edited mid-deploy is not clobbered.
-  const workflowsRef = useRef(workflows);
-  workflowsRef.current = workflows;
-  const timers = useRef(new Set<ReturnType<typeof setTimeout>>());
-  useEffect(() => {
-    const pending = timers.current;
-    return () => {
-      pending.forEach(clearTimeout);
-      pending.clear();
-    };
-  }, []);
+  // The list arrives newest-first, so the first hit per app is its latest —
+  // which is where a workflow's version and deploy time come from.
+  const latestByAppId = useMemo(() => {
+    const byApp = new Map<string, ApiDeployment>();
+    for (const d of deploymentsQuery.data?.items ?? []) {
+      if (!byApp.has(d.app_id)) byApp.set(d.app_id, d);
+    }
+    return byApp;
+  }, [deploymentsQuery.data]);
 
-  const redeploy = useCallback((id: string) => {
-    setFunctions((prev) =>
-      prev.map((fn) => (fn.id === id ? { ...fn, state: 'deploying' as const } : fn))
-    );
+  const workflows = useMemo(
+    () => apps.map((app) => toWorkflow(app, metricsQuery.data, latestByAppId.get(app.id))),
+    [apps, metricsQuery.data, latestByAppId]
+  );
 
-    const timer = setTimeout(() => {
-      timers.current.delete(timer);
-      const current = workflowsRef.current.find((f) => f.id === id);
-      if (!current) return;
-      const nextVersion = bumpPatch(current.version);
-
-      setFunctions((prev) =>
-        prev.map((fn) =>
-          fn.id === id
-            ? { ...fn, state: 'running' as const, version: nextVersion, lastDeployedAt: Date.now() }
-            : fn
-        )
-      );
-      setDeployments((prev) => [
-        {
-          id: `dep_${id}_${prev.length}`,
-          workflowId: id,
-          version: nextVersion,
-          state: 'succeeded' as const,
-          commit: Math.abs(hash(id + prev.length))
-            .toString(16)
-            .padStart(7, '0')
-            .slice(0, 7),
-          message: 'Manual redeploy from the dashboard',
-          author: 'you',
-          createdAt: Date.now(),
-          durationMs: 8200,
-        },
-        ...prev,
-      ]);
-    }, 8200);
-    timers.current.add(timer);
-  }, []);
+  const deployments = useMemo(() => {
+    const bySlug = slugIndex(apps);
+    return (deploymentsQuery.data?.items ?? []).map((d) => toDeployment(d, bySlug));
+  }, [apps, deploymentsQuery.data]);
 
   const value = useMemo<DataValue>(
     () => ({
       workflows,
       deployments,
+      // Metrics are excluded: the list should paint as soon as the apps land
+      // rather than waiting on a Prometheus round-trip that may be degraded.
+      loading: appsQuery.isPending || deploymentsQuery.isPending,
+      error: appsQuery.error ?? deploymentsQuery.error ?? null,
       getWorkflow: (id) => workflows.find((f) => f.id === id),
       deploymentsFor: (id) => deployments.filter((d) => d.workflowId === id),
       workflowsForProject: (projectId) => workflows.filter((f) => f.projectId === projectId),
-      addWorkflow,
-      redeploy,
+
+      addWorkflow: async (input) => {
+        const app = await createApp.mutateAsync({
+          slug: input.name,
+          type: input.type ?? 'function',
+          runtime: input.runtime,
+          ram_mb: input.memoryMb,
+        });
+        return toWorkflow(app);
+      },
+
+      // The console's "redeploy" is a rollback to the previous deployment.
+      // Creating a *new* deployment needs an image or a source ref, which is
+      // the CLI's and GitHub integration's job, not a button in a dashboard.
+      redeploy: async (id) => {
+        await rollback.mutateAsync(id);
+      },
+
+      refresh: () => {
+        void qc.invalidateQueries({ queryKey: keys.apps });
+        void qc.invalidateQueries({ queryKey: keys.deployments });
+      },
     }),
-    [workflows, deployments, addWorkflow, redeploy]
+    [
+      workflows,
+      deployments,
+      appsQuery.isPending,
+      appsQuery.error,
+      deploymentsQuery.isPending,
+      deploymentsQuery.error,
+      createApp,
+      rollback,
+      qc,
+    ]
   );
 
   return <DataContext.Provider value={value}>{children}</DataContext.Provider>;
@@ -170,17 +147,6 @@ export function useData(): DataValue {
   const ctx = useContext(DataContext);
   if (!ctx) throw new Error('useData must be used inside <DataProvider>');
   return ctx;
-}
-
-/** Small deterministic string hash, for stable generated ids and commit shas. */
-function hash(input: string | number): number {
-  const s = String(input);
-  let h = 2166136261;
-  for (let i = 0; i < s.length; i++) {
-    h ^= s.charCodeAt(i);
-    h = Math.imul(h, 16777619);
-  }
-  return h | 0;
 }
 
 export { NOW };
