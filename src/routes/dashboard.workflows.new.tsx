@@ -65,6 +65,9 @@ function NewFunctionPage() {
   const { addWorkflow } = useData();
 
   const [createdId, setCreatedId] = useState<string | null>(null);
+  // The endpoint the API assigned. Constructing one from the slug would be a
+  // guess about the platform's hostname scheme; this is the real value.
+  const [createdUrl, setCreatedUrl] = useState<string | null>(null);
   const [step, setStep] = useState(0);
   const [source, setSource] = useState('git');
   const [repo, setRepo] = useState('acme-corp/checkout-service');
@@ -99,6 +102,7 @@ function NewFunctionPage() {
             void addWorkflow({ name, runtime, memoryMb, type: appType })
               .then((created) => {
                 setCreatedId(created.id);
+                setCreatedUrl(created.url);
                 setDeployed(true);
                 toast({
                   kind: 'success',
@@ -125,10 +129,12 @@ function NewFunctionPage() {
             className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border bg-card p-4"
           >
             <a
-              href="#"
+              href={createdUrl ?? undefined}
+              target="_blank"
+              rel="noopener noreferrer"
               className="font-mono text-xs text-muted-foreground transition-colors hover:text-foreground"
             >
-              https://{name}.gregale.run
+              {createdUrl ?? 'Waiting for the endpoint…'}
             </a>
             <div className="flex gap-2">
               <Button
@@ -399,7 +405,8 @@ function NewFunctionPage() {
                   ['Runtime', runtime],
                   ['Memory', `${memoryMb} MB`],
                   ['Scale to zero', scaleToZero ? 'Enabled' : 'Disabled'],
-                  ['Endpoint', `${name}.gregale.run`],
+                  // Assigned by the API on create, so it is not known until then.
+                  ['Endpoint', createdUrl ?? 'Assigned on create'],
                 ].map(([label, value]) => (
                   <div key={label} className="flex flex-col gap-1 border-b border-border pb-3">
                     <dt className="label-mono text-muted-foreground">{label}</dt>

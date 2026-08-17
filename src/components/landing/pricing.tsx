@@ -1,5 +1,4 @@
 import { motion } from 'framer-motion';
-import { ArrowRight } from 'lucide-react';
 import { EASE, Reveal } from './reveal';
 import { TextReveal } from './text-reveal';
 import { PixelBeams } from './shaders/pixel-beams';
@@ -55,12 +54,10 @@ export function Pricing() {
           </div>
         </div>
 
+        {/* The "View detailed pricing" link went nowhere — there is no pricing
+            page beyond this section, so the sentence stands on its own. */}
         <p className="mt-6 text-sm text-muted-foreground">
-          1M invocations and 400,000 GB-seconds free every month.{' '}
-          <a href="#" className="inline-flex items-center gap-1 text-brand hover:text-brand-hover">
-            View detailed pricing
-            <ArrowRight className="h-3.5 w-3.5" />
-          </a>
+          1M invocations and 400,000 GB-seconds free every month.
         </p>
       </div>
     </section>
