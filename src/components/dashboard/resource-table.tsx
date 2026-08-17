@@ -1,7 +1,7 @@
 import { useMemo, useState, type ReactNode } from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
 import { ArrowDown, ArrowUp, Search, X } from 'lucide-react';
-import { EmptyState } from './primitives';
+import { EmptyState, ErrorState, LoadingState } from './primitives';
 import { EASE } from './motion';
 import { cn } from '@/lib/utils';
 
@@ -39,6 +39,12 @@ export interface ResourceTableProps<T> {
   filters?: ReactNode;
   emptyMessage?: string;
   minWidth?: string;
+  /** True while the first fetch is in flight. Replaces the table, not the header. */
+  loading?: boolean;
+  /** A failed fetch. Rendered instead of an empty state, which means the opposite. */
+  error?: unknown;
+  /** Wired to the error state's retry button. */
+  onRetry?: () => void;
 }
 
 export function ResourceTable<T extends { id: string }>({
@@ -51,6 +57,9 @@ export function ResourceTable<T extends { id: string }>({
   filters,
   emptyMessage = 'Nothing here yet.',
   minWidth = 'min-w-[820px]',
+  loading = false,
+  error,
+  onRetry,
 }: ResourceTableProps<T>) {
   const [query, setQuery] = useState('');
   const [sort, setSort] = useState(initialSort);
@@ -143,7 +152,14 @@ export function ResourceTable<T extends { id: string }>({
         </div>
       )}
 
-      {visible.length === 0 ? (
+      {/* Order matters: a failed fetch is not an empty list, and neither is a
+          fetch still in flight. Collapsing all three into "nothing here" is how
+          a broken console looks like a working one. */}
+      {error ? (
+        <ErrorState error={error} onRetry={onRetry} />
+      ) : loading ? (
+        <LoadingState />
+      ) : visible.length === 0 ? (
         <EmptyState message={emptyMessage} />
       ) : (
         <div className="overflow-hidden rounded-xl border border-border bg-card">

@@ -70,6 +70,24 @@ export const api = createClient<paths>({
 api.use(sessionMiddleware);
 
 /**
+ * The dashboard CSRF token, for the endpoints that demand it in the body.
+ *
+ * Double-submit: the server sets a `faas_csrf` cookie on every authenticated
+ * response and expects the same value echoed in the JSON body, so
+ * `VerifyAuthenticated` can compare the two. Unlike `faas_sid` this cookie is
+ * deliberately *not* `HttpOnly` — it has to be readable here for the pattern to
+ * work at all, and it is useless without the session cookie riding alongside.
+ *
+ * Returns an empty string when it is missing, which the server rejects with
+ * `csrf_mismatch` — the correct outcome, and better than guessing a value.
+ */
+export function csrfToken(): string {
+  if (typeof document === 'undefined') return '';
+  const match = document.cookie.match(/(?:^|;\s*)faas_csrf=([^;]*)/);
+  return match ? decodeURIComponent(match[1]) : '';
+}
+
+/**
  * Narrows an `openapi-fetch` result to its data, throwing `ApiError` otherwise.
  *
  * The raw result is a `{ data?, error?, response }` union, which is honest but

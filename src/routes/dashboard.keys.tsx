@@ -1,13 +1,12 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { createFileRoute } from '@tanstack/react-router';
-import { Check, Copy, Eye, EyeOff, Plus, Trash2 } from 'lucide-react';
+import { AlertTriangle, Copy, Plus, RotateCw, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { ConfirmDialog } from '@/components/ui/modal';
+import { PageHeader, Panel } from '@/components/dashboard/primitives';
+import { Pill, ResourceTable, type Column } from '@/components/dashboard/resource-table';
 import { useToast } from '@/components/ui/toast';
-import { EmptyState, PageHeader, Panel } from '@/components/dashboard/primitives';
-import { Pill } from '@/components/dashboard/resource-table';
-import { API_KEYS, type ApiKeyRecord } from '@/lib/mock-resources';
-import { formatRelative } from '@/lib/mock-data';
+import { useApiKeys, useCreateApiKey, useDeleteApiKey, useRotateApiKey } from '@/lib/api/queries';
+import { errorMessage } from '@/lib/api/errors';
 import { consoleHead } from '@/lib/seo';
 
 export const Route = createFileRoute('/dashboard/keys')({
@@ -15,143 +14,220 @@ export const Route = createFileRoute('/dashboard/keys')({
   head: () => consoleHead('keys'),
 });
 
-/** 20 hex chars, matching the shape of the seeded keys. */
-function generateKey(): string {
-  const bytes = new Uint8Array(10);
-  crypto.getRandomValues(bytes);
-  return `grg_live_${Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('')}`;
+/**
+ * API keys, from `/v1/keys`.
+ *
+ * **The plaintext is returned exactly once**, on create and on rotate. After
+ * that the API only ever surfaces the prefix, and there is no recovery path —
+ * so the reveal panel below is not a nicety, it is the only chance the customer
+ * gets. It stays until dismissed rather than auto-hiding.
+ *
+ * Rotation is not deletion: the old key keeps working for a grace window
+ * (`/v1/account/keys/grace_window_days`) so a deploy mid-rotation does not fail.
+ */
+interface KeyRow {
+  id: string;
+  label: string;
+  prefix: string;
+  scopes: string;
+  lastUsedAt: string | null;
 }
 
-function KeyRow({ apiKey, onRevoke }: { apiKey: ApiKeyRecord; onRevoke: (id: string) => void }) {
-  const [revealed, setRevealed] = useState(false);
-  const [copied, setCopied] = useState(false);
+function formatWhen(value: string | null | undefined): string {
+  if (!value) return 'Never';
+  const ms = Date.parse(value);
+  return Number.isNaN(ms) ? 'Never' : new Date(ms).toLocaleDateString();
+}
 
-  const copy = async () => {
-    try {
-      await navigator.clipboard.writeText(apiKey.value);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 1600);
-    } catch {
-      // Clipboard unavailable — the value stays selectable when revealed.
-    }
-  };
+/** The one-time reveal. Dismissing it is the only way out, on purpose. */
+function PlaintextPanel({ value, onDismiss }: { value: string; onDismiss: () => void }) {
+  const { toast } = useToast();
 
   return (
-    <li className="flex flex-wrap items-center gap-3 py-3.5 first:pt-0 last:pb-0">
-      <div className="min-w-0 flex-1">
-        <p className="flex items-center gap-2 text-sm font-medium">
-          {apiKey.label}
-          {apiKey.scopes.map((s) => (
-            <Pill key={s} label={s} />
-          ))}
-        </p>
-        <p className="mt-1 font-mono text-xs text-muted-foreground">
-          {revealed ? apiKey.value : `${apiKey.value.slice(0, 9)}${'•'.repeat(16)}`}
-        </p>
-      </div>
-
-      <div className="text-right text-xs text-muted-foreground">
-        <p>Created {formatRelative(apiKey.createdAt)}</p>
-        <p className="mt-0.5">
-          {apiKey.lastUsedAt ? `Used ${formatRelative(apiKey.lastUsedAt)}` : 'Never used'}
-        </p>
-      </div>
-
-      <button
-        type="button"
-        onClick={() => setRevealed((v) => !v)}
-        aria-label={revealed ? 'Hide key' : 'Reveal key'}
-        className="rounded-md border border-border p-1.5 text-muted-foreground transition-colors hover:text-foreground"
-      >
-        {revealed ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
-      </button>
-      <button
-        type="button"
-        onClick={copy}
-        aria-label="Copy key"
-        className="rounded-md border border-border p-1.5 text-muted-foreground transition-colors hover:text-foreground"
-      >
-        {copied ? (
-          <Check className="h-3.5 w-3.5" style={{ color: 'var(--status-good)' }} />
-        ) : (
+    <div
+      role="alert"
+      className="flex flex-col gap-3 rounded-xl border p-5"
+      style={{ borderColor: 'color-mix(in oklab, var(--status-warning) 45%, transparent)' }}
+    >
+      <span className="flex items-center gap-2 text-sm font-medium">
+        <AlertTriangle className="h-4 w-4" style={{ color: 'var(--status-warning)' }} />
+        Copy this key now — it will not be shown again
+      </span>
+      <code className="select-all break-all rounded-lg border border-border bg-background px-3 py-2 font-mono text-xs">
+        {value}
+      </code>
+      <div className="flex items-center gap-2">
+        <Button
+          size="sm"
+          variant="outline"
+          className="gap-1.5"
+          onClick={() => {
+            void navigator.clipboard
+              .writeText(value)
+              .then(() => toast({ kind: 'success', title: 'Copied to clipboard' }))
+              .catch(() => toast({ kind: 'error', title: 'Could not copy' }));
+          }}
+        >
           <Copy className="h-3.5 w-3.5" />
-        )}
-      </button>
-      <button
-        type="button"
-        onClick={() => onRevoke(apiKey.id)}
-        aria-label={`Revoke ${apiKey.label}`}
-        className="rounded-md border border-border p-1.5 text-muted-foreground transition-colors hover:border-[color:var(--status-critical)] hover:text-[color:var(--status-critical)]"
-      >
-        <Trash2 className="h-3.5 w-3.5" />
-      </button>
-    </li>
+          Copy
+        </Button>
+        <Button size="sm" variant="ghost" onClick={onDismiss}>
+          I have saved it
+        </Button>
+      </div>
+    </div>
   );
 }
 
 function KeysPage() {
   const { toast } = useToast();
-  const [keys, setKeys] = useState<ApiKeyRecord[]>(API_KEYS);
-  const [pendingRevoke, setPendingRevoke] = useState<ApiKeyRecord | null>(null);
+  const { data, isPending, error, refetch } = useApiKeys();
+  const createKey = useCreateApiKey();
+  const deleteKey = useDeleteApiKey();
+  const rotateKey = useRotateApiKey();
 
-  const createKey = () => {
-    const created: ApiKeyRecord = {
-      id: `key_${Date.now()}`,
-      label: `Key ${keys.length + 1}`,
-      value: generateKey(),
-      scopes: ['deploy', 'read'],
-      createdAt: Date.now(),
-      lastUsedAt: null,
-    };
-    setKeys((prev) => [...prev, created]);
-    toast({
-      kind: 'success',
-      title: 'API key created',
-      description: 'Copy it now — this is the only time it is shown in full.',
-    });
-  };
+  const [label, setLabel] = useState('');
+  const [plaintext, setPlaintext] = useState<string | null>(null);
+
+  const rows = useMemo<KeyRow[]>(
+    () =>
+      (data ?? []).map((k) => ({
+        id: k.id,
+        label: k.label ?? '—',
+        prefix: k.prefix,
+        scopes: k.scopes.join(', '),
+        lastUsedAt: k.last_used_at ?? null,
+      })),
+    [data]
+  );
+
+  const columns: Column<KeyRow>[] = [
+    { key: 'label', label: 'Label' },
+    {
+      key: 'prefix',
+      label: 'Key',
+      render: (k) => <span className="font-mono text-xs">{k.prefix}…</span>,
+    },
+    {
+      key: 'scopes',
+      label: 'Scopes',
+      render: (k) => (
+        <span className="flex flex-wrap gap-1">
+          {k.scopes
+            ? k.scopes.split(', ').map((s) => <Pill key={s} label={s} />)
+            : <span className="text-xs text-muted-foreground">—</span>}
+        </span>
+      ),
+    },
+    {
+      key: 'lastUsedAt',
+      label: 'Last used',
+      numeric: true,
+      render: (k) => <span className="text-xs text-muted-foreground">{formatWhen(k.lastUsedAt)}</span>,
+    },
+    {
+      key: 'id',
+      label: '',
+      width: 'w-20',
+      render: (k) => (
+        <span className="flex items-center gap-3">
+          <button
+            type="button"
+            aria-label={`Rotate ${k.label}`}
+            onClick={() => {
+              void rotateKey
+                .mutateAsync(k.id)
+                .then((result) => {
+                  setPlaintext(result.key_plaintext);
+                  toast({
+                    kind: 'success',
+                    title: 'Key rotated',
+                    description: 'The previous key keeps working for its grace window.',
+                  });
+                })
+                .catch((err: unknown) =>
+                  toast({ kind: 'error', title: 'Could not rotate', description: errorMessage(err) })
+                );
+            }}
+            className="text-muted-foreground transition-colors hover:text-foreground"
+          >
+            <RotateCw className="h-3.5 w-3.5" />
+          </button>
+          <button
+            type="button"
+            aria-label={`Revoke ${k.label}`}
+            onClick={() => {
+              void deleteKey
+                .mutateAsync(k.id)
+                .then(() => toast({ kind: 'success', title: 'Key revoked' }))
+                .catch((err: unknown) =>
+                  toast({ kind: 'error', title: 'Could not revoke', description: errorMessage(err) })
+                );
+            }}
+            className="text-muted-foreground transition-colors hover:text-foreground"
+          >
+            <Trash2 className="h-3.5 w-3.5" />
+          </button>
+        </span>
+      ),
+    },
+  ];
 
   return (
     <div className="flex flex-col gap-6">
       <PageHeader
         title="API Keys"
-        description="Used by the CLI and the deployment API. Keys are shown in full only once."
-        actions={
-          <Button size="sm" className="gap-1.5" onClick={createKey}>
-            <Plus className="h-3.5 w-3.5" />
-            Create key
-          </Button>
-        }
+        description="Bearer keys for the CLI and the API. Revoking is immediate; rotating leaves the old key valid for its grace window."
       />
 
-      <Panel>
-        {keys.length === 0 ? (
-          <EmptyState message="No API keys yet. Create one to use the CLI." />
-        ) : (
-          <ul className="flex flex-col divide-y divide-border">
-            {keys.map((k) => (
-              <KeyRow
-                key={k.id}
-                apiKey={k}
-                onRevoke={(id) => setPendingRevoke(keys.find((x) => x.id === id) ?? null)}
-              />
-            ))}
-          </ul>
-        )}
+      {plaintext && <PlaintextPanel value={plaintext} onDismiss={() => setPlaintext(null)} />}
+
+      <Panel title="Create a key">
+        <form
+          className="flex flex-wrap items-end gap-3 p-5"
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (createKey.isPending) return;
+            void createKey
+              .mutateAsync({ label: label.trim() || undefined })
+              .then((result) => {
+                setLabel('');
+                // `plaintext` on create; the rotate response calls the same
+                // thing `key_plaintext`. Both are the only copy that exists.
+                setPlaintext(result.plaintext ?? null);
+              })
+              .catch((err: unknown) =>
+                toast({ kind: 'error', title: 'Could not create key', description: errorMessage(err) })
+              );
+          }}
+        >
+          <label className="flex min-w-56 flex-1 flex-col gap-1.5">
+            <span className="label-mono text-muted-foreground">Label</span>
+            <input
+              value={label}
+              onChange={(e) => setLabel(e.target.value)}
+              placeholder="ci-deploy"
+              className="h-10 rounded-lg border border-border bg-background px-3 text-sm outline-none focus:border-brand"
+            />
+          </label>
+          <Button type="submit" size="sm" className="gap-1.5" disabled={createKey.isPending}>
+            <Plus className="h-3.5 w-3.5" />
+            {createKey.isPending ? 'Creating…' : 'Create key'}
+          </Button>
+        </form>
       </Panel>
 
-      <ConfirmDialog
-        open={pendingRevoke !== null}
-        onClose={() => setPendingRevoke(null)}
-        onConfirm={() => {
-          if (!pendingRevoke) return;
-          setKeys((prev) => prev.filter((k) => k.id !== pendingRevoke.id));
-          toast({ kind: 'info', title: `Revoked ${pendingRevoke.label}` });
-        }}
-        title="Revoke this key?"
-        description={`Anything using ${pendingRevoke?.label ?? 'this key'} will stop working immediately. This cannot be undone.`}
-        confirmLabel="Revoke key"
-        destructive
+      <ResourceTable
+        rows={rows}
+        columns={columns}
+        initialSort={{ key: 'label', dir: 'asc' }}
+        searchKeys={['label', 'prefix']}
+        searchPlaceholder="Filter by label…"
+        emptyMessage="No API keys yet."
+        minWidth="min-w-[820px]"
+        loading={isPending}
+        error={error}
+        onRetry={() => void refetch()}
       />
     </div>
   );

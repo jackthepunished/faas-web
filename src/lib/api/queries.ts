@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient, type UseQueryOptions } from '@tanstack/react-query';
-import { api, unwrap } from './client';
+import { api, csrfToken, unwrap } from './client';
 import { ApiError } from './errors';
 import type { components } from './schema';
 
@@ -222,5 +222,420 @@ export function useInstances() {
   return useQuery({
     queryKey: keys.instances,
     queryFn: () => unwrap(api.GET('/v1/instances', {})),
+  });
+}
+
+/* ------------------------------------------------------------------ *
+ * Per-app configuration
+ *
+ * Secrets and env vars are the same shape with a crucial difference: a secret's
+ * value is never echoed back. Both write with PUT keyed by name, so "create"
+ * and "update" are one operation.
+ * ------------------------------------------------------------------ */
+
+export function useAppSecrets(slug: string) {
+  return useQuery({
+    queryKey: keys.appSecrets(slug),
+    queryFn: () => unwrap(api.GET('/v1/apps/{slug}/secrets', { params: { path: { slug } } })),
+    enabled: Boolean(slug),
+  });
+}
+
+export function useSetSecret(slug: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ key, value }: { key: string; value: string }) =>
+      unwrap(
+        api.PUT('/v1/apps/{slug}/secrets/{key}', {
+          params: { path: { slug, key } },
+          body: { value },
+        })
+      ),
+    onSuccess: () => qc.invalidateQueries({ queryKey: keys.appSecrets(slug) }),
+  });
+}
+
+export function useDeleteSecret(slug: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (key: string) =>
+      unwrap(api.DELETE('/v1/apps/{slug}/secrets/{key}', { params: { path: { slug, key } } })),
+    onSuccess: () => qc.invalidateQueries({ queryKey: keys.appSecrets(slug) }),
+  });
+}
+
+export function useAppEnv(slug: string) {
+  return useQuery({
+    queryKey: keys.appEnv(slug),
+    queryFn: () => unwrap(api.GET('/v1/apps/{slug}/env', { params: { path: { slug } } })),
+    enabled: Boolean(slug),
+  });
+}
+
+export function useSetEnv(slug: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ key, value }: { key: string; value: string }) =>
+      unwrap(
+        api.PUT('/v1/apps/{slug}/env/{key}', { params: { path: { slug, key } }, body: { value } })
+      ),
+    onSuccess: () => qc.invalidateQueries({ queryKey: keys.appEnv(slug) }),
+  });
+}
+
+export function useDeleteEnv(slug: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (key: string) =>
+      unwrap(api.DELETE('/v1/apps/{slug}/env/{key}', { params: { path: { slug, key } } })),
+    onSuccess: () => qc.invalidateQueries({ queryKey: keys.appEnv(slug) }),
+  });
+}
+
+/* ------------------------------------------------------------------ *
+ * Domains, crons, keys — account-level CRUD
+ * ------------------------------------------------------------------ */
+
+export function useAddDomain() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: components['schemas']['CreateCustomDomainRequest']) =>
+      unwrap(api.POST('/v1/domains', { body })),
+    onSuccess: () => qc.invalidateQueries({ queryKey: keys.domains }),
+  });
+}
+
+export function useDeleteDomain() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (domain: string) =>
+      unwrap(api.DELETE('/v1/domains/{domain}', { params: { path: { domain } } })),
+    onSuccess: () => qc.invalidateQueries({ queryKey: keys.domains }),
+  });
+}
+
+export function useCronRuns(id: string) {
+  return useQuery({
+    queryKey: ['crons', id, 'runs'],
+    queryFn: () => unwrap(api.GET('/v1/crons/{id}/runs', { params: { path: { id } } })),
+    enabled: Boolean(id),
+  });
+}
+
+export function useDeleteCron() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => unwrap(api.DELETE('/v1/crons/{id}', { params: { path: { id } } })),
+    onSuccess: () => qc.invalidateQueries({ queryKey: keys.crons }),
+  });
+}
+
+/** Fires a scheduled job now, out of band. */
+export function useRunCron() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => unwrap(api.POST('/v1/crons/{id}/run', { params: { path: { id } } })),
+    onSuccess: () => qc.invalidateQueries({ queryKey: keys.crons }),
+  });
+}
+
+/**
+ * The plaintext key comes back exactly once, on create. The UI has to show it
+ * immediately and warn that it will not be shown again — there is no recovery.
+ */
+export function useCreateApiKey() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: components['schemas']['CreateKeyRequest']) =>
+      unwrap(api.POST('/v1/keys', { body })),
+    onSuccess: () => qc.invalidateQueries({ queryKey: keys.keys }),
+  });
+}
+
+export function useDeleteApiKey() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => unwrap(api.DELETE('/v1/keys/{id}', { params: { path: { id } } })),
+    onSuccess: () => qc.invalidateQueries({ queryKey: keys.keys }),
+  });
+}
+
+export function useRotateApiKey() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) =>
+      unwrap(api.POST('/v1/keys/{id}/rotate', { params: { path: { id } } })),
+    onSuccess: () => qc.invalidateQueries({ queryKey: keys.keys }),
+  });
+}
+
+/* ------------------------------------------------------------------ *
+ * Observability
+ * ------------------------------------------------------------------ */
+
+export function useInvocations(limit = 50) {
+  return useQuery({
+    queryKey: [...keys.invocations, limit],
+    queryFn: () => unwrap(api.GET('/v1/invocations', { params: { query: { limit } } })),
+  });
+}
+
+export function useInvocation(id: string) {
+  return useQuery({
+    queryKey: ['invocations', id],
+    queryFn: () => unwrap(api.GET('/v1/invocations/{id}', { params: { path: { id } } })),
+    enabled: Boolean(id),
+  });
+}
+
+export function useReplayInvocation() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) =>
+      unwrap(api.POST('/v1/invocations/{id}/replay', { params: { path: { id } } })),
+    onSuccess: () => qc.invalidateQueries({ queryKey: keys.invocations }),
+  });
+}
+
+export function useTrace(traceId: string) {
+  return useQuery({
+    queryKey: ['traces', traceId],
+    queryFn: () => unwrap(api.GET('/v1/traces/{trace_id}', { params: { path: { trace_id: traceId } } })),
+    enabled: Boolean(traceId),
+  });
+}
+
+export function useAuditLog() {
+  return useQuery({
+    queryKey: keys.auditLog,
+    queryFn: () => unwrap(api.GET('/v1/audit-log', {})),
+  });
+}
+
+/* ------------------------------------------------------------------ *
+ * Alerts and webhooks — both per-app, both signed-payload dispatchers
+ * ------------------------------------------------------------------ */
+
+export function useAlerts(slug: string) {
+  return useQuery({
+    queryKey: keys.appAlerts(slug),
+    queryFn: () => unwrap(api.GET('/v1/apps/{slug}/alerts', { params: { path: { slug } } })),
+    enabled: Boolean(slug),
+  });
+}
+
+export function useDeleteAlert(slug: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) =>
+      unwrap(api.DELETE('/v1/apps/{slug}/alerts/{id}', { params: { path: { slug, id } } })),
+    onSuccess: () => qc.invalidateQueries({ queryKey: keys.appAlerts(slug) }),
+  });
+}
+
+export function useWebhooks(slug: string) {
+  return useQuery({
+    queryKey: ['apps', slug, 'webhooks'],
+    queryFn: () => unwrap(api.GET('/v1/apps/{slug}/webhooks', { params: { path: { slug } } })),
+    enabled: Boolean(slug),
+  });
+}
+
+export function useWebhookDeliveries(slug: string, id: string) {
+  return useQuery({
+    queryKey: ['apps', slug, 'webhooks', id, 'deliveries'],
+    queryFn: () =>
+      unwrap(
+        api.GET('/v1/apps/{slug}/webhooks/{id}/deliveries', { params: { path: { slug, id } } })
+      ),
+    enabled: Boolean(slug && id),
+  });
+}
+
+/** Clears a delivery out of `dead` back to `pending` for another attempt. */
+export function useRetryDelivery(slug: string, id: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (did: string) =>
+      unwrap(
+        api.POST('/v1/apps/{slug}/webhooks/{id}/deliveries/{did}/retry', {
+          params: { path: { slug, id, did } },
+        })
+      ),
+    onSuccess: () =>
+      qc.invalidateQueries({ queryKey: ['apps', slug, 'webhooks', id, 'deliveries'] }),
+  });
+}
+
+/* ------------------------------------------------------------------ *
+ * Edge rules and queues
+ * ------------------------------------------------------------------ */
+
+export function useEdgeRules() {
+  return useQuery({
+    queryKey: ['edge-rules'],
+    queryFn: () => unwrap(api.GET('/v1/edge-rules', {})),
+  });
+}
+
+export function useDeleteEdgeRule() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) =>
+      unwrap(api.DELETE('/v1/edge-rules/{id}', { params: { path: { id } } })),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['edge-rules'] }),
+  });
+}
+
+export function useQueueState(slug: string) {
+  return useQuery({
+    queryKey: ['apps', slug, 'queues', 'state'],
+    queryFn: () => unwrap(api.GET('/v1/apps/{slug}/queues/state', { params: { path: { slug } } })),
+    enabled: Boolean(slug),
+  });
+}
+
+/** Non-destructive read of the head of the queue. `receive` would claim it. */
+export function useQueuePeek(slug: string) {
+  return useQuery({
+    queryKey: ['apps', slug, 'queues', 'peek'],
+    queryFn: () => unwrap(api.GET('/v1/apps/{slug}/queues/peek', { params: { path: { slug } } })),
+    enabled: Boolean(slug),
+  });
+}
+
+export function useDeadLetter(slug: string) {
+  return useQuery({
+    queryKey: ['apps', slug, 'queues', 'dead_letter'],
+    queryFn: () =>
+      unwrap(api.GET('/v1/apps/{slug}/queues/dead_letter', { params: { path: { slug } } })),
+    enabled: Boolean(slug),
+  });
+}
+
+/* ------------------------------------------------------------------ *
+ * Builds and supply chain
+ * ------------------------------------------------------------------ */
+
+export function useBuilds() {
+  return useQuery({
+    queryKey: ['builds'],
+    queryFn: () => unwrap(api.GET('/v1/builds', {})),
+  });
+}
+
+export function useBuildSbom(id: string) {
+  return useQuery({
+    queryKey: ['builds', id, 'sbom'],
+    queryFn: () => unwrap(api.GET('/v1/builds/{id}/sbom', { params: { path: { id } } })),
+    enabled: Boolean(id),
+  });
+}
+
+/** Per-deployment CVE scan. A CRITICAL finding does not block a deploy. */
+export function useDeploymentScan(id: string) {
+  return useQuery({
+    queryKey: ['deployments', id, 'scan'],
+    queryFn: () => unwrap(api.GET('/v1/deployments/{id}/scan', { params: { path: { id } } })),
+    enabled: Boolean(id),
+  });
+}
+
+/* ------------------------------------------------------------------ *
+ * Usage and billing
+ * ------------------------------------------------------------------ */
+
+/** Both of these are a single day's snapshot, not a range — `day` is required. */
+export function useUsageDaily(day: string) {
+  return useQuery({
+    queryKey: ['usage', 'daily', day],
+    queryFn: () => unwrap(api.GET('/v1/usage/daily', { params: { query: { day } } })),
+    enabled: Boolean(day),
+  });
+}
+
+export function useStorageUsage(day: string) {
+  return useQuery({
+    queryKey: ['usage', 'storage', day],
+    queryFn: () => unwrap(api.GET('/v1/usage/storage', { params: { query: { day } } })),
+    enabled: Boolean(day),
+  });
+}
+
+/**
+ * Returns a URL to the provider's hosted portal rather than a page we render —
+ * card details never touch this app.
+ */
+export function useBillingPortal() {
+  return useMutation({
+    mutationFn: () => unwrap(api.GET('/v1/billing/portal', {})),
+  });
+}
+
+export function useAccountSlo() {
+  return useQuery({
+    queryKey: ['account', 'slo'],
+    queryFn: () => unwrap(api.GET('/v1/account/slo', {})),
+  });
+}
+
+/* ------------------------------------------------------------------ *
+ * Organisations
+ * ------------------------------------------------------------------ */
+
+export function useOrgs() {
+  return useQuery({
+    queryKey: ['orgs'],
+    queryFn: () => unwrap(api.GET('/v1/orgs', {})),
+  });
+}
+
+export function useOrgMembers(slug: string) {
+  return useQuery({
+    queryKey: ['orgs', slug, 'members'],
+    queryFn: () => unwrap(api.GET('/v1/orgs/{slug}/members', { params: { path: { slug } } })),
+    enabled: Boolean(slug),
+  });
+}
+
+export function useOrgInvitations(slug: string) {
+  return useQuery({
+    queryKey: ['orgs', slug, 'invitations'],
+    queryFn: () => unwrap(api.GET('/v1/orgs/{slug}/invitations', { params: { path: { slug } } })),
+    enabled: Boolean(slug),
+  });
+}
+
+/* ------------------------------------------------------------------ *
+ * Sessions — the signed-in devices list, and the panic button
+ * ------------------------------------------------------------------ */
+
+export function useSessions() {
+  return useQuery({
+    queryKey: ['auth', 'sessions'],
+    queryFn: () => unwrap(api.GET('/v1/auth/sessions', {})),
+  });
+}
+
+export function useRevokeSession() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) =>
+      unwrap(
+        api.DELETE('/v1/auth/sessions/{id}', {
+          params: { path: { id } },
+          body: { csrf_token: csrfToken() },
+        })
+      ),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['auth', 'sessions'] }),
+  });
+}
+
+export function useRevokeAllSessions() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () =>
+      unwrap(api.POST('/v1/auth/sessions/revoke_all', { body: { csrf_token: csrfToken() } })),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['auth', 'sessions'] }),
   });
 }
