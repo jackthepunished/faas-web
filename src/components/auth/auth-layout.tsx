@@ -2,6 +2,27 @@ import type { ReactNode } from 'react';
 import { Link } from '@tanstack/react-router';
 import { Wind } from 'lucide-react';
 import { DotCutCanvas } from '@/components/dotcut/dot-cut-canvas';
+import type { Scene } from '@/components/dotcut/scenes';
+
+/**
+ * The auth-screen scene cycle.
+ *
+ * Identical to the stock set except the text scene, which rendered a bare `A`
+ * — a placeholder from the component's own demo that had no relationship to
+ * this product. It is the brand initial now.
+ *
+ * Defined at module scope on purpose: `DotCutCanvas` rebuilds its canvas when
+ * this array's identity changes, so an inline literal would tear down and
+ * restart the animation on every render.
+ */
+const AUTH_SCENES: Scene[] = [
+  { kind: 'text', value: 'G', transition: 'wipe', palette: 0, style: 'drift' },
+  { kind: 'rings', transition: 'ripple', palette: 1, style: 'grain' },
+  { kind: 'columns', transition: 'columns', palette: 2, style: 'streak' },
+  { kind: 'checker', transition: 'scatter', palette: 3, style: 'swell' },
+  { kind: 'boxes', transition: 'collapse', palette: 4, style: 'grain' },
+  { kind: 'bars', transition: 'wipe', palette: 5, style: 'drift' },
+];
 
 const PROOF_POINTS = [
   ['Cold start p50', 'under 350ms'],
@@ -33,7 +54,7 @@ export function AuthLayout({ children }: { children: ReactNode }) {
 
       {/* Visual side */}
       <aside className="relative hidden overflow-hidden border-l border-border lg:block lg:w-[48%]">
-        <DotCutCanvas className="absolute inset-0 h-full w-full" />
+        <DotCutCanvas scenes={AUTH_SCENES} className="absolute inset-0 h-full w-full" />
         <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-background via-background/40 to-transparent" />
 
         <div className="pointer-events-none absolute inset-x-0 bottom-0 p-12">

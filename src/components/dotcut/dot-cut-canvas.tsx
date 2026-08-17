@@ -1,18 +1,27 @@
 import { useEffect, useRef } from 'react';
 import { DotCut } from './engine';
+import type { Scene } from './scenes';
 
 interface DotCutCanvasProps {
   className?: string;
+  /**
+   * Scene cycle to render. Omit for the stock set in `scenes.ts`.
+   *
+   * Pass a literal defined at module scope, not an inline array — this is a
+   * dependency of the effect that constructs the engine, so a new array every
+   * render would tear the canvas down and rebuild it every render.
+   */
+  scenes?: Scene[];
 }
 
-export function DotCutCanvas({ className }: DotCutCanvasProps) {
+export function DotCutCanvas({ className, scenes }: DotCutCanvasProps) {
   const hostRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const host = hostRef.current;
     if (!host) return;
 
-    const dotcut = new DotCut(host, "'Inter', sans-serif");
+    const dotcut = new DotCut(host, { fontFamily: "'Inter', sans-serif", scenes });
     if (!dotcut.ok) {
       return () => dotcut.destroy();
     }
@@ -64,7 +73,7 @@ export function DotCutCanvas({ className }: DotCutCanvasProps) {
       host.removeEventListener('pointerleave', onPointerLeave);
       dotcut.destroy();
     };
-  }, []);
+  }, [scenes]);
 
   return <div ref={hostRef} className={className} aria-hidden="true" />;
 }
