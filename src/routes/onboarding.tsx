@@ -357,17 +357,17 @@ function OnboardingPage() {
                 >
                   <PartyPopper className="h-5 w-5" style={{ color: 'var(--status-good)' }} />
                 </span>
-                <h1 className="mt-5 text-2xl font-semibold tracking-tight">You are live.</h1>
+                {/* This step used to announce "You are live" and show a URL for
+                    a function that was never created — onboarding writes a
+                    workspace slug locally and nothing else. Creating a real app
+                    here means `POST /v1/apps`, which is what the New app wizard
+                    does; until this flow calls it, the copy has to stop
+                    claiming a deployment happened. */}
+                <h1 className="mt-5 text-2xl font-semibold tracking-tight">Workspace ready.</h1>
                 <p className="mt-2 text-sm text-muted-foreground">
-                  Your function is deployed to {region} and already scaled back to zero.
+                  {workspace} is set up. Create your first app from the console — it will be live
+                  and scaled to zero within seconds.
                 </p>
-
-                <a
-                  href="#"
-                  className="mt-6 inline-flex items-center gap-2 rounded-lg border border-border bg-card px-3.5 py-2 font-mono text-xs text-muted-foreground transition-colors hover:border-brand/40 hover:text-foreground"
-                >
-                  https://hello-world.{workspace}.gregale.run
-                </a>
 
                 <div className="mt-8">
                   <Button variant="cta" onClick={finish} className="h-11 gap-2 rounded-lg px-6">

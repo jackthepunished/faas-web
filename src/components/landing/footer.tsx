@@ -1,57 +1,74 @@
 import { useEffect, useRef, useState } from 'react';
+import { Link } from '@tanstack/react-router';
 import { ArrowRight, ArrowUpRight, Check, Copy, Wind } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { SweepLink } from '@/components/sweep-link';
+import { STATUS_COPY, useApiStatus } from '@/lib/api/status';
 import { Reveal } from './reveal';
 import { TextReveal } from './text-reveal';
 import { DitherFade } from './shaders/dither-fade';
 
 const INSTALL_COMMAND = 'brew install gregale';
 
-const LINK_GROUPS: { title: string; links: { label: string; external?: boolean }[] }[] = [
+const REPO = 'https://github.com/poyrazK/faas';
+
+/**
+ * Footer directory.
+ *
+ * **Every href here resolves.** This was twenty links pointing at `#`, naming
+ * pages that do not exist — Careers, Blog, Brand kit, DPA, Sub-processors,
+ * Containers. A dead link in a footer is worse than a missing one: it reads as
+ * a real page right up until someone clicks it.
+ *
+ * Destinations are limited to what actually exists today: the two landing
+ * anchors, the app's own routes, the source repository, and the OpenAPI
+ * document the API serves. Following `nav.tsx`, the repository stands in for a
+ * docs site — there isn't one yet, and `docs.gregale.dev` does not answer.
+ *
+ * Deliberately absent: Privacy, Terms, and a DPA. Those are real pages this
+ * product needs before it takes paying customers — the API already exposes a
+ * GDPR export — but they have to be written, not linked into existence.
+ * Changelog is absent too: the repository has no releases to point at.
+ */
+interface FooterLink {
+  label: string;
+  href: string;
+  /** Leaves the site. Gets an icon and the usual rel hardening. */
+  external?: boolean;
+  /** An in-app route rather than an anchor, so the router handles it. */
+  route?: '/login' | '/signup' | '/dashboard';
+}
+
+const LINK_GROUPS: { title: string; links: FooterLink[] }[] = [
   {
-    title: 'Platform',
+    title: 'Product',
     links: [
-      { label: 'Functions' },
-      { label: 'Containers' },
-      { label: 'Databases' },
-      { label: 'Storage' },
-      { label: 'Networking' },
+      { label: 'How it works', href: '#deploy' },
+      { label: 'Pricing', href: '#pricing' },
+      { label: 'Console', href: '/dashboard', route: '/dashboard' },
+      { label: 'Start free', href: '/signup', route: '/signup' },
+      { label: 'Sign in', href: '/login', route: '/login' },
     ],
   },
   {
     title: 'Developers',
     links: [
-      { label: 'Documentation' },
-      { label: 'CLI reference' },
-      { label: 'API' },
-      { label: 'Changelog' },
-      { label: 'GitHub', external: true },
+      { label: 'Source', href: REPO, external: true },
+      // Served by apid on this same origin, so it needs no absolute URL.
+      { label: 'API reference', href: '/v1/openapi.yaml' },
+      { label: 'Issues', href: `${REPO}/issues`, external: true },
+      { label: 'Contributing', href: `${REPO}/blob/main/CONTRIBUTING.md`, external: true },
     ],
   },
   {
-    title: 'Company',
+    title: 'Trust',
     links: [
-      { label: 'About' },
-      { label: 'Blog' },
-      { label: 'Careers' },
-      { label: 'Contact' },
-      { label: 'Brand kit' },
-    ],
-  },
-  {
-    title: 'Legal',
-    links: [
-      { label: 'Privacy' },
-      { label: 'Terms' },
-      { label: 'Security' },
-      { label: 'DPA' },
-      { label: 'Sub-processors' },
+      { label: 'Security policy', href: `${REPO}/blob/main/SECURITY.md`, external: true },
+      { label: 'Report a vulnerability', href: '/.well-known/security.txt' },
+      { label: 'License', href: `${REPO}/blob/main/LICENSE`, external: true },
     ],
   },
 ];
-
-const SOCIALS = ['GitHub', 'Discord', 'LinkedIn'];
 
 const TRUST_POINTS = ['No credit card', '1M invocations free', 'Under 350ms cold starts'];
 
@@ -98,7 +115,48 @@ function CopyCommand() {
   );
 }
 
+const LINK_CLASS =
+  'group inline-flex items-center gap-1 text-sm text-muted-foreground transition-colors hover:text-foreground';
+
+/**
+ * One link, rendered three ways.
+ *
+ * In-app routes go through the router so they preload and do not reload the
+ * document; anchors and same-origin files served by `apid` (the OpenAPI
+ * document, `security.txt`) are plain `<a>`, because the router does not own
+ * those paths and would 404 them.
+ */
+function FooterAnchor({ link }: { link: FooterLink }) {
+  const icon = link.external && (
+    <ArrowUpRight className="h-3 w-3 -translate-x-0.5 opacity-0 transition-all duration-200 group-hover:translate-x-0 group-hover:opacity-100" />
+  );
+
+  if (link.route) {
+    return (
+      <SweepLink to={link.route} className={LINK_CLASS}>
+        {link.label}
+      </SweepLink>
+    );
+  }
+
+  return (
+    <a
+      href={link.href}
+      className={LINK_CLASS}
+      // noopener is the security-relevant half; noreferrer keeps the referrer
+      // off third parties.
+      {...(link.external ? { target: '_blank', rel: 'noopener noreferrer' } : {})}
+    >
+      {link.label}
+      {icon}
+    </a>
+  );
+}
+
 export function Footer() {
+  const status = useApiStatus();
+  const { label, token } = STATUS_COPY[status];
+
   return (
     <footer className="relative overflow-hidden border-t border-border">
       {/* Dissolve across the whole footer, clipped by its overflow. Densest
@@ -197,26 +255,38 @@ export function Footer() {
         <div className="grid gap-10 border-t border-border py-14 md:grid-cols-[1.4fr_repeat(4,1fr)] md:gap-6">
           {/* Brand column */}
           <div className="md:pr-8">
-            <a href="#" className="inline-flex items-center gap-2.5">
+            <Link to="/" className="inline-flex items-center gap-2.5">
               <span className="brand-mark">
                 <Wind className="h-3.5 w-3.5" />
               </span>
               <span className="font-medium tracking-tight">Gregale</span>
-            </a>
+            </Link>
             <p className="mt-4 max-w-[26ch] text-sm leading-relaxed text-muted-foreground">
               Scale-to-zero serverless on real microVMs. Snapshot cold starts under 350ms.
             </p>
 
-            <a
-              href="#"
-              className="mt-6 inline-flex items-center gap-2 rounded-full border border-border bg-card/60 px-3 py-1.5 text-xs text-muted-foreground transition-colors hover:border-brand/40 hover:text-foreground"
+            {/* A live probe, not a decoration. See `lib/api/status.ts` — this
+                badge was hardcoded to green, which is exactly the wrong answer
+                during an outage. It is a status readout, so it is not a link:
+                there is no status page to send anyone to. */}
+            <p
+              role="status"
+              className="mt-6 inline-flex items-center gap-2 rounded-full border border-border bg-card/60 px-3 py-1.5 text-xs text-muted-foreground"
             >
               <span className="relative flex h-1.5 w-1.5">
-                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-status-good opacity-75" />
-                <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-status-good" />
+                {status === 'operational' && (
+                  <span
+                    className="absolute inline-flex h-full w-full animate-ping rounded-full opacity-75 motion-reduce:animate-none"
+                    style={{ background: token }}
+                  />
+                )}
+                <span
+                  className="relative inline-flex h-1.5 w-1.5 rounded-full"
+                  style={{ background: token }}
+                />
               </span>
-              All systems operational
-            </a>
+              {label}
+            </p>
           </div>
 
           {/* Link groups */}
@@ -230,15 +300,7 @@ export function Footer() {
               <ul className="mt-4 flex flex-col gap-2.5">
                 {group.links.map((link) => (
                   <li key={link.label}>
-                    <a
-                      href="#"
-                      className="group inline-flex items-center gap-1 text-sm text-muted-foreground transition-colors hover:text-foreground"
-                    >
-                      {link.label}
-                      {link.external && (
-                        <ArrowUpRight className="h-3 w-3 -translate-x-0.5 opacity-0 transition-all duration-200 group-hover:translate-x-0 group-hover:opacity-100" />
-                      )}
-                    </a>
+                    <FooterAnchor link={link} />
                   </li>
                 ))}
               </ul>
@@ -262,16 +324,17 @@ export function Footer() {
           <p className="text-xs text-muted-foreground">
             © {new Date().getFullYear()} Gregale. All rights reserved.
           </p>
+          {/* Was GitHub, Discord, and LinkedIn, all pointing at `#`. Only one of
+              the three exists, so only one is listed. */}
           <div className="flex items-center gap-5">
-            {SOCIALS.map((label) => (
-              <a
-                key={label}
-                href="#"
-                className="text-xs text-muted-foreground transition-colors hover:text-foreground"
-              >
-                {label}
-              </a>
-            ))}
+            <a
+              href={REPO}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-xs text-muted-foreground transition-colors hover:text-foreground"
+            >
+              GitHub
+            </a>
           </div>
         </div>
       </div>
