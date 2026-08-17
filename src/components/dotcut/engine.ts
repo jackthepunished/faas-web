@@ -8,6 +8,22 @@ import {
   type Scene,
 } from './scenes';
 
+export interface DotCutOptions {
+  /** Font used to rasterise `text` scenes. Defaults to the system sans stack. */
+  fontFamily?: string;
+  /** Scene cycle to run. Defaults to `SCENES`; an empty array is ignored. */
+  scenes?: Scene[];
+  /**
+   * Grid width in cells. Defaults to 42.
+   *
+   * This is the resolution knob. Dot size is the panel width divided by this,
+   * so raising it buys detail at the cost of smaller dots — which is the trade
+   * a wordmark needs: legible letterforms want cells to spare, and 42 columns
+   * cannot spell a seven-letter word.
+   */
+  cols?: number;
+}
+
 const COLS = 42;
 
 const HOLD_MS = 600;
@@ -80,10 +96,19 @@ export class DotCut {
   private ro: ResizeObserver | null = null;
   private disposed = false;
   private fontFamily = 'sans-serif';
+  /**
+   * The scene cycle. Defaults to `SCENES`, but callers can supply their own —
+   * the login screen renders the brand initial rather than the stock letter.
+   */
+  private scenes: Scene[] = SCENES;
 
-  constructor(host: HTMLElement, fontFamily?: string) {
+  constructor(host: HTMLElement, options: DotCutOptions = {}) {
     this.host = host;
-    if (fontFamily) this.fontFamily = fontFamily;
+    if (options.fontFamily) this.fontFamily = options.fontFamily;
+    // An empty array would divide by zero in `advance`, so it is ignored.
+    if (options.scenes?.length) this.scenes = options.scenes;
+    // Before `resize`, which reads it to lay out the grid.
+    if (options.cols) this.params.cols = options.cols;
     this.canvas = document.createElement('canvas');
     this.canvas.style.cssText = 'display:block;width:100%;height:100%';
     host.appendChild(this.canvas);
@@ -145,7 +170,7 @@ export class DotCut {
     this.bore = new Float32Array(n);
     for (let i = 0; i < n; i++) this.rnd[i] = hash(i * 1.37 + 0.5);
 
-    this.applyScene(SCENES[this.sceneIdx], true);
+    this.applyScene(this.scenes[this.sceneIdx], true);
     if (!this.running) this.draw(0);
   }
 
@@ -161,13 +186,14 @@ export class DotCut {
 
   advance() {
     this.prevScene = this.sceneIdx;
-    this.sceneIdx = (this.sceneIdx + 1) % SCENES.length;
-    this.prevPalette = SCENES[(this.sceneIdx - 1 + SCENES.length) % SCENES.length].palette;
+    this.sceneIdx = (this.sceneIdx + 1) % this.scenes.length;
+    this.prevPalette =
+      this.scenes[(this.sceneIdx - 1 + this.scenes.length) % this.scenes.length].palette;
     this.paletteMix = 0;
     this.phase = 'morph';
     this.phaseT = 0;
     this.styleT = 0;
-    this.applyScene(SCENES[this.sceneIdx], false);
+    this.applyScene(this.scenes[this.sceneIdx], false);
   }
 
   private step(dt: number) {
@@ -199,12 +225,12 @@ export class DotCut {
     this.styleT =
       this.phase === 'morph' ? Math.min(1, this.styleT + dt / (this.params.morph / 1000)) : 1;
     styleField(
-      SCENES[this.sceneIdx],
+      this.scenes[this.sceneIdx],
       this.cols,
       this.rows,
       this.styleT,
       this.bore,
-      SCENES[this.prevScene]
+      this.scenes[this.prevScene]
     );
   }
 
@@ -216,7 +242,7 @@ export class DotCut {
     const W = this.canvas.width;
     const H = this.canvas.height;
     const s = this.dpr;
-    const scene = SCENES[this.sceneIdx];
+    const scene = this.scenes[this.sceneIdx];
 
     const [cA, bA] = PALETTES[this.prevPalette % PALETTES.length];
     const [cB, bB] = PALETTES[scene.palette % PALETTES.length];
@@ -282,7 +308,7 @@ export class DotCut {
     this.phase = 'hold';
     this.phaseT = 0;
     this.paletteMix = 1;
-    this.applyScene(SCENES[this.sceneIdx], true);
+    this.applyScene(this.scenes[this.sceneIdx], true);
     this.draw(0);
   }
 

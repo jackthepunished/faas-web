@@ -1,18 +1,34 @@
 import { useEffect, useRef } from 'react';
 import { DotCut } from './engine';
+import type { Scene } from './scenes';
 
 interface DotCutCanvasProps {
   className?: string;
+  /**
+   * Scene cycle to render. Omit for the stock set in `scenes.ts`.
+   *
+   * Pass a literal defined at module scope, not an inline array — this is a
+   * dependency of the effect that constructs the engine, so a new array every
+   * render would tear the canvas down and rebuild it every render.
+   */
+  scenes?: Scene[];
+  /**
+   * Grid width in cells. Defaults to 42.
+   *
+   * Raise it when a scene needs detail the default cannot carry — a wordmark
+   * being the obvious case. Dots get smaller as this grows.
+   */
+  columns?: number;
 }
 
-export function DotCutCanvas({ className }: DotCutCanvasProps) {
+export function DotCutCanvas({ className, scenes, columns }: DotCutCanvasProps) {
   const hostRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const host = hostRef.current;
     if (!host) return;
 
-    const dotcut = new DotCut(host, "'Inter', sans-serif");
+    const dotcut = new DotCut(host, { fontFamily: "'Inter', sans-serif", scenes, cols: columns });
     if (!dotcut.ok) {
       return () => dotcut.destroy();
     }
@@ -64,7 +80,7 @@ export function DotCutCanvas({ className }: DotCutCanvasProps) {
       host.removeEventListener('pointerleave', onPointerLeave);
       dotcut.destroy();
     };
-  }, []);
+  }, [scenes, columns]);
 
   return <div ref={hostRef} className={className} aria-hidden="true" />;
 }
