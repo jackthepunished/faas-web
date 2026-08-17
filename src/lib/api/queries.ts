@@ -96,6 +96,21 @@ export function useAppMetrics(slug: string, range: MetricsRange = '24h') {
   });
 }
 
+/**
+ * Routes observed on an app, from gatewayd's per-route metrics.
+ *
+ * `source: 'unavailable'` means route metrics are off for this app — the flag
+ * is plan-gated and Free always reads false — so an empty list there means
+ * "not measured", not "no routes".
+ */
+export function useAppRoutes(slug: string) {
+  return useQuery({
+    queryKey: ['apps', slug, 'routes'],
+    queryFn: () => unwrap(api.GET('/v1/apps/{slug}/routes', { params: { path: { slug } } })),
+    enabled: Boolean(slug),
+  });
+}
+
 /* ------------------------------------------------------------------ *
  * Deployments
  * ------------------------------------------------------------------ */

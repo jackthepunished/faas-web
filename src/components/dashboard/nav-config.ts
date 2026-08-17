@@ -14,11 +14,17 @@ import {
   ListTree,
   type LucideIcon,
   Network,
+  Package,
   Receipt,
   Rocket,
+  ScrollText,
   Settings,
+  ShieldCheck,
+  Shuffle,
   SlidersHorizontal,
+  Users,
   Variable,
+  Webhook,
   Workflow as WorkflowIcon,
 } from 'lucide-react';
 
@@ -53,18 +59,21 @@ export const NAV_GROUPS: NavGroup[] = [
       { to: '/dashboard/apis', label: 'APIs', icon: Network },
       { to: '/dashboard/crons', label: 'Cron Jobs', icon: AlarmClock },
       { to: '/dashboard/queues', label: 'Queue Jobs', icon: ListTree },
-      { to: '/dashboard/workers', label: 'Workers', icon: Layers },
+      { to: '/dashboard/workers', label: 'Instances', icon: Layers },
       { to: '/dashboard/deployments', label: 'Deployments', icon: Rocket },
+      { to: '/dashboard/builds', label: 'Builds', icon: Package },
     ],
   },
   {
     title: 'Manage',
     items: [
       { to: '/dashboard/domains', label: 'Domains', icon: Globe },
+      { to: '/dashboard/edge-rules', label: 'Edge Rules', icon: Shuffle },
       { to: '/dashboard/secrets', label: 'Secrets', icon: KeyRound },
       { to: '/dashboard/env', label: 'Env Vars', icon: Variable },
+      { to: '/dashboard/webhooks', label: 'Webhooks', icon: Webhook },
       { to: '/dashboard/storage', label: 'Storage', icon: HardDrive },
-      { to: '/dashboard/databases', label: 'Databases', icon: Database },
+      { to: '/dashboard/databases', label: 'Upstreams', icon: Database },
     ],
   },
   {
@@ -72,8 +81,9 @@ export const NAV_GROUPS: NavGroup[] = [
     items: [
       { to: '/dashboard/logs', label: 'Logs', icon: FileText },
       { to: '/dashboard/metrics', label: 'Metrics', icon: Gauge },
-      { to: '/dashboard/traces', label: 'Traces', icon: Activity },
+      { to: '/dashboard/traces', label: 'Invocations', icon: Activity },
       { to: '/dashboard/alerts', label: 'Alerts', icon: Bell },
+      { to: '/dashboard/audit', label: 'Audit Log', icon: ScrollText },
     ],
   },
   {
@@ -88,6 +98,8 @@ export const NAV_GROUPS: NavGroup[] = [
     title: 'Account',
     items: [
       { to: '/dashboard/keys', label: 'API Keys', icon: KeyRound },
+      { to: '/dashboard/team', label: 'Team', icon: Users },
+      { to: '/dashboard/security', label: 'Security', icon: ShieldCheck },
       { to: '/dashboard/settings', label: 'Settings', icon: Settings },
     ],
   },

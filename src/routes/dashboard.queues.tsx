@@ -1,10 +1,9 @@
+import { useMemo } from 'react';
 import { createFileRoute } from '@tanstack/react-router';
-import { Plus } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { PageHeader } from '@/components/dashboard/primitives';
-import { Pill, ResourceTable, type Column } from '@/components/dashboard/resource-table';
-import { QUEUES, type Queue } from '@/lib/mock-resources';
-import { formatCompact } from '@/lib/mock-data';
+import { PageHeader, Panel, StatTile } from '@/components/dashboard/primitives';
+import { ResourceTable, type Column } from '@/components/dashboard/resource-table';
+import { AppSelect, useSelectedApp } from '@/components/dashboard/app-select';
+import { useDeadLetter, useQueuePeek, useQueueState } from '@/lib/api/queries';
 import { consoleHead } from '@/lib/seo';
 
 export const Route = createFileRoute('/dashboard/queues')({
@@ -12,68 +11,129 @@ export const Route = createFileRoute('/dashboard/queues')({
   head: () => consoleHead('queues'),
 });
 
-const STATE_COLOR: Record<Queue['state'], string> = {
-  healthy: 'var(--status-good)',
-  draining: 'var(--status-warning)',
-  'backed-up': 'var(--status-critical)',
-};
+/**
+ * The per-app FIFO queue, from `/v1/apps/{slug}/queues/*`.
+ *
+ * There is one queue per app, not a list of named queues — which is why this
+ * page is a depth readout plus two message lists rather than a table of queues.
+ *
+ * The head of the queue is read with `peek`, deliberately: `receive` would
+ * claim the message and start its visibility timeout, so browsing a queue in
+ * the dashboard would steal work from the app consuming it.
+ */
+interface MessageRow {
+  id: string;
+  createdAt: string;
+  attempts: number;
+  failedAt: string;
+}
 
-const COLUMNS: Column<Queue>[] = [
-  { key: 'name', label: 'Queue', render: (q) => <span className="font-mono">{q.name}</span> },
-  {
-    key: 'state',
-    label: 'State',
-    width: 'w-32',
-    render: (q) => <Pill label={q.state} color={STATE_COLOR[q.state]} />,
-  },
-  { key: 'depth', label: 'Depth', numeric: true, render: (q) => formatCompact(q.depth) },
-  { key: 'inFlight', label: 'In flight', numeric: true },
-  {
-    key: 'dlqDepth',
-    label: 'Dead letter',
-    numeric: true,
-    render: (q) => (
-      <span style={q.dlqDepth > 50 ? { color: 'var(--status-critical)' } : undefined}>
-        {q.dlqDepth}
-      </span>
-    ),
-  },
-  { key: 'consumers', label: 'Consumers', numeric: true },
-  {
-    key: 'throughputPerMin',
-    label: 'Throughput',
-    numeric: true,
-    render: (q) => `${formatCompact(q.throughputPerMin)}/min`,
-  },
-  {
-    key: 'oldestMessageAgeSec',
-    label: 'Oldest',
-    numeric: true,
-    render: (q) => `${q.oldestMessageAgeSec}s`,
-  },
-];
+function formatWhen(value: string | undefined): string {
+  if (!value) return '—';
+  const ms = Date.parse(value);
+  return Number.isNaN(ms) ? '—' : new Date(ms).toLocaleString();
+}
+
+function formatAge(seconds: number | null | undefined): string {
+  if (seconds == null) return '—';
+  if (seconds < 60) return `${Math.round(seconds)}s`;
+  if (seconds < 3600) return `${Math.round(seconds / 60)}m`;
+  return `${Math.round(seconds / 3600)}h`;
+}
 
 function QueuesPage() {
+  const { slug, select, apps, loadingApps } = useSelectedApp();
+  const state = useQueueState(slug);
+  const peek = useQueuePeek(slug);
+  const dlq = useDeadLetter(slug);
+
+  const pending = useMemo<MessageRow[]>(
+    () =>
+      (peek.data?.messages ?? []).map((m) => ({
+        id: m.id,
+        createdAt: m.created_at,
+        attempts: 0,
+        failedAt: '',
+      })),
+    [peek.data]
+  );
+
+  const dead = useMemo<MessageRow[]>(
+    () =>
+      (dlq.data?.messages ?? []).map((m) => ({
+        id: m.id,
+        createdAt: m.created_at ?? '',
+        attempts: m.attempts ?? 0,
+        failedAt: m.failed_at ?? '',
+      })),
+    [dlq.data]
+  );
+
+  const pendingColumns: Column<MessageRow>[] = [
+    { key: 'id', label: 'Message', render: (m) => <span className="font-mono text-xs">{m.id}</span> },
+    {
+      key: 'createdAt',
+      label: 'Enqueued',
+      numeric: true,
+      render: (m) => <span className="text-xs text-muted-foreground">{formatWhen(m.createdAt)}</span>,
+    },
+  ];
+
+  const deadColumns: Column<MessageRow>[] = [
+    { key: 'id', label: 'Message', render: (m) => <span className="font-mono text-xs">{m.id}</span> },
+    {
+      key: 'attempts',
+      label: 'Attempts',
+      numeric: true,
+      width: 'w-28',
+      render: (m) => <span className="[font-variant-numeric:tabular-nums]">{m.attempts}</span>,
+    },
+    {
+      key: 'failedAt',
+      label: 'Failed',
+      numeric: true,
+      render: (m) => <span className="text-xs text-muted-foreground">{formatWhen(m.failedAt)}</span>,
+    },
+  ];
+
   return (
     <div className="flex flex-col gap-6">
       <PageHeader
         title="Queue Jobs"
-        description="Message queues and their consumers. Workers wake only when messages land."
-        actions={
-          <Button size="sm" className="gap-1.5">
-            <Plus className="h-3.5 w-3.5" />
-            New queue
-          </Button>
-        }
+        description="One FIFO queue per app. Messages here are peeked, not received — browsing never claims work from your consumers."
+        actions={<AppSelect slug={slug} onSelect={select} apps={apps} />}
       />
-      <ResourceTable
-        rows={QUEUES}
-        columns={COLUMNS}
-        initialSort={{ key: 'depth', dir: 'desc' }}
-        searchKeys={['name']}
-        searchPlaceholder="Filter by name…"
-        emptyMessage="No queues match these filters."
-      />
+
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <StatTile label="Depth" value={String(state.data?.depth ?? '—')} />
+        <StatTile label="In flight" value={String(state.data?.in_flight ?? '—')} />
+        <StatTile label="Oldest pending" value={formatAge(state.data?.oldest_pending_age_seconds)} />
+        <StatTile label="Plan cap" value={String(state.data?.plan_cap ?? '—')} />
+      </div>
+
+      <Panel title="Pending">
+        <ResourceTable
+          rows={pending}
+          columns={pendingColumns}
+          emptyMessage={slug ? 'The queue is empty.' : 'Create an app first.'}
+          minWidth="min-w-[600px]"
+          loading={loadingApps || peek.isPending}
+          error={peek.error}
+          onRetry={() => void peek.refetch()}
+        />
+      </Panel>
+
+      <Panel title="Dead letter">
+        <ResourceTable
+          rows={dead}
+          columns={deadColumns}
+          emptyMessage="Nothing has been dead-lettered."
+          minWidth="min-w-[600px]"
+          loading={loadingApps || dlq.isPending}
+          error={dlq.error}
+          onRetry={() => void dlq.refetch()}
+        />
+      </Panel>
     </div>
   );
 }
