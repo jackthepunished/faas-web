@@ -9,6 +9,7 @@ import {
   TrendingUp,
 } from 'lucide-react';
 import type { LogLevel, RunState } from '@/lib/mock-data';
+import { errorMessage } from '@/lib/api/errors';
 import { Sparkline } from './charts';
 import {
   DitherButton,
@@ -275,6 +276,50 @@ export function EmptyState({ message }: { message: string }) {
     <div className="flex flex-col items-center justify-center gap-2 rounded-lg border border-dashed border-border px-6 py-14 text-center">
       <CircleDashed className="h-5 w-5 text-muted-foreground" />
       <p className="text-sm text-muted-foreground">{message}</p>
+    </div>
+  );
+}
+
+/**
+ * The in-flight state for a panel whose data comes over the network.
+ *
+ * Deliberately the same box as `EmptyState` so a list does not jump when the
+ * response lands and one replaces the other.
+ */
+export function LoadingState({ message = 'Loading…' }: { message?: string }) {
+  return (
+    <div
+      role="status"
+      className="flex flex-col items-center justify-center gap-2 rounded-lg border border-dashed border-border px-6 py-14 text-center"
+    >
+      <Loader2 className="h-5 w-5 animate-spin text-muted-foreground motion-reduce:animate-none" />
+      <p className="text-sm text-muted-foreground">{message}</p>
+    </div>
+  );
+}
+
+/**
+ * A failed read. Distinct from empty on purpose — "no functions yet" and "we
+ * could not reach the API" are opposite situations and used to look identical.
+ */
+export function ErrorState({ error, onRetry }: { error: unknown; onRetry?: () => void }) {
+  return (
+    <div
+      role="alert"
+      className="flex flex-col items-center justify-center gap-3 rounded-lg border border-dashed px-6 py-14 text-center"
+      style={{ borderColor: 'color-mix(in oklab, var(--status-critical) 35%, transparent)' }}
+    >
+      <AlertTriangle className="h-5 w-5" style={{ color: 'var(--status-critical)' }} />
+      <p className="max-w-sm text-sm text-muted-foreground">{errorMessage(error)}</p>
+      {onRetry && (
+        <button
+          type="button"
+          onClick={onRetry}
+          className="text-xs text-brand transition-colors hover:text-brand-hover"
+        >
+          Try again
+        </button>
+      )}
     </div>
   );
 }

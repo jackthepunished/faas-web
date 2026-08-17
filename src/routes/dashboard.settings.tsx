@@ -128,11 +128,19 @@ function SettingsPage() {
     toast({ kind: 'success', title: 'Settings saved', description: `${workspace} · ${region}` });
   };
 
+  // Local reset only. Real account deletion is `DELETE /v1/account` — it stages
+  // a 30-day grace period and is restorable — but wiring a destructive endpoint
+  // to this button needs its own decision, not a drive-by. Until then the copy
+  // says what actually happens rather than implying the account is gone.
   const handleDelete = () => {
     setShowDelete(false);
     clearWorkspace();
-    signOut();
-    toast({ kind: 'info', title: 'Workspace deleted', description: 'You have been signed out.' });
+    void signOut();
+    toast({
+      kind: 'info',
+      title: 'Local workspace settings cleared',
+      description: 'You have been signed out. Your account was not deleted.',
+    });
     navigate({ to: '/' });
   };
 

@@ -1,10 +1,12 @@
+import { useMemo } from 'react';
 import { createFileRoute } from '@tanstack/react-router';
-import { Plus } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { Play, Trash2 } from 'lucide-react';
 import { PageHeader } from '@/components/dashboard/primitives';
 import { Pill, ResourceTable, type Column } from '@/components/dashboard/resource-table';
-import { CRON_JOBS, type CronJob } from '@/lib/mock-resources';
-import { formatMs, formatRelative, getWorkflow, NOW } from '@/lib/mock-data';
+import { useToast } from '@/components/ui/toast';
+import { useApps, useCrons, useDeleteCron, useRunCron } from '@/lib/api/queries';
+import { slugIndex } from '@/lib/api/adapters';
+import { errorMessage } from '@/lib/api/errors';
 import { consoleHead } from '@/lib/seo';
 
 export const Route = createFileRoute('/dashboard/crons')({
@@ -12,79 +14,144 @@ export const Route = createFileRoute('/dashboard/crons')({
   head: () => consoleHead('crons'),
 });
 
-/** Relative label for a timestamp in the future. */
-function formatIn(ts: number): string {
-  const diff = Math.max(0, ts - NOW);
-  if (diff < 3_600_000) return `in ${Math.max(1, Math.round(diff / 60_000))}m`;
-  if (diff < 86_400_000) return `in ${Math.round(diff / 3_600_000)}h`;
-  return `in ${Math.round(diff / 86_400_000)}d`;
+/**
+ * Scheduled jobs, from `/v1/crons`.
+ *
+ * A cron here is a synthetic POST to a path on one of your apps — there is no
+ * separate job runtime. "Run now" fires it out of band without touching the
+ * schedule.
+ */
+interface CronRow {
+  id: string;
+  app: string;
+  schedule: string;
+  path: string;
+  enabled: boolean;
+  lastFiredAt: string | null;
 }
 
-const COLUMNS: Column<CronJob>[] = [
-  { key: 'name', label: 'Job', render: (c) => <span className="font-mono">{c.name}</span> },
-  {
-    key: 'state',
-    label: 'State',
-    width: 'w-28',
-    render: (c) => (
-      <Pill label={c.state} color={c.state === 'active' ? 'var(--status-good)' : undefined} />
-    ),
-  },
-  {
-    key: 'schedule',
-    label: 'Schedule',
-    render: (c) => <span className="font-mono text-xs">{c.schedule}</span>,
-  },
-  {
-    key: 'workflowId',
-    label: 'Workflow',
-    render: (c) => (
-      <span className="font-mono text-xs text-muted-foreground">
-        {getWorkflow(c.workflowId)?.name ?? '—'}
-      </span>
-    ),
-  },
-  {
-    key: 'lastRunAt',
-    label: 'Last run',
-    numeric: true,
-    render: (c) => formatRelative(c.lastRunAt),
-  },
-  { key: 'nextRunAt', label: 'Next run', numeric: true, render: (c) => formatIn(c.nextRunAt) },
-  {
-    key: 'lastDurationMs',
-    label: 'Duration',
-    numeric: true,
-    render: (c) => formatMs(c.lastDurationMs),
-  },
-  {
-    key: 'successRatePct',
-    label: 'Success',
-    numeric: true,
-    render: (c) => `${c.successRatePct}%`,
-  },
-];
+function formatWhen(value: string | null | undefined): string {
+  if (!value) return 'Never';
+  const ms = Date.parse(value);
+  return Number.isNaN(ms) ? 'Never' : new Date(ms).toLocaleString();
+}
 
 function CronsPage() {
+  const { toast } = useToast();
+  const { data, isPending, error, refetch } = useCrons();
+  const { data: apps } = useApps();
+  const runCron = useRunCron();
+  const deleteCron = useDeleteCron();
+
+  const rows = useMemo<CronRow[]>(() => {
+    const bySlug = slugIndex(apps ?? []);
+    return (data ?? []).map((c) => ({
+      id: c.id,
+      app: bySlug.get(c.app_id) ?? c.app_id,
+      schedule: c.schedule,
+      path: c.path,
+      enabled: c.enabled,
+      lastFiredAt: c.last_fired_at ?? null,
+    }));
+  }, [data, apps]);
+
+  const columns: Column<CronRow>[] = [
+    {
+      key: 'schedule',
+      label: 'Schedule',
+      render: (c) => <span className="font-mono text-xs">{c.schedule}</span>,
+    },
+    {
+      key: 'app',
+      label: 'App',
+      render: (c) => <span className="font-mono text-xs text-muted-foreground">{c.app}</span>,
+    },
+    {
+      key: 'path',
+      label: 'Path',
+      render: (c) => <span className="font-mono text-xs text-muted-foreground">{c.path}</span>,
+    },
+    {
+      key: 'enabled',
+      label: 'State',
+      width: 'w-28',
+      render: (c) => (
+        <Pill
+          label={c.enabled ? 'enabled' : 'paused'}
+          color={c.enabled ? 'var(--status-good)' : 'var(--status-neutral)'}
+        />
+      ),
+    },
+    {
+      key: 'lastFiredAt',
+      label: 'Last fired',
+      numeric: true,
+      render: (c) => (
+        <span className="text-xs text-muted-foreground">{formatWhen(c.lastFiredAt)}</span>
+      ),
+    },
+    {
+      key: 'id',
+      label: '',
+      width: 'w-20',
+      render: (c) => (
+        <span className="flex items-center gap-3">
+          <button
+            type="button"
+            aria-label={`Run ${c.schedule} now`}
+            onClick={() => {
+              void runCron
+                .mutateAsync(c.id)
+                .then(() => toast({ kind: 'success', title: 'Cron fired' }))
+                .catch((err: unknown) =>
+                  toast({ kind: 'error', title: 'Could not fire', description: errorMessage(err) })
+                );
+            }}
+            className="text-muted-foreground transition-colors hover:text-foreground"
+          >
+            <Play className="h-3.5 w-3.5" />
+          </button>
+          <button
+            type="button"
+            aria-label={`Delete cron ${c.id}`}
+            onClick={() => {
+              void deleteCron
+                .mutateAsync(c.id)
+                .then(() => toast({ kind: 'success', title: 'Cron deleted' }))
+                .catch((err: unknown) =>
+                  toast({
+                    kind: 'error',
+                    title: 'Could not delete',
+                    description: errorMessage(err),
+                  })
+                );
+            }}
+            className="text-muted-foreground transition-colors hover:text-foreground"
+          >
+            <Trash2 className="h-3.5 w-3.5" />
+          </button>
+        </span>
+      ),
+    },
+  ];
+
   return (
     <div className="flex flex-col gap-6">
       <PageHeader
         title="Cron Jobs"
-        description="Scheduled workflows. Idle between runs, so they cost nothing while waiting."
-        actions={
-          <Button size="sm" className="gap-1.5">
-            <Plus className="h-3.5 w-3.5" />
-            New job
-          </Button>
-        }
+        description="Scheduled synthetic requests into your apps. Firing one by hand does not change its schedule."
       />
       <ResourceTable
-        rows={CRON_JOBS}
-        columns={COLUMNS}
-        initialSort={{ key: 'nextRunAt', dir: 'asc' }}
-        searchKeys={['name', 'schedule']}
-        searchPlaceholder="Filter by name or schedule…"
-        emptyMessage="No cron jobs match these filters."
+        rows={rows}
+        columns={columns}
+        initialSort={{ key: 'schedule', dir: 'asc' }}
+        searchKeys={['schedule', 'path', 'app']}
+        searchPlaceholder="Filter by schedule or path…"
+        emptyMessage="No scheduled jobs yet."
+        minWidth="min-w-[820px]"
+        loading={isPending}
+        error={error}
+        onRetry={() => void refetch()}
       />
     </div>
   );

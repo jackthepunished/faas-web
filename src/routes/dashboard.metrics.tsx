@@ -1,8 +1,15 @@
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import { createFileRoute } from '@tanstack/react-router';
-import { AreaChart, PercentileChart, UsageBars } from '@/components/dashboard/charts';
-import { PageHeader, Panel, RangeSelector, StatTile } from '@/components/dashboard/primitives';
-import { RANGES, buildSeries, formatCompact, formatMs, type RangeKey } from '@/lib/mock-data';
+import { AlertTriangle } from 'lucide-react';
+import {
+  ErrorState,
+  LoadingState,
+  PageHeader,
+  Panel,
+  StatTile,
+} from '@/components/dashboard/primitives';
+import { AppSelect, useSelectedApp } from '@/components/dashboard/app-select';
+import { useAppMetrics, type MetricsRange } from '@/lib/api/queries';
 import { consoleHead } from '@/lib/seo';
 
 export const Route = createFileRoute('/dashboard/metrics')({
@@ -10,79 +17,111 @@ export const Route = createFileRoute('/dashboard/metrics')({
   head: () => consoleHead('metrics'),
 });
 
-function MetricsPage() {
-  const [range, setRange] = useState<RangeKey>('24h');
-  const series = useMemo(() => buildSeries(range), [range]);
+/**
+ * Per-app metrics, from `/v1/apps/{slug}/metrics`.
+ *
+ * **There are no charts here, deliberately.** This endpoint returns scalar
+ * aggregates over a window — one p50, one p95, one error rate — not a time
+ * series. The page it replaced drew smooth line charts from a seeded PRNG; with
+ * real data there is nothing to plot, and interpolating a curve between a single
+ * pair of numbers would be inventing the shape of an outage.
+ *
+ * Changing the range re-queries rather than slicing a cached series, because
+ * each window is computed server-side by a separate PromQL query.
+ */
+const RANGES: MetricsRange[] = ['5m', '15m', '1h', '6h', '24h', '7d', '15d'];
 
-  const invocations = series.reduce((a, s) => a + s.invocations, 0);
-  const errors = series.reduce((a, s) => a + s.errors, 0);
-  const coldStarts = series.reduce((a, s) => a + s.coldStarts, 0);
-  const avgP95 = series.reduce((a, s) => a + s.p95, 0) / series.length;
+function formatMs(value: number | undefined): string {
+  if (value == null) return '—';
+  return value >= 1000 ? `${(value / 1000).toFixed(2)} s` : `${Math.round(value)} ms`;
+}
+
+function formatPct(value: number | undefined): string {
+  return value == null ? '—' : `${value.toFixed(2)}%`;
+}
+
+function formatCount(value: number | undefined): string {
+  if (value == null) return '—';
+  return new Intl.NumberFormat().format(value);
+}
+
+function MetricsPage() {
+  const { slug, select, apps, loadingApps } = useSelectedApp();
+  const [range, setRange] = useState<MetricsRange>('24h');
+  const { data, isPending, error, refetch } = useAppMetrics(slug, range);
+
+  // "prometheus" on success; anything else is the documented degraded string.
+  const degraded = Boolean(data && data.source !== 'prometheus');
 
   return (
     <div className="flex flex-col gap-6">
       <PageHeader
         title="Metrics"
-        description="Traffic, latency, and cold starts across every workflow."
+        description="Aggregates over the selected window, straight from Prometheus."
         actions={
-          <RangeSelector
-            value={range}
-            onChange={setRange}
-            options={RANGES.map((r) => ({ key: r.key, label: r.key }))}
-          />
+          <div className="flex flex-wrap items-center gap-3">
+            <AppSelect slug={slug} onSelect={select} apps={apps} />
+            <label className="flex items-center gap-2">
+              <span className="label-mono text-muted-foreground">Window</span>
+              <select
+                value={range}
+                onChange={(e) => setRange(e.target.value as MetricsRange)}
+                aria-label="Metrics window"
+                className="h-9 rounded-md border border-border bg-card px-2.5 text-sm outline-none focus:border-brand/50"
+              >
+                {RANGES.map((r) => (
+                  <option key={r} value={r}>
+                    {r}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
         }
       />
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <StatTile
-          label="Invocations"
-          value={formatCompact(invocations)}
-          series={series.map((s) => s.invocations)}
-        />
-        <StatTile
-          label="p95 latency"
-          value={formatMs(avgP95)}
-          series={series.map((s) => s.p95)}
-          color="var(--chart-ord-2)"
-          deltaGood={false}
-        />
-        <StatTile
-          label="Cold starts"
-          value={formatCompact(coldStarts)}
-          series={series.map((s) => s.coldStarts)}
-          color="var(--chart-3)"
-        />
-        <StatTile
-          label="Errors"
-          value={formatCompact(errors)}
-          series={series.map((s) => s.errors)}
-          color="var(--chart-2)"
-          deltaGood={false}
-        />
-      </div>
-
-      <Panel title="Response latency" description="Percentile distribution over time">
-        <PercentileChart data={series} range={range} />
-      </Panel>
-
-      <div className="grid gap-6 xl:grid-cols-2">
-        <Panel title="Invocations">
-          <AreaChart data={series} range={range} metric="invocations" label="invocations" />
-        </Panel>
-        <Panel title="Cold starts">
-          <AreaChart
-            data={series}
-            range={range}
-            metric="coldStarts"
-            label="cold starts"
-            color="var(--chart-3)"
+      {degraded && (
+        <p
+          role="status"
+          className="flex items-start gap-2 rounded-lg border px-3 py-2 text-xs"
+          style={{ borderColor: 'color-mix(in oklab, var(--status-warning) 40%, transparent)' }}
+        >
+          <AlertTriangle
+            className="mt-px h-3.5 w-3.5 shrink-0"
+            style={{ color: 'var(--status-warning)' }}
           />
-        </Panel>
-      </div>
+          Metrics are degraded ({data?.source}). The figures below are zeroed rather than partial —
+          treat them as unavailable, not as zero traffic.
+        </p>
+      )}
 
-      <Panel title="Compute consumption" description="GB-seconds per bucket">
-        <UsageBars data={series} range={range} />
-      </Panel>
+      {error ? (
+        <ErrorState error={error} onRetry={() => void refetch()} />
+      ) : loadingApps || isPending ? (
+        <LoadingState message="Querying metrics…" />
+      ) : (
+        <>
+          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+            <StatTile label="Requests" value={formatCount(data?.request_count)} />
+            <StatTile label="Error rate" value={formatPct(data?.error_rate_pct)} />
+            <StatTile label="Cold starts" value={formatPct(data?.cold_start_pct)} />
+            <StatTile label="Wake p95 (fleet)" value={formatMs(data?.wake_p95_ms)} />
+          </div>
+
+          <Panel title="Latency (2xx only)">
+            <div className="grid gap-4 p-5 sm:grid-cols-3">
+              <StatTile label="p50" value={formatMs(data?.latency_p50_ms)} />
+              <StatTile label="p95" value={formatMs(data?.latency_p95_ms)} />
+              <StatTile label="p99" value={formatMs(data?.latency_p99_ms)} />
+            </div>
+          </Panel>
+
+          <p className="text-xs text-muted-foreground">
+            Window {data?.range}. Latency percentiles cover 2xx traffic only; wake p95 is the fleet
+            figure, not this app alone.
+          </p>
+        </>
+      )}
     </div>
   );
 }

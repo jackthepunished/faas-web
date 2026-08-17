@@ -2,8 +2,14 @@ import { useMemo, useState } from 'react';
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router';
 import { ArrowDown, ArrowUp, Plus, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { EmptyState, PageHeader, StateBadge } from '@/components/dashboard/primitives';
-import { PROJECTS, formatCompact, formatMs, formatRelative, type RunState } from '@/lib/mock-data';
+import {
+  EmptyState,
+  ErrorState,
+  LoadingState,
+  PageHeader,
+  StateBadge,
+} from '@/components/dashboard/primitives';
+import { formatCompact, formatMs, formatRelative, type RunState } from '@/lib/mock-data';
 import { useData } from '@/lib/store';
 import { cn } from '@/lib/utils';
 import { consoleHead } from '@/lib/seo';
@@ -43,19 +49,21 @@ const COLUMNS: { key: SortKey; label: string; numeric: boolean }[] = [
 function FunctionsPage() {
   const [query, setQuery] = useState('');
   const [state, setState] = useState<RunState | 'all'>('all');
-  const [projectId, setProjectId] = useState<string>('all');
+  // Was a project filter. The API has no projects — apps are flat per account —
+  // so this filters on the one grouping that is real: the runtime.
+  const [runtime, setRuntime] = useState<string>('all');
   const [sort, setSort] = useState<{ key: SortKey; dir: 'asc' | 'desc' }>({
     key: 'invocations24h',
     dir: 'desc',
   });
-  const { workflows } = useData();
+  const { workflows, loading, error, refresh } = useData();
   const navigate = useNavigate();
 
   const rows = useMemo(() => {
     const q = query.trim().toLowerCase();
     const filtered = workflows.filter((fn) => {
       if (state !== 'all' && fn.state !== state) return false;
-      if (projectId !== 'all' && fn.projectId !== projectId) return false;
+      if (runtime !== 'all' && fn.runtime !== runtime) return false;
       if (q && !fn.name.toLowerCase().includes(q) && !fn.runtime.toLowerCase().includes(q))
         return false;
       return true;
@@ -68,7 +76,14 @@ function FunctionsPage() {
       if (typeof av === 'number' && typeof bv === 'number') return (av - bv) * factor;
       return String(av).localeCompare(String(bv)) * factor;
     });
-  }, [workflows, query, state, projectId, sort]);
+  }, [workflows, query, state, runtime, sort]);
+
+  // Built from what is actually deployed rather than a fixed list, so the
+  // filter never offers a runtime with nothing behind it.
+  const runtimes = useMemo(
+    () => [...new Set(workflows.map((fn) => fn.runtime))].filter(Boolean).sort(),
+    [workflows]
+  );
 
   // Text columns read naturally A→Z first; numbers most-interesting first.
   const toggleSort = (key: SortKey, numeric: boolean) =>
@@ -125,15 +140,15 @@ function FunctionsPage() {
         </div>
 
         <select
-          value={projectId}
-          onChange={(e) => setProjectId(e.target.value)}
-          aria-label="Filter by project"
+          value={runtime}
+          onChange={(e) => setRuntime(e.target.value)}
+          aria-label="Filter by runtime"
           className="h-9 rounded-md border border-border bg-card px-2.5 text-sm outline-none focus:border-brand/50"
         >
-          <option value="all">All projects</option>
-          {PROJECTS.map((p) => (
-            <option key={p.id} value={p.id}>
-              {p.name}
+          <option value="all">All runtimes</option>
+          {runtimes.map((r) => (
+            <option key={r} value={r}>
+              {r}
             </option>
           ))}
         </select>
@@ -143,8 +158,18 @@ function FunctionsPage() {
         </span>
       </div>
 
-      {rows.length === 0 ? (
-        <EmptyState message="No workflows match these filters." />
+      {error ? (
+        <ErrorState error={error} onRetry={refresh} />
+      ) : loading ? (
+        <LoadingState message="Loading apps…" />
+      ) : rows.length === 0 ? (
+        <EmptyState
+          message={
+            workflows.length === 0
+              ? 'No apps on this account yet.'
+              : 'No workflows match these filters.'
+          }
+        />
       ) : (
         <div className="overflow-hidden rounded-xl border border-border bg-card">
           <div className="overflow-x-auto">
@@ -209,7 +234,7 @@ function FunctionsPage() {
                       >
                         {fn.name}
                       </Link>
-                      <p className="mt-0.5 text-xs text-muted-foreground">{fn.region}</p>
+                      <p className="mt-0.5 text-xs text-muted-foreground">{fn.runtime}</p>
                     </td>
                     <td className="px-4 py-3">
                       <StateBadge state={fn.state} />

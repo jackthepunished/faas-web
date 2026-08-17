@@ -17,10 +17,13 @@ import { Route as SignupRouteImport } from './routes/signup'
 import { Route as DashboardIndexRouteImport } from './routes/dashboard.index'
 import { Route as DashboardAlertsRouteImport } from './routes/dashboard.alerts'
 import { Route as DashboardApisRouteImport } from './routes/dashboard.apis'
+import { Route as DashboardAuditRouteImport } from './routes/dashboard.audit'
+import { Route as DashboardBuildsRouteImport } from './routes/dashboard.builds'
 import { Route as DashboardCronsRouteImport } from './routes/dashboard.crons'
 import { Route as DashboardDatabasesRouteImport } from './routes/dashboard.databases'
 import { Route as DashboardDeploymentsRouteImport } from './routes/dashboard.deployments'
 import { Route as DashboardDomainsRouteImport } from './routes/dashboard.domains'
+import { Route as DashboardEdgeRulesRouteImport } from './routes/dashboard.edge-rules'
 import { Route as DashboardEnvRouteImport } from './routes/dashboard.env'
 import { Route as DashboardInvoicesRouteImport } from './routes/dashboard.invoices'
 import { Route as DashboardKeysRouteImport } from './routes/dashboard.keys'
@@ -29,10 +32,13 @@ import { Route as DashboardMetricsRouteImport } from './routes/dashboard.metrics
 import { Route as DashboardPlansRouteImport } from './routes/dashboard.plans'
 import { Route as DashboardQueuesRouteImport } from './routes/dashboard.queues'
 import { Route as DashboardSecretsRouteImport } from './routes/dashboard.secrets'
+import { Route as DashboardSecurityRouteImport } from './routes/dashboard.security'
 import { Route as DashboardSettingsRouteImport } from './routes/dashboard.settings'
 import { Route as DashboardStorageRouteImport } from './routes/dashboard.storage'
+import { Route as DashboardTeamRouteImport } from './routes/dashboard.team'
 import { Route as DashboardTracesRouteImport } from './routes/dashboard.traces'
 import { Route as DashboardUsageRouteImport } from './routes/dashboard.usage'
+import { Route as DashboardWebhooksRouteImport } from './routes/dashboard.webhooks'
 import { Route as DashboardWorkersRouteImport } from './routes/dashboard.workers'
 import { Route as DashboardWorkflowsIndexRouteImport } from './routes/dashboard.workflows.index'
 import { Route as DashboardWorkflowsWorkflowIdRouteImport } from './routes/dashboard.workflows.$workflowId'
@@ -78,6 +84,16 @@ const DashboardApisRoute = DashboardApisRouteImport.update({
   path: '/apis',
   getParentRoute: () => DashboardRoute,
 } as any)
+const DashboardAuditRoute = DashboardAuditRouteImport.update({
+  id: '/audit',
+  path: '/audit',
+  getParentRoute: () => DashboardRoute,
+} as any)
+const DashboardBuildsRoute = DashboardBuildsRouteImport.update({
+  id: '/builds',
+  path: '/builds',
+  getParentRoute: () => DashboardRoute,
+} as any)
 const DashboardCronsRoute = DashboardCronsRouteImport.update({
   id: '/crons',
   path: '/crons',
@@ -96,6 +112,11 @@ const DashboardDeploymentsRoute = DashboardDeploymentsRouteImport.update({
 const DashboardDomainsRoute = DashboardDomainsRouteImport.update({
   id: '/domains',
   path: '/domains',
+  getParentRoute: () => DashboardRoute,
+} as any)
+const DashboardEdgeRulesRoute = DashboardEdgeRulesRouteImport.update({
+  id: '/edge-rules',
+  path: '/edge-rules',
   getParentRoute: () => DashboardRoute,
 } as any)
 const DashboardEnvRoute = DashboardEnvRouteImport.update({
@@ -138,6 +159,11 @@ const DashboardSecretsRoute = DashboardSecretsRouteImport.update({
   path: '/secrets',
   getParentRoute: () => DashboardRoute,
 } as any)
+const DashboardSecurityRoute = DashboardSecurityRouteImport.update({
+  id: '/security',
+  path: '/security',
+  getParentRoute: () => DashboardRoute,
+} as any)
 const DashboardSettingsRoute = DashboardSettingsRouteImport.update({
   id: '/settings',
   path: '/settings',
@@ -148,6 +174,11 @@ const DashboardStorageRoute = DashboardStorageRouteImport.update({
   path: '/storage',
   getParentRoute: () => DashboardRoute,
 } as any)
+const DashboardTeamRoute = DashboardTeamRouteImport.update({
+  id: '/team',
+  path: '/team',
+  getParentRoute: () => DashboardRoute,
+} as any)
 const DashboardTracesRoute = DashboardTracesRouteImport.update({
   id: '/traces',
   path: '/traces',
@@ -156,6 +187,11 @@ const DashboardTracesRoute = DashboardTracesRouteImport.update({
 const DashboardUsageRoute = DashboardUsageRouteImport.update({
   id: '/usage',
   path: '/usage',
+  getParentRoute: () => DashboardRoute,
+} as any)
+const DashboardWebhooksRoute = DashboardWebhooksRouteImport.update({
+  id: '/webhooks',
+  path: '/webhooks',
   getParentRoute: () => DashboardRoute,
 } as any)
 const DashboardWorkersRoute = DashboardWorkersRouteImport.update({
@@ -188,10 +224,13 @@ export interface FileRoutesByFullPath {
   '/signup': typeof SignupRoute
   '/dashboard/alerts': typeof DashboardAlertsRoute
   '/dashboard/apis': typeof DashboardApisRoute
+  '/dashboard/audit': typeof DashboardAuditRoute
+  '/dashboard/builds': typeof DashboardBuildsRoute
   '/dashboard/crons': typeof DashboardCronsRoute
   '/dashboard/databases': typeof DashboardDatabasesRoute
   '/dashboard/deployments': typeof DashboardDeploymentsRoute
   '/dashboard/domains': typeof DashboardDomainsRoute
+  '/dashboard/edge-rules': typeof DashboardEdgeRulesRoute
   '/dashboard/env': typeof DashboardEnvRoute
   '/dashboard/invoices': typeof DashboardInvoicesRoute
   '/dashboard/keys': typeof DashboardKeysRoute
@@ -200,10 +239,13 @@ export interface FileRoutesByFullPath {
   '/dashboard/plans': typeof DashboardPlansRoute
   '/dashboard/queues': typeof DashboardQueuesRoute
   '/dashboard/secrets': typeof DashboardSecretsRoute
+  '/dashboard/security': typeof DashboardSecurityRoute
   '/dashboard/settings': typeof DashboardSettingsRoute
   '/dashboard/storage': typeof DashboardStorageRoute
+  '/dashboard/team': typeof DashboardTeamRoute
   '/dashboard/traces': typeof DashboardTracesRoute
   '/dashboard/usage': typeof DashboardUsageRoute
+  '/dashboard/webhooks': typeof DashboardWebhooksRoute
   '/dashboard/workers': typeof DashboardWorkersRoute
   '/dashboard/': typeof DashboardIndexRoute
   '/dashboard/workflows/$workflowId': typeof DashboardWorkflowsWorkflowIdRoute
@@ -217,10 +259,13 @@ export interface FileRoutesByTo {
   '/signup': typeof SignupRoute
   '/dashboard/alerts': typeof DashboardAlertsRoute
   '/dashboard/apis': typeof DashboardApisRoute
+  '/dashboard/audit': typeof DashboardAuditRoute
+  '/dashboard/builds': typeof DashboardBuildsRoute
   '/dashboard/crons': typeof DashboardCronsRoute
   '/dashboard/databases': typeof DashboardDatabasesRoute
   '/dashboard/deployments': typeof DashboardDeploymentsRoute
   '/dashboard/domains': typeof DashboardDomainsRoute
+  '/dashboard/edge-rules': typeof DashboardEdgeRulesRoute
   '/dashboard/env': typeof DashboardEnvRoute
   '/dashboard/invoices': typeof DashboardInvoicesRoute
   '/dashboard/keys': typeof DashboardKeysRoute
@@ -229,10 +274,13 @@ export interface FileRoutesByTo {
   '/dashboard/plans': typeof DashboardPlansRoute
   '/dashboard/queues': typeof DashboardQueuesRoute
   '/dashboard/secrets': typeof DashboardSecretsRoute
+  '/dashboard/security': typeof DashboardSecurityRoute
   '/dashboard/settings': typeof DashboardSettingsRoute
   '/dashboard/storage': typeof DashboardStorageRoute
+  '/dashboard/team': typeof DashboardTeamRoute
   '/dashboard/traces': typeof DashboardTracesRoute
   '/dashboard/usage': typeof DashboardUsageRoute
+  '/dashboard/webhooks': typeof DashboardWebhooksRoute
   '/dashboard/workers': typeof DashboardWorkersRoute
   '/dashboard': typeof DashboardIndexRoute
   '/dashboard/workflows/$workflowId': typeof DashboardWorkflowsWorkflowIdRoute
@@ -248,10 +296,13 @@ export interface FileRoutesById {
   '/signup': typeof SignupRoute
   '/dashboard/alerts': typeof DashboardAlertsRoute
   '/dashboard/apis': typeof DashboardApisRoute
+  '/dashboard/audit': typeof DashboardAuditRoute
+  '/dashboard/builds': typeof DashboardBuildsRoute
   '/dashboard/crons': typeof DashboardCronsRoute
   '/dashboard/databases': typeof DashboardDatabasesRoute
   '/dashboard/deployments': typeof DashboardDeploymentsRoute
   '/dashboard/domains': typeof DashboardDomainsRoute
+  '/dashboard/edge-rules': typeof DashboardEdgeRulesRoute
   '/dashboard/env': typeof DashboardEnvRoute
   '/dashboard/invoices': typeof DashboardInvoicesRoute
   '/dashboard/keys': typeof DashboardKeysRoute
@@ -260,10 +311,13 @@ export interface FileRoutesById {
   '/dashboard/plans': typeof DashboardPlansRoute
   '/dashboard/queues': typeof DashboardQueuesRoute
   '/dashboard/secrets': typeof DashboardSecretsRoute
+  '/dashboard/security': typeof DashboardSecurityRoute
   '/dashboard/settings': typeof DashboardSettingsRoute
   '/dashboard/storage': typeof DashboardStorageRoute
+  '/dashboard/team': typeof DashboardTeamRoute
   '/dashboard/traces': typeof DashboardTracesRoute
   '/dashboard/usage': typeof DashboardUsageRoute
+  '/dashboard/webhooks': typeof DashboardWebhooksRoute
   '/dashboard/workers': typeof DashboardWorkersRoute
   '/dashboard/': typeof DashboardIndexRoute
   '/dashboard/workflows/$workflowId': typeof DashboardWorkflowsWorkflowIdRoute
@@ -280,10 +334,13 @@ export interface FileRouteTypes {
     | '/signup'
     | '/dashboard/alerts'
     | '/dashboard/apis'
+    | '/dashboard/audit'
+    | '/dashboard/builds'
     | '/dashboard/crons'
     | '/dashboard/databases'
     | '/dashboard/deployments'
     | '/dashboard/domains'
+    | '/dashboard/edge-rules'
     | '/dashboard/env'
     | '/dashboard/invoices'
     | '/dashboard/keys'
@@ -292,10 +349,13 @@ export interface FileRouteTypes {
     | '/dashboard/plans'
     | '/dashboard/queues'
     | '/dashboard/secrets'
+    | '/dashboard/security'
     | '/dashboard/settings'
     | '/dashboard/storage'
+    | '/dashboard/team'
     | '/dashboard/traces'
     | '/dashboard/usage'
+    | '/dashboard/webhooks'
     | '/dashboard/workers'
     | '/dashboard/'
     | '/dashboard/workflows/$workflowId'
@@ -309,10 +369,13 @@ export interface FileRouteTypes {
     | '/signup'
     | '/dashboard/alerts'
     | '/dashboard/apis'
+    | '/dashboard/audit'
+    | '/dashboard/builds'
     | '/dashboard/crons'
     | '/dashboard/databases'
     | '/dashboard/deployments'
     | '/dashboard/domains'
+    | '/dashboard/edge-rules'
     | '/dashboard/env'
     | '/dashboard/invoices'
     | '/dashboard/keys'
@@ -321,10 +384,13 @@ export interface FileRouteTypes {
     | '/dashboard/plans'
     | '/dashboard/queues'
     | '/dashboard/secrets'
+    | '/dashboard/security'
     | '/dashboard/settings'
     | '/dashboard/storage'
+    | '/dashboard/team'
     | '/dashboard/traces'
     | '/dashboard/usage'
+    | '/dashboard/webhooks'
     | '/dashboard/workers'
     | '/dashboard'
     | '/dashboard/workflows/$workflowId'
@@ -339,10 +405,13 @@ export interface FileRouteTypes {
     | '/signup'
     | '/dashboard/alerts'
     | '/dashboard/apis'
+    | '/dashboard/audit'
+    | '/dashboard/builds'
     | '/dashboard/crons'
     | '/dashboard/databases'
     | '/dashboard/deployments'
     | '/dashboard/domains'
+    | '/dashboard/edge-rules'
     | '/dashboard/env'
     | '/dashboard/invoices'
     | '/dashboard/keys'
@@ -351,10 +420,13 @@ export interface FileRouteTypes {
     | '/dashboard/plans'
     | '/dashboard/queues'
     | '/dashboard/secrets'
+    | '/dashboard/security'
     | '/dashboard/settings'
     | '/dashboard/storage'
+    | '/dashboard/team'
     | '/dashboard/traces'
     | '/dashboard/usage'
+    | '/dashboard/webhooks'
     | '/dashboard/workers'
     | '/dashboard/'
     | '/dashboard/workflows/$workflowId'
@@ -428,6 +500,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DashboardApisRouteImport
       parentRoute: typeof DashboardRoute
     }
+    '/dashboard/audit': {
+      id: '/dashboard/audit'
+      path: '/audit'
+      fullPath: '/dashboard/audit'
+      preLoaderRoute: typeof DashboardAuditRouteImport
+      parentRoute: typeof DashboardRoute
+    }
+    '/dashboard/builds': {
+      id: '/dashboard/builds'
+      path: '/builds'
+      fullPath: '/dashboard/builds'
+      preLoaderRoute: typeof DashboardBuildsRouteImport
+      parentRoute: typeof DashboardRoute
+    }
     '/dashboard/crons': {
       id: '/dashboard/crons'
       path: '/crons'
@@ -454,6 +540,13 @@ declare module '@tanstack/react-router' {
       path: '/domains'
       fullPath: '/dashboard/domains'
       preLoaderRoute: typeof DashboardDomainsRouteImport
+      parentRoute: typeof DashboardRoute
+    }
+    '/dashboard/edge-rules': {
+      id: '/dashboard/edge-rules'
+      path: '/edge-rules'
+      fullPath: '/dashboard/edge-rules'
+      preLoaderRoute: typeof DashboardEdgeRulesRouteImport
       parentRoute: typeof DashboardRoute
     }
     '/dashboard/env': {
@@ -512,6 +605,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DashboardSecretsRouteImport
       parentRoute: typeof DashboardRoute
     }
+    '/dashboard/security': {
+      id: '/dashboard/security'
+      path: '/security'
+      fullPath: '/dashboard/security'
+      preLoaderRoute: typeof DashboardSecurityRouteImport
+      parentRoute: typeof DashboardRoute
+    }
     '/dashboard/settings': {
       id: '/dashboard/settings'
       path: '/settings'
@@ -526,6 +626,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DashboardStorageRouteImport
       parentRoute: typeof DashboardRoute
     }
+    '/dashboard/team': {
+      id: '/dashboard/team'
+      path: '/team'
+      fullPath: '/dashboard/team'
+      preLoaderRoute: typeof DashboardTeamRouteImport
+      parentRoute: typeof DashboardRoute
+    }
     '/dashboard/traces': {
       id: '/dashboard/traces'
       path: '/traces'
@@ -538,6 +645,13 @@ declare module '@tanstack/react-router' {
       path: '/usage'
       fullPath: '/dashboard/usage'
       preLoaderRoute: typeof DashboardUsageRouteImport
+      parentRoute: typeof DashboardRoute
+    }
+    '/dashboard/webhooks': {
+      id: '/dashboard/webhooks'
+      path: '/webhooks'
+      fullPath: '/dashboard/webhooks'
+      preLoaderRoute: typeof DashboardWebhooksRouteImport
       parentRoute: typeof DashboardRoute
     }
     '/dashboard/workers': {
@@ -574,10 +688,13 @@ declare module '@tanstack/react-router' {
 interface DashboardRouteChildren {
   DashboardAlertsRoute: typeof DashboardAlertsRoute
   DashboardApisRoute: typeof DashboardApisRoute
+  DashboardAuditRoute: typeof DashboardAuditRoute
+  DashboardBuildsRoute: typeof DashboardBuildsRoute
   DashboardCronsRoute: typeof DashboardCronsRoute
   DashboardDatabasesRoute: typeof DashboardDatabasesRoute
   DashboardDeploymentsRoute: typeof DashboardDeploymentsRoute
   DashboardDomainsRoute: typeof DashboardDomainsRoute
+  DashboardEdgeRulesRoute: typeof DashboardEdgeRulesRoute
   DashboardEnvRoute: typeof DashboardEnvRoute
   DashboardInvoicesRoute: typeof DashboardInvoicesRoute
   DashboardKeysRoute: typeof DashboardKeysRoute
@@ -586,10 +703,13 @@ interface DashboardRouteChildren {
   DashboardPlansRoute: typeof DashboardPlansRoute
   DashboardQueuesRoute: typeof DashboardQueuesRoute
   DashboardSecretsRoute: typeof DashboardSecretsRoute
+  DashboardSecurityRoute: typeof DashboardSecurityRoute
   DashboardSettingsRoute: typeof DashboardSettingsRoute
   DashboardStorageRoute: typeof DashboardStorageRoute
+  DashboardTeamRoute: typeof DashboardTeamRoute
   DashboardTracesRoute: typeof DashboardTracesRoute
   DashboardUsageRoute: typeof DashboardUsageRoute
+  DashboardWebhooksRoute: typeof DashboardWebhooksRoute
   DashboardWorkersRoute: typeof DashboardWorkersRoute
   DashboardIndexRoute: typeof DashboardIndexRoute
   DashboardWorkflowsWorkflowIdRoute: typeof DashboardWorkflowsWorkflowIdRoute
@@ -600,10 +720,13 @@ interface DashboardRouteChildren {
 const DashboardRouteChildren: DashboardRouteChildren = {
   DashboardAlertsRoute: DashboardAlertsRoute,
   DashboardApisRoute: DashboardApisRoute,
+  DashboardAuditRoute: DashboardAuditRoute,
+  DashboardBuildsRoute: DashboardBuildsRoute,
   DashboardCronsRoute: DashboardCronsRoute,
   DashboardDatabasesRoute: DashboardDatabasesRoute,
   DashboardDeploymentsRoute: DashboardDeploymentsRoute,
   DashboardDomainsRoute: DashboardDomainsRoute,
+  DashboardEdgeRulesRoute: DashboardEdgeRulesRoute,
   DashboardEnvRoute: DashboardEnvRoute,
   DashboardInvoicesRoute: DashboardInvoicesRoute,
   DashboardKeysRoute: DashboardKeysRoute,
@@ -612,10 +735,13 @@ const DashboardRouteChildren: DashboardRouteChildren = {
   DashboardPlansRoute: DashboardPlansRoute,
   DashboardQueuesRoute: DashboardQueuesRoute,
   DashboardSecretsRoute: DashboardSecretsRoute,
+  DashboardSecurityRoute: DashboardSecurityRoute,
   DashboardSettingsRoute: DashboardSettingsRoute,
   DashboardStorageRoute: DashboardStorageRoute,
+  DashboardTeamRoute: DashboardTeamRoute,
   DashboardTracesRoute: DashboardTracesRoute,
   DashboardUsageRoute: DashboardUsageRoute,
+  DashboardWebhooksRoute: DashboardWebhooksRoute,
   DashboardWorkersRoute: DashboardWorkersRoute,
   DashboardIndexRoute: DashboardIndexRoute,
   DashboardWorkflowsWorkflowIdRoute: DashboardWorkflowsWorkflowIdRoute,

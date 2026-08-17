@@ -1,10 +1,13 @@
+import { useMemo, useState } from 'react';
 import { createFileRoute } from '@tanstack/react-router';
-import { Plus } from 'lucide-react';
+import { Plus, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { PageHeader } from '@/components/dashboard/primitives';
-import { Pill, ResourceTable, type Column } from '@/components/dashboard/resource-table';
-import { SECRETS, type Secret } from '@/lib/mock-resources';
-import { formatRelative, getWorkflow } from '@/lib/mock-data';
+import { PageHeader, Panel } from '@/components/dashboard/primitives';
+import { ResourceTable, type Column } from '@/components/dashboard/resource-table';
+import { AppSelect, useSelectedApp } from '@/components/dashboard/app-select';
+import { useToast } from '@/components/ui/toast';
+import { useAppSecrets, useDeleteSecret, useSetSecret } from '@/lib/api/queries';
+import { errorMessage } from '@/lib/api/errors';
 import { consoleHead } from '@/lib/seo';
 
 export const Route = createFileRoute('/dashboard/secrets')({
@@ -12,69 +15,168 @@ export const Route = createFileRoute('/dashboard/secrets')({
   head: () => consoleHead('secrets'),
 });
 
-const COLUMNS: Column<Secret>[] = [
-  {
-    key: 'key',
-    label: 'Key',
-    render: (s) => (
-      <span className="flex flex-col">
-        <span className="font-mono">{s.key}</span>
-        {/* Values are never rendered — secrets are write-only once stored. */}
-        <span className="mt-0.5 font-mono text-xs text-muted-foreground">••••••••••••</span>
-      </span>
-    ),
-  },
-  {
-    key: 'scope',
-    label: 'Scope',
-    width: 'w-40',
-    render: (s) => (
-      <span className="flex items-center gap-2">
-        <Pill label={s.scope} color={s.scope === 'workspace' ? 'var(--brand)' : undefined} />
-        {s.workflowId && (
-          <span className="font-mono text-xs text-muted-foreground">
-            {getWorkflow(s.workflowId)?.name}
-          </span>
-        )}
-      </span>
-    ),
-  },
-  { key: 'version', label: 'Version', numeric: true, render: (s) => `v${s.version}` },
-  {
-    key: 'lastAccessedAt',
-    label: 'Last read',
-    numeric: true,
-    render: (s) => formatRelative(s.lastAccessedAt),
-  },
-  {
-    key: 'updatedAt',
-    label: 'Updated',
-    numeric: true,
-    render: (s) => formatRelative(s.updatedAt),
-  },
-];
+/**
+ * Sealed secrets, from `/v1/apps/{slug}/secrets`.
+ *
+ * **Values are never readable, by anyone, including the server.** Each row is a
+ * sealed envelope; the API returns the key name and timestamps and nothing
+ * else. So there is no "reveal" affordance here and there cannot be one —
+ * writing a new value is the only way to change a secret.
+ *
+ * Secrets are per-app: there is no account-wide list to show.
+ */
+interface SecretRow {
+  id: string;
+  key: string;
+  updatedAt: string;
+  kid: string;
+}
+
+function formatWhen(value: string | undefined): string {
+  if (!value) return '—';
+  const ms = Date.parse(value);
+  return Number.isNaN(ms) ? '—' : new Date(ms).toLocaleString();
+}
 
 function SecretsPage() {
+  const { toast } = useToast();
+  const { slug, select, apps, loadingApps } = useSelectedApp();
+  const { data, isPending, error, refetch } = useAppSecrets(slug);
+  const setSecret = useSetSecret(slug);
+  const deleteSecret = useDeleteSecret(slug);
+
+  const [key, setKey] = useState('');
+  const [value, setValue] = useState('');
+
+  const rows = useMemo<SecretRow[]>(
+    () =>
+      (data?.secrets ?? []).map((s) => ({
+        id: s.key,
+        key: s.key,
+        updatedAt: s.updated_at,
+        kid: s.kid ?? '',
+      })),
+    [data]
+  );
+
+  const columns: Column<SecretRow>[] = [
+    {
+      key: 'key',
+      label: 'Name',
+      render: (s) => <span className="font-mono text-xs">{s.key}</span>,
+    },
+    {
+      key: 'kid',
+      label: 'Value',
+      render: () => (
+        <span className="font-mono text-xs text-muted-foreground">•••••••• (sealed)</span>
+      ),
+    },
+    {
+      key: 'updatedAt',
+      label: 'Updated',
+      numeric: true,
+      render: (s) => (
+        <span className="text-xs text-muted-foreground">{formatWhen(s.updatedAt)}</span>
+      ),
+    },
+    {
+      key: 'id',
+      label: '',
+      width: 'w-12',
+      render: (s) => (
+        <button
+          type="button"
+          aria-label={`Delete secret ${s.key}`}
+          onClick={() => {
+            void deleteSecret
+              .mutateAsync(s.key)
+              .then(() => toast({ kind: 'success', title: `Deleted ${s.key}` }))
+              .catch((err: unknown) =>
+                toast({ kind: 'error', title: 'Could not delete', description: errorMessage(err) })
+              );
+          }}
+          className="text-muted-foreground transition-colors hover:text-foreground"
+        >
+          <Trash2 className="h-3.5 w-3.5" />
+        </button>
+      ),
+    },
+  ];
+
   return (
     <div className="flex flex-col gap-6">
       <PageHeader
         title="Secrets"
-        description="Encrypted at rest and injected into the microVM at boot. Values cannot be read back."
-        actions={
-          <Button size="sm" className="gap-1.5">
-            <Plus className="h-3.5 w-3.5" />
-            Add secret
-          </Button>
+        description={
+          data
+            ? `Sealed per-app values injected at boot. ${data.count} of ${data.quota_max} used.`
+            : 'Sealed per-app values injected at boot. The server cannot read them back — set a new value to change one.'
         }
+        actions={<AppSelect slug={slug} onSelect={select} apps={apps} />}
       />
+
+      <Panel title="Set a secret">
+        <form
+          className="flex flex-wrap items-end gap-3 p-5"
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (!key.trim() || !value || setSecret.isPending) return;
+            void setSecret
+              .mutateAsync({ key: key.trim(), value })
+              .then(() => {
+                setKey('');
+                setValue('');
+                toast({ kind: 'success', title: 'Secret saved' });
+              })
+              .catch((err: unknown) =>
+                toast({ kind: 'error', title: 'Could not save', description: errorMessage(err) })
+              );
+          }}
+        >
+          <label className="flex min-w-44 flex-1 flex-col gap-1.5">
+            <span className="label-mono text-muted-foreground">Name</span>
+            <input
+              value={key}
+              onChange={(e) => setKey(e.target.value)}
+              placeholder="DATABASE_URL"
+              className="h-10 rounded-lg border border-border bg-background px-3 font-mono text-sm outline-none focus:border-brand"
+            />
+          </label>
+          <label className="flex min-w-56 flex-[2] flex-col gap-1.5">
+            <span className="label-mono text-muted-foreground">Value</span>
+            <input
+              type="password"
+              value={value}
+              onChange={(e) => setValue(e.target.value)}
+              autoComplete="off"
+              placeholder="Never shown again once saved"
+              className="h-10 rounded-lg border border-border bg-background px-3 text-sm outline-none focus:border-brand"
+            />
+          </label>
+          <Button
+            type="submit"
+            size="sm"
+            className="gap-1.5"
+            disabled={setSecret.isPending || !slug}
+          >
+            <Plus className="h-3.5 w-3.5" />
+            {setSecret.isPending ? 'Saving…' : 'Save secret'}
+          </Button>
+        </form>
+      </Panel>
+
       <ResourceTable
-        rows={SECRETS}
-        columns={COLUMNS}
+        rows={rows}
+        columns={columns}
         initialSort={{ key: 'key', dir: 'asc' }}
         searchKeys={['key']}
-        searchPlaceholder="Filter by key…"
-        emptyMessage="No secrets match these filters."
-        minWidth="min-w-[760px]"
+        searchPlaceholder="Filter by name…"
+        emptyMessage={slug ? `No secrets set for ${slug}.` : 'Create an app first.'}
+        minWidth="min-w-[720px]"
+        loading={loadingApps || isPending}
+        error={error}
+        onRetry={() => void refetch()}
       />
     </div>
   );

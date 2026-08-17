@@ -1,9 +1,8 @@
 # Gregale
 
-Marketing site and product console for a fictional serverless platform — a
-single-page React app with no backend. Everything behind the login is driven by
-in-memory fixtures, so the whole product can be explored end to end without a
-server running anywhere.
+Marketing site and product console for [one-box FaaS](https://github.com/poyrazK/faas)
+— functions on Firecracker microVMs that scale to zero. The console talks to the
+real `apid` REST API; the marketing site is static.
 
 ## Getting started
 
@@ -12,9 +11,16 @@ npm install
 npm run dev          # http://localhost:3000
 ```
 
-There is nothing to configure — no `.env`, no API keys, no database. To reach
-the console, sign in with any email address and the demo code **`123456`**
-(`DEMO_CODE` in `src/lib/auth.tsx`, and shown as a hint in the UI).
+Sign in with a real account on the box — email and password. There is no demo
+code any more; the API has no one-time-code flow, and the console follows it.
+
+`npm run dev` proxies `/v1`, `/login`, `/signup`, and `/auth` to
+`https://api.gregale.dev` so the browser sees one origin and the session cookie
+works. Point it somewhere else with `API_ORIGIN`:
+
+```bash
+API_ORIGIN=http://localhost:8081 npm run dev
+```
 
 ## Scripts
 
@@ -24,6 +30,8 @@ the console, sign in with any email address and the demo code **`123456`**
 | `npm run build`      | Typecheck, then production build to `dist/`         |
 | `npm run preview`    | Serve the built `dist/` locally                     |
 | `npm run typecheck`  | `tsc --noEmit` — types only, no build               |
+| `npm run api:types`  | Regenerate API types from `api/openapi.yaml`        |
+| `npm run api:pull`   | Re-fetch the spec from upstream, then regenerate    |
 | `npm run lint`       | ESLint                                              |
 | `npm run test`       | Vitest, once                                        |
 | `npm run test:watch` | Vitest in watch mode                                |
@@ -33,8 +41,10 @@ the console, sign in with any email address and the demo code **`123456`**
 ## Architecture
 
 ```
+api/openapi.yaml   Vendored from poyrazK/faas. The source of truth for types.
 src/
   routes/          File-based routes. The filename *is* the URL.
+  lib/api/         The API client: generated types, fetch wrapper, queries.
   components/
     landing/       Marketing page sections
     originkit/     Vendored hero + features sections
@@ -60,20 +70,81 @@ every route inherits a shared error boundary and pending state from
 `src/components/route-status.tsx` — so a route that throws degrades to a scoped
 panel rather than a blank page.
 
+### The API layer
+
+Everything lives in `src/lib/api/`:
+
+- **`schema.d.ts`** — generated from `api/openapi.yaml`. **Never edit it**; run
+  `npm run api:types`. It is in both ignore files, like `routeTree.gen.ts`.
+- **`client.ts`** — an [openapi-fetch](https://openapi-ts.dev/openapi-fetch/)
+  client typed by that schema, so a path or field that does not exist upstream
+  is a compile error rather than a 404 in production.
+- **`errors.ts`** — every failure becomes an `ApiError` carrying the RFC 7807
+  `code`. **Branch on `code`, never on the prose or the bare status.**
+- **`queries.ts`** — TanStack Query hooks and the shared cache keys.
+- **`adapters.ts`** — projects REST shapes onto the view models the console
+  already renders. A migration seam, not a permanent layer.
+
+**Base URL is empty on purpose.** `apid` serves the API from the same origin as
+this app, which is what makes the `HttpOnly` session cookie work — the API sends
+no CORS headers, so a cross-origin console could not authenticate at all. The
+dev proxy reproduces that same-origin shape.
+
 ### State
 
-Three providers wrap the app in `src/routes/__root.tsx`:
+Providers wrap the app in `src/routes/__root.tsx`:
 
-- **`AuthProvider`** (`lib/auth.tsx`) — mock session in `localStorage`, with
-  simulated latency so pending and error states are real. Route guards read it
-  synchronously in `beforeLoad`.
-- **`DataProvider`** (`lib/store.tsx`) — the workspace: workflows and
-  deployments, seeded from `lib/mock-data.ts`. Writes live in memory and reset
-  on reload, by design.
+- **`QueryClientProvider`** — 30s `staleTime`; 4xx are never retried, since a
+  401 or a 422 is a settled answer.
+- **`AuthProvider`** (`lib/auth.tsx`) — the real session. `POST /login` sets an
+  `HttpOnly` cookie that JavaScript cannot read, so a non-secret _hint_ in
+  `localStorage` lets the synchronous `beforeLoad` guard route without a
+  round-trip. The hint grants nothing; the cookie authorises every request, and
+  any 401 clears it. See the note at the top of the file.
+- **`DataProvider`** (`lib/store.tsx`) — apps, metrics, and deployments over the
+  API. `addWorkflow` and `redeploy` are HTTP writes now: they are async and they
+  can fail, so callers must await and report.
 - **`ToastProvider`** (`components/ui/toast.tsx`) — `useToast().toast({ … })`.
 
-Each is shaped so that swapping in a real API touches only the provider, and
-none of the consuming components.
+### What is live
+
+**Every console page reads from the API.** No page renders fixture data any
+more; `lib/mock-data.ts` survives only for formatters (`formatRelative`,
+`formatCompact`) and a couple of shared types.
+
+Logs are the one exception to the client above: `/v1/apps/{slug}/logs` is an SSE
+stream, so it uses `EventSource` in `lib/api/logs.ts` rather than
+`openapi-fetch`. There is no single response to cache, so no TanStack Query
+either.
+
+Not surfaced, deliberately: the `/v1/admin/*` routes (operator-only, not a
+customer surface), the CLI device-code flow, OAuth callbacks, and the Stripe
+webhook receiver. These are not UI features.
+
+### Where the UI and the API disagreed
+
+Several pages showed things the platform does not have. They now show what it
+does, rather than being kept honest-looking with invented data:
+
+| Page      | Was                            | Is                                                |
+| --------- | ------------------------------ | ------------------------------------------------- |
+| Workers   | A pool of long-lived workers   | **Instances** — microVMs that park when idle      |
+| Traces    | A span waterfall               | **Invocations** — with replay                     |
+| Databases | Managed databases              | **Upstreams** — observed egress, hostnames hashed |
+| Storage   | Object-storage buckets         | VM snapshots and image layers                     |
+| APIs      | Invented routes                | Routes observed at the gateway                    |
+| Metrics   | Line charts from a seeded PRNG | Scalar aggregates per window                      |
+| Plans     | Invented dollar prices         | Real quotas; pricing links to the portal          |
+
+Two concepts were removed entirely rather than faked: **projects** (apps are
+flat per account; the real grouping is orgs, on the Team page) and **regions**
+(it is one box).
+
+**There are no charts in the console any more.** `/v1/apps/{slug}/metrics`
+returns scalar aggregates over a window, not a time series — one p50, one error
+rate. The charts that used to be here were drawn from a seeded PRNG. Plotting a
+curve between two real numbers would be inventing the shape of an outage, so the
+figures are shown as figures. `dither-kit` is still used by the landing page.
 
 ### Theming
 
@@ -99,6 +170,16 @@ browser — `/` is the only real file. **The host must serve `index.html` for
 every unmatched path**, or refreshing on `/dashboard/logs` (or opening a shared
 link to it) 404s before the router ever runs. `vite preview` does this
 automatically, which is why the problem only ever shows up in production.
+
+**The API must win over the SPA fallback.** `apid` and this app are served from
+one origin, so whatever fronts the deployment has to send `/v1/*` and `/auth/*`
+to `apid` before the fallback rewrites them to `index.html`.
+
+`/login` and `/signup` are the awkward pair: **both sides own them, split by
+method.** GET must render this app's page; POST must reach `apid` to set the
+session cookie. Route them by method, or a visitor to `/login` gets apid's own
+htmx sign-in page instead of this one. `vite.config.ts` does the same split for
+`npm run dev`, and the note there explains it.
 
 Config for the common hosts is committed:
 

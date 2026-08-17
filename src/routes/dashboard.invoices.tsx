@@ -1,9 +1,12 @@
+import { useMemo } from 'react';
 import { createFileRoute } from '@tanstack/react-router';
-import { Download } from 'lucide-react';
+import { ExternalLink } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { PageHeader } from '@/components/dashboard/primitives';
 import { Pill, ResourceTable, type Column } from '@/components/dashboard/resource-table';
-import { INVOICES, formatDate, type Invoice } from '@/lib/mock-resources';
-import { formatUsd } from '@/lib/mock-data';
+import { useToast } from '@/components/ui/toast';
+import { useBillingPortal, useInvoices } from '@/lib/api/queries';
+import { errorMessage } from '@/lib/api/errors';
 import { consoleHead } from '@/lib/seo';
 
 export const Route = createFileRoute('/dashboard/invoices')({
@@ -11,105 +14,139 @@ export const Route = createFileRoute('/dashboard/invoices')({
   head: () => consoleHead('invoices'),
 });
 
-const STATUS_COLOR: Record<Invoice['status'], string | undefined> = {
-  paid: 'var(--status-good)',
-  open: 'var(--status-warning)',
-  void: undefined,
-};
-
-/** Client-side export of the row — the mock has no PDF to serve. */
-function downloadInvoice(invoice: Invoice) {
-  const rows = [
-    ['invoice', 'status', 'period_start', 'period_end', 'issued_at', 'amount_usd'],
-    [
-      invoice.number,
-      invoice.status,
-      new Date(invoice.periodStart).toISOString().slice(0, 10),
-      new Date(invoice.periodEnd).toISOString().slice(0, 10),
-      new Date(invoice.issuedAt).toISOString().slice(0, 10),
-      invoice.amountUsd.toFixed(2),
-    ],
-  ];
-  const csv = rows.map((r) => r.join(',')).join('\n');
-  const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `${invoice.number}.csv`;
-  a.click();
-  URL.revokeObjectURL(url);
+/**
+ * Invoices, from `/v1/invoices`.
+ *
+ * Amounts are integer cents in a single currency, so they are formatted here
+ * rather than trusted to a locale guess. The PDF and any payment action live in
+ * the provider's hosted portal — card details never reach this app — so the
+ * page links out rather than rendering a document it does not have.
+ */
+interface InvoiceRow {
+  id: string;
+  number: string;
+  status: string;
+  period: string;
+  total: number;
+  currency: string;
+  createdAt: string;
 }
 
-const COLUMNS: Column<Invoice>[] = [
-  {
-    key: 'number',
-    label: 'Invoice',
-    render: (i) => <span className="font-mono">{i.number}</span>,
-  },
-  {
-    key: 'status',
-    label: 'Status',
-    width: 'w-24',
-    render: (i) => <Pill label={i.status} color={STATUS_COLOR[i.status]} />,
-  },
-  {
-    key: 'periodStart',
-    label: 'Period',
-    render: (i) => (
-      <span className="text-muted-foreground">
-        {formatDate(i.periodStart)} – {formatDate(i.periodEnd)}
-      </span>
-    ),
-  },
-  { key: 'issuedAt', label: 'Issued', numeric: true, render: (i) => formatDate(i.issuedAt) },
-  {
-    key: 'amountUsd',
-    label: 'Amount',
-    numeric: true,
-    render: (i) => <span className="font-medium">{formatUsd(i.amountUsd)}</span>,
-  },
-  {
-    key: 'id',
-    label: '',
-    sortable: false,
-    numeric: true,
-    width: 'w-16',
-    render: (i) => (
-      <button
-        type="button"
-        aria-label={`Download invoice ${i.number}`}
-        onClick={() => downloadInvoice(i)}
-        className="inline-flex rounded-md p-1 text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
-      >
-        <Download className="h-3.5 w-3.5" />
-      </button>
-    ),
-  },
-];
+const STATUS_COLOR: Record<string, string> = {
+  paid: 'var(--status-good)',
+  open: 'var(--status-warning)',
+  draft: 'var(--status-neutral)',
+  void: 'var(--status-neutral)',
+  uncollectible: 'var(--status-critical)',
+};
+
+function formatMoney(cents: number, currency: string): string {
+  return new Intl.NumberFormat(undefined, {
+    style: 'currency',
+    currency: currency.toUpperCase(),
+  }).format(cents / 100);
+}
+
+function formatDay(value: string): string {
+  const ms = Date.parse(value);
+  return Number.isNaN(ms) ? '—' : new Date(ms).toLocaleDateString();
+}
 
 function InvoicesPage() {
-  const outstanding = INVOICES.filter((i) => i.status === 'open').reduce(
-    (a, i) => a + i.amountUsd,
-    0
+  const { toast } = useToast();
+  const { data, isPending, error, refetch } = useInvoices();
+  const portal = useBillingPortal();
+
+  const rows = useMemo<InvoiceRow[]>(
+    () =>
+      (data?.items ?? []).map((i) => ({
+        id: i.id,
+        number: i.number ?? i.provider_invoice_id,
+        status: i.status,
+        period: `${formatDay(i.period_start)} – ${formatDay(i.period_end)}`,
+        total: i.total_cents,
+        currency: i.currency,
+        createdAt: i.created_at,
+      })),
+    [data]
   );
+
+  const columns: Column<InvoiceRow>[] = [
+    {
+      key: 'number',
+      label: 'Invoice',
+      render: (i) => <span className="font-mono text-xs">{i.number}</span>,
+    },
+    {
+      key: 'status',
+      label: 'Status',
+      width: 'w-32',
+      render: (i) => <Pill label={i.status} color={STATUS_COLOR[i.status]} />,
+    },
+    { key: 'period', label: 'Period' },
+    {
+      key: 'total',
+      label: 'Total',
+      numeric: true,
+      render: (i) => (
+        <span className="[font-variant-numeric:tabular-nums]">
+          {formatMoney(i.total, i.currency)}
+        </span>
+      ),
+    },
+    {
+      key: 'createdAt',
+      label: 'Issued',
+      numeric: true,
+      render: (i) => (
+        <span className="text-xs text-muted-foreground">{formatDay(i.createdAt)}</span>
+      ),
+    },
+  ];
 
   return (
     <div className="flex flex-col gap-6">
       <PageHeader
         title="Invoices"
-        description={
-          outstanding > 0
-            ? `${formatUsd(outstanding)} outstanding on the current period.`
-            : 'All invoices settled.'
+        description="Billing history. Payment methods and PDFs live in the provider's portal."
+        actions={
+          <Button
+            size="sm"
+            variant="outline"
+            className="gap-1.5"
+            disabled={portal.isPending}
+            onClick={() => {
+              void portal
+                .mutateAsync()
+                .then((result) => {
+                  // A full-page navigation, not a fetch — it is another origin.
+                  if (result.url) window.location.href = result.url;
+                })
+                .catch((err: unknown) =>
+                  toast({
+                    kind: 'error',
+                    title: 'Could not open the billing portal',
+                    description: errorMessage(err),
+                  })
+                );
+            }}
+          >
+            <ExternalLink className="h-3.5 w-3.5" />
+            Billing portal
+          </Button>
         }
       />
       <ResourceTable
-        rows={INVOICES}
-        columns={COLUMNS}
-        initialSort={{ key: 'issuedAt', dir: 'desc' }}
-        searchKeys={['number']}
+        rows={rows}
+        columns={columns}
+        initialSort={{ key: 'createdAt', dir: 'desc' }}
+        searchKeys={['number', 'status']}
         searchPlaceholder="Filter by invoice number…"
-        emptyMessage="No invoices match these filters."
-        minWidth="min-w-[720px]"
+        emptyMessage="No invoices yet."
+        minWidth="min-w-[760px]"
+        loading={isPending}
+        error={error}
+        onRetry={() => void refetch()}
       />
     </div>
   );

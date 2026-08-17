@@ -1,7 +1,9 @@
+import { useMemo } from 'react';
 import { createFileRoute } from '@tanstack/react-router';
 import { PageHeader } from '@/components/dashboard/primitives';
 import { Pill, ResourceTable, type Column } from '@/components/dashboard/resource-table';
-import { WORKERS, type Worker } from '@/lib/mock-resources';
+import { useApps, useInstances } from '@/lib/api/queries';
+import { slugIndex } from '@/lib/api/adapters';
 import { consoleHead } from '@/lib/seo';
 
 export const Route = createFileRoute('/dashboard/workers')({
@@ -9,69 +11,112 @@ export const Route = createFileRoute('/dashboard/workers')({
   head: () => consoleHead('workers'),
 });
 
-const STATE_COLOR: Record<Worker['state'], string | undefined> = {
-  online: 'var(--status-good)',
-  draining: 'var(--status-warning)',
-  offline: undefined,
-};
-
-/** Thin utilisation bar — a number plus its share of the ceiling. */
-function Meter({ pct }: { pct: number }) {
-  const danger = pct > 85;
-  return (
-    <span className="flex items-center justify-end gap-2">
-      <span className="h-1 w-16 overflow-hidden rounded-full bg-muted">
-        <span
-          className="block h-full rounded-full"
-          style={{
-            width: `${Math.min(100, pct)}%`,
-            background: danger ? 'var(--status-critical)' : 'var(--chart-1)',
-          }}
-        />
-      </span>
-      <span className="w-11 text-right">{pct.toFixed(0)}%</span>
-    </span>
-  );
+/**
+ * Live microVM instances, from `/v1/instances`.
+ *
+ * This page previously invented a pool of long-lived "workers". The platform
+ * does not have those: it has Firecracker VMs that wake on a request and park
+ * again when idle, so an empty table here is the healthy scaled-to-zero state,
+ * not an outage. The empty copy says so.
+ */
+interface InstanceRow {
+  id: string;
+  app: string;
+  state: string;
+  ramMb: number;
+  startedAt: string;
+  lastRequestAt: string;
 }
 
-const COLUMNS: Column<Worker>[] = [
-  { key: 'name', label: 'Worker', render: (w) => <span className="font-mono">{w.name}</span> },
-  {
-    key: 'state',
-    label: 'State',
-    width: 'w-28',
-    render: (w) => <Pill label={w.state} color={STATE_COLOR[w.state]} />,
-  },
-  {
-    key: 'region',
-    label: 'Region',
-    render: (w) => <span className="font-mono text-xs text-muted-foreground">{w.region}</span>,
-  },
-  {
-    key: 'activeTasks',
-    label: 'Tasks',
-    numeric: true,
-    render: (w) => `${w.activeTasks} / ${w.concurrency}`,
-  },
-  { key: 'cpuPct', label: 'CPU', numeric: true, render: (w) => <Meter pct={w.cpuPct} /> },
-  { key: 'memPct', label: 'Memory', numeric: true, render: (w) => <Meter pct={w.memPct} /> },
-];
+const STATE_COLOR: Record<string, string> = {
+  running: 'var(--status-good)',
+  ready: 'var(--status-good)',
+  waking: 'var(--status-warning)',
+  parked: 'var(--status-neutral)',
+  failed: 'var(--status-critical)',
+};
+
+function formatWhen(value: string | null | undefined): string {
+  if (!value) return '—';
+  const ms = Date.parse(value);
+  return Number.isNaN(ms) ? '—' : new Date(ms).toLocaleString();
+}
 
 function WorkersPage() {
+  const { data, isPending, error, refetch } = useInstances();
+  const { data: apps } = useApps();
+
+  const rows = useMemo<InstanceRow[]>(() => {
+    const bySlug = slugIndex(apps ?? []);
+    return (data?.instances ?? []).map((i) => ({
+      id: i.id,
+      app: bySlug.get(i.app_id) ?? i.app_id,
+      state: i.state,
+      ramMb: i.ram_mb,
+      startedAt: i.started_at ?? '',
+      lastRequestAt: i.last_request_at ?? '',
+    }));
+  }, [data, apps]);
+
+  const columns: Column<InstanceRow>[] = [
+    {
+      key: 'app',
+      label: 'App',
+      render: (i) => <span className="font-mono text-xs">{i.app}</span>,
+    },
+    {
+      key: 'state',
+      label: 'State',
+      width: 'w-32',
+      render: (i) => <Pill label={i.state} color={STATE_COLOR[i.state.toLowerCase()]} />,
+    },
+    {
+      key: 'ramMb',
+      label: 'RAM',
+      numeric: true,
+      width: 'w-28',
+      render: (i) => <span className="[font-variant-numeric:tabular-nums]">{i.ramMb} MB</span>,
+    },
+    {
+      key: 'startedAt',
+      label: 'Started',
+      numeric: true,
+      render: (i) => (
+        <span className="text-xs text-muted-foreground">{formatWhen(i.startedAt)}</span>
+      ),
+    },
+    {
+      key: 'lastRequestAt',
+      label: 'Last request',
+      numeric: true,
+      render: (i) => (
+        <span className="text-xs text-muted-foreground">{formatWhen(i.lastRequestAt)}</span>
+      ),
+    },
+    {
+      key: 'id',
+      label: 'Instance',
+      render: (i) => <span className="font-mono text-xs text-muted-foreground">{i.id}</span>,
+    },
+  ];
+
   return (
     <div className="flex flex-col gap-6">
       <PageHeader
-        title="Workers"
-        description="MicroVMs draining queues and running background tasks."
+        title="Instances"
+        description="Firecracker microVMs currently alive. Apps park when idle, so an empty list means everything scaled to zero."
       />
       <ResourceTable
-        rows={WORKERS}
-        columns={COLUMNS}
-        initialSort={{ key: 'cpuPct', dir: 'desc' }}
-        searchKeys={['name', 'region']}
-        searchPlaceholder="Filter by name or region…"
-        emptyMessage="No workers match these filters."
-        minWidth="min-w-[720px]"
+        rows={rows}
+        columns={columns}
+        initialSort={{ key: 'startedAt', dir: 'desc' }}
+        searchKeys={['app', 'state', 'id']}
+        searchPlaceholder="Filter by app or state…"
+        emptyMessage="No instances running — everything is parked."
+        minWidth="min-w-[900px]"
+        loading={isPending}
+        error={error}
+        onRetry={() => void refetch()}
       />
     </div>
   );

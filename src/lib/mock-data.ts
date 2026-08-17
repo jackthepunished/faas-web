@@ -23,7 +23,14 @@ const HOUR = 3_600_000;
 const DAY = 24 * HOUR;
 
 export type RunState = 'running' | 'idle' | 'error' | 'deploying';
-export type Runtime = 'node22' | 'python3.12' | 'go1.23' | 'rust1.80';
+
+/**
+ * The runtimes `apid` actually accepts, mirrored from `CreateAppRequest` in
+ * `api/openapi.yaml`. Kept as a hand-written union rather than an import so the
+ * fixtures below do not depend on the generated schema; `npm run api:types`
+ * will break the build here if upstream changes the set.
+ */
+export type Runtime = 'node22' | 'node24' | 'python312' | 'python313' | 'go124' | 'go124-alpine';
 
 export interface Project {
   id: string;
@@ -33,13 +40,20 @@ export interface Project {
 }
 
 export interface Workflow {
+  /** The app slug — what `/v1/apps/{slug}` is keyed by, and what the URL shows. */
   id: string;
-  projectId: string;
+  /**
+   * Optional because the API has no project concept: apps are flat per
+   * account. Only the remaining fixtures still set it.
+   */
+  projectId?: string;
   name: string;
-  runtime: Runtime;
+  /** `node22`, `python312`, … or the app `type` for non-function apps. */
+  runtime: string;
   memoryMb: number;
   state: RunState;
-  region: string;
+  /** Optional: this is a one-box platform, so the API reports no region. */
+  region?: string;
   url: string;
   invocations24h: number;
   avgDurationMs: number;
@@ -116,7 +130,7 @@ const WORKFLOW_SEED: {
   {
     name: 'image-resize',
     projectId: 'proj_storefront',
-    runtime: 'go1.23',
+    runtime: 'go124',
     memoryMb: 512,
     state: 'running',
   },
@@ -130,21 +144,21 @@ const WORKFLOW_SEED: {
   {
     name: 'catalog-search',
     projectId: 'proj_storefront',
-    runtime: 'rust1.80',
+    runtime: 'node24',
     memoryMb: 1024,
     state: 'running',
   },
   {
     name: 'thumbnail-gen',
     projectId: 'proj_storefront',
-    runtime: 'go1.23',
+    runtime: 'go124',
     memoryMb: 512,
     state: 'idle',
   },
   {
     name: 'nightly-etl',
     projectId: 'proj_analytics',
-    runtime: 'python3.12',
+    runtime: 'python312',
     memoryMb: 2048,
     state: 'idle',
   },
@@ -158,7 +172,7 @@ const WORKFLOW_SEED: {
   {
     name: 'warehouse-sync',
     projectId: 'proj_analytics',
-    runtime: 'python3.12',
+    runtime: 'python312',
     memoryMb: 1024,
     state: 'error',
   },
@@ -172,7 +186,7 @@ const WORKFLOW_SEED: {
   {
     name: 'auth-callback',
     projectId: 'proj_internal',
-    runtime: 'go1.23',
+    runtime: 'go124',
     memoryMb: 128,
     state: 'running',
   },

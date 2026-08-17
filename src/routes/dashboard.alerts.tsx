@@ -1,10 +1,12 @@
+import { useMemo } from 'react';
 import { createFileRoute } from '@tanstack/react-router';
-import { Plus } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { Trash2 } from 'lucide-react';
 import { PageHeader } from '@/components/dashboard/primitives';
 import { Pill, ResourceTable, type Column } from '@/components/dashboard/resource-table';
-import { ALERT_RULES, type AlertRule } from '@/lib/mock-resources';
-import { formatRelative } from '@/lib/mock-data';
+import { AppSelect, useSelectedApp } from '@/components/dashboard/app-select';
+import { useToast } from '@/components/ui/toast';
+import { useAlerts, useDeleteAlert } from '@/lib/api/queries';
+import { errorMessage } from '@/lib/api/errors';
 import { consoleHead } from '@/lib/seo';
 
 export const Route = createFileRoute('/dashboard/alerts')({
@@ -12,72 +14,119 @@ export const Route = createFileRoute('/dashboard/alerts')({
   head: () => consoleHead('alerts'),
 });
 
-const STATE_COLOR: Record<AlertRule['state'], string | undefined> = {
-  ok: 'var(--status-good)',
-  firing: 'var(--status-critical)',
-  paused: undefined,
-};
+/**
+ * Alert rules, from `/v1/apps/{slug}/alerts`.
+ *
+ * A rule pins a metric to a threshold over a window; when it trips, the
+ * dispatcher POSTs a signed payload to the rule's webhook. Account-wide rules
+ * (those with an empty `app_id`) appear in every per-app listing, which is why
+ * the scope column exists — otherwise the same rule looks duplicated as you
+ * switch apps.
+ */
+interface AlertRow {
+  id: string;
+  name: string;
+  condition: string;
+  window: string;
+  enabled: boolean;
+  scope: string;
+}
 
-const COLUMNS: Column<AlertRule>[] = [
-  { key: 'name', label: 'Rule', render: (a) => a.name },
-  {
-    key: 'state',
-    label: 'State',
-    width: 'w-28',
-    render: (a) => <Pill label={a.state} color={STATE_COLOR[a.state]} />,
-  },
-  {
-    key: 'metric',
-    label: 'Condition',
-    render: (a) => (
-      <span className="font-mono text-xs text-muted-foreground">
-        {a.metric} {a.comparator} {a.threshold}
-        {a.unit === 'USD' ? ' USD' : a.unit}
-      </span>
-    ),
-  },
-  {
-    key: 'windowMinutes',
-    label: 'Window',
-    numeric: true,
-    render: (a) => `${a.windowMinutes}m`,
-  },
-  { key: 'channel', label: 'Notifies', render: (a) => <Pill label={a.channel} /> },
-  {
-    key: 'lastTriggeredAt',
-    label: 'Last fired',
-    numeric: true,
-    render: (a) => (a.lastTriggeredAt ? formatRelative(a.lastTriggeredAt) : '—'),
-  },
-];
+const COMPARISON: Record<string, string> = { gt: '>', gte: '≥', lt: '<', lte: '≤' };
 
 function AlertsPage() {
-  const firing = ALERT_RULES.filter((a) => a.state === 'firing').length;
+  const { toast } = useToast();
+  const { slug, select, apps, loadingApps } = useSelectedApp();
+  const { data, isPending, error, refetch } = useAlerts(slug);
+  const deleteAlert = useDeleteAlert(slug);
+
+  const rows = useMemo<AlertRow[]>(
+    () =>
+      (data ?? []).map((a) => ({
+        id: a.id,
+        name: a.name,
+        condition: `${a.metric} ${COMPARISON[a.comparison] ?? a.comparison} ${a.threshold}`,
+        window: a.window_spec,
+        enabled: a.enabled,
+        scope: a.app_id ? 'app' : 'account',
+      })),
+    [data]
+  );
+
+  const columns: Column<AlertRow>[] = [
+    { key: 'name', label: 'Rule' },
+    {
+      key: 'condition',
+      label: 'Condition',
+      render: (a) => <span className="font-mono text-xs">{a.condition}</span>,
+    },
+    {
+      key: 'window',
+      label: 'Window',
+      width: 'w-24',
+      render: (a) => <span className="font-mono text-xs text-muted-foreground">{a.window}</span>,
+    },
+    {
+      key: 'scope',
+      label: 'Scope',
+      width: 'w-28',
+      render: (a) => (
+        <Pill label={a.scope} color={a.scope === 'account' ? 'var(--brand)' : undefined} />
+      ),
+    },
+    {
+      key: 'enabled',
+      label: 'State',
+      width: 'w-28',
+      render: (a) => (
+        <Pill
+          label={a.enabled ? 'enabled' : 'paused'}
+          color={a.enabled ? 'var(--status-good)' : 'var(--status-neutral)'}
+        />
+      ),
+    },
+    {
+      key: 'id',
+      label: '',
+      width: 'w-12',
+      render: (a) => (
+        <button
+          type="button"
+          aria-label={`Delete rule ${a.name}`}
+          onClick={() => {
+            void deleteAlert
+              .mutateAsync(a.id)
+              .then(() => toast({ kind: 'success', title: 'Rule deleted' }))
+              .catch((err: unknown) =>
+                toast({ kind: 'error', title: 'Could not delete', description: errorMessage(err) })
+              );
+          }}
+          className="text-muted-foreground transition-colors hover:text-foreground"
+        >
+          <Trash2 className="h-3.5 w-3.5" />
+        </button>
+      ),
+    },
+  ];
 
   return (
     <div className="flex flex-col gap-6">
       <PageHeader
         title="Alerts"
-        description={
-          firing > 0
-            ? `${firing} rule${firing > 1 ? 's' : ''} currently firing.`
-            : 'No rules are firing right now.'
-        }
-        actions={
-          <Button size="sm" className="gap-1.5">
-            <Plus className="h-3.5 w-3.5" />
-            New rule
-          </Button>
-        }
+        description="Threshold rules on your app metrics. A breach POSTs a signed payload to the rule's webhook."
+        actions={<AppSelect slug={slug} onSelect={select} apps={apps} />}
       />
       <ResourceTable
-        rows={ALERT_RULES}
-        columns={COLUMNS}
-        initialSort={{ key: 'state', dir: 'asc' }}
-        searchKeys={['name', 'metric']}
-        searchPlaceholder="Filter by rule or metric…"
-        emptyMessage="No alert rules match these filters."
-        minWidth="min-w-[760px]"
+        rows={rows}
+        columns={columns}
+        initialSort={{ key: 'name', dir: 'asc' }}
+        searchKeys={['name', 'condition']}
+        searchPlaceholder="Filter by rule name…"
+        emptyMessage={slug ? `No alert rules for ${slug}.` : 'Create an app first.'}
+        minWidth="min-w-[880px]"
+        loading={loadingApps || isPending}
+        error={error}
+        onRetry={() => void refetch()}
       />
     </div>
   );
