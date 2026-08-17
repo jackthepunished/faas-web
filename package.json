@@ -10,6 +10,7 @@
     "typecheck": "tsc --noEmit",
     "api:types": "openapi-typescript api/openapi.yaml -o src/lib/api/schema.d.ts",
     "api:pull": "curl -fsSL https://raw.githubusercontent.com/poyrazK/faas/main/api/openapi.yaml -o api/openapi.yaml && npm run api:types",
+    "docs:pull": "node scripts/pull-docs.mjs",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "format": "prettier --write \"**/*.{ts,tsx,css,json,md}\"",
@@ -33,6 +34,8 @@
     "openapi-fetch": "^0.17.0",
     "radix-ui": "^1.6.7",
     "react": "^19.1.1",
+    "react-markdown": "^10.1.0",
+    "remark-gfm": "^4.0.1",
     "tailwind-merge": "^3.3.1"
   },
   "devDependencies": {

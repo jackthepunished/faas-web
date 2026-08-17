@@ -32,6 +32,7 @@ API_ORIGIN=http://localhost:8081 npm run dev
 | `npm run typecheck`  | `tsc --noEmit` — types only, no build               |
 | `npm run api:types`  | Regenerate API types from `api/openapi.yaml`        |
 | `npm run api:pull`   | Re-fetch the spec from upstream, then regenerate    |
+| `npm run docs:pull`  | Re-fetch the vendored docs from upstream            |
 | `npm run lint`       | ESLint                                              |
 | `npm run test`       | Vitest, once                                        |
 | `npm run test:watch` | Vitest in watch mode                                |
@@ -145,6 +146,33 @@ returns scalar aggregates over a window, not a time series — one p50, one erro
 rate. The charts that used to be here were drawn from a seeded PRNG. Plotting a
 curve between two real numbers would be inventing the shape of an outage, so the
 figures are shown as figures. `dither-kit` is still used by the landing page.
+
+## Documentation
+
+`/docs` is served from markdown vendored out of `poyrazK/faas` into
+`content/docs/`. `src/lib/docs-manifest.ts` is the table of contents: it pins
+each page's upstream path, its URL slug, and its summary, and it drives the
+sidebar, the index, prev/next, the prerender list, and the sitemap.
+
+```bash
+npm run docs:pull      # refresh the vendored copies
+```
+
+Content is committed rather than fetched at runtime, for the same reason
+`api/openapi.yaml` is — the site prerenders, and docs that depend on GitHub
+being reachable break during exactly the incident that sends people to read
+them. Vendored files are Prettier-ignored so a refresh shows the upstream
+change rather than a reformat.
+
+**It is a curated subset, not a mirror.** The upstream repository holds ~200
+markdown files and most are not customer documentation: ~40 runbooks naming
+alert thresholds and failover steps, ~100 ADRs, plus operator procedures and
+engineering planning notes. Publishing the runbooks in particular would hand an
+attacker a map. `docs-manifest.ts` explains the rule and `src/lib/docs.test.ts`
+enforces it — a `docs/runbooks/…` or `docs/adr/…` source fails the suite.
+
+Adding a page means adding it to the manifest and running `docs:pull`. The
+tests will tell you if the two have drifted.
 
 ### Theming
 

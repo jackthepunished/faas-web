@@ -1,0 +1,194 @@
+# `go124` runtime
+
+Go 1.24 on both deploy surfaces — apps (long-running, static binary in
+an OCI image layer) and functions (per-request subprocess, §4.9 envelope
+contract). Built by Railpack v0.31.1 with `--plan go`; detected from
+`go.mod` (priority: `docker > node > python > go`).
+
+## Function contract
+
+The customer's source is a Go package with `go.mod` and a `main` that
+reads the §4.9 request envelope from **stdin** and writes the §4.9
+response envelope to **stdout**. There is no HTTP server in the handler
+— the `go124` runner is the HTTP server inside the microVM (listens on
+`:8080`) and execs the compiled handler binary at `/app/handler` per
+request.
+
+The runner shim sets `FAAS_RUNTIME=go124` in the handler's environment
+so customers can branch on runtime if they want.
+
+### Minimal handler
+
+```go
+package main
+
+import (
+	"encoding/base64"
+	"encoding/json"
+	"io"
+	"os"
+)
+
+type request struct {
+	Method  string            `json:"method"`
+	Path    string            `json:"path"`
+	Headers map[string]string `json:"headers"`
+	Query   string            `json:"query"`
+	BodyB64 string            `json:"body_b64"`
+}
+
+type response struct {
+	Status  int               `json:"status"`
+	Headers map[string]string `json:"headers"`
+	BodyB64 string            `json:"body_b64"`
+}
+
+func main() {
+	raw, _ := io.ReadAll(os.Stdin)
+	var req request
+	_ = json.Unmarshal(raw, &req)
+
+	body, _ := json.Marshal(map[string]string{"hello": "world"})
+
+	_ = json.NewEncoder(os.Stdout).Encode(response{
+		Status:  200,
+		Headers: map[string]string{"content-type": "application/json"},
+		BodyB64: base64.StdEncoding.EncodeToString(body),
+	})
+}
+```
+
+### Local smoke test
+
+The §4.9 envelope round-trips with bash and `base64` — the runner is a
+JSON-to-stdio translator, so:
+
+```
+echo '{"method":"GET","path":"/hello","headers":{},"query":"","body_b64":""}' \
+  | go run main.go
+```
+
+prints a JSON response envelope on stdout. The platform runs the same
+binary in production; nothing else differs.
+
+### CGO
+
+Railpack's `--plan go` defaults to `CGO_ENABLED=0` — the standard case
+Just Works. Customers who need CGO (SQLite bindings, etc.) must ensure
+the base image ships the libc their bindings link against.
+
+- `runtime: go124` (default) — base is `golang:1.24-bookworm` (glibc).
+- `runtime: go124-alpine` (opt-in) — base is `golang:1.24-alpine`
+  (musl). See "Alpine variant" below for the libc-match contract.
+
+## App contract
+
+Customer source has the same `go.mod` + `main.go` shape as the function
+contract, but `main` runs its own HTTP server (typically on `:3000`).
+Railpack emits a static binary at `/app/server` and the OCI image's
+`Cmd: ["/app/server"]` lands in the layer manifest via
+`manifestFromImageConfig` in `pkg/imaged/handler.go` — no customer
+wiring required. This is the **first runtime on the app path whose
+entrypoint is a static binary**; previously every runtime went through
+a runner-scaffold manifest.
+
+If `manifestFromImageConfig` ever flips to reading `cfg.Entrypoint`
+instead of `cfg.Cmd`, the manifest will be empty and validation will
+fail loudly. This contract is now pinned by
+`TestManifestFromImageConfig_AppModeCmd` (positive:
+`cfg.Cmd = ["/app/server"]` produces the manifest entrypoint verbatim,
+plus the defensive-copy pin: mutating `cfg.Cmd[0]` after conversion
+does NOT mutate `manifest.Entrypoint[0]`, because the function uses
+`slices.Clone(cfg.Cmd)` to force a fresh backing array)
+and `TestManifestFromImageConfig_NoCmdYieldsEmptyEntrypoint` (negative:
+an image without `Cmd` produces an empty entrypoint that fails
+`manifest.Validate()` with `"empty entrypoint"`). Both tests live in
+`pkg/imaged/handler_test.go`.
+
+## Base image
+
+- Base ref: `ghcr.io/onebox-faas/runner-go124:latest`
+- Source: `images/runner-go124.Dockerfile` (`FROM golang:1.24-bookworm`)
+- Disk: ~350 MB uncompressed, amortized across all `go124` apps via
+  the two-drive scheme (drive0 = shared base, drive1 = per-app layer).
+  Per-app cost is just the static binary (~5–30 MB).
+
+### Operator staging
+
+In Tier 1 PR 2, the runtime base is **auto-staged** by `imaged` at
+boot via `pkg/imaged/base_stage.go::EnsureBases`, mirroring the
+builder-base auto-stage path. Set `FAAS_DEPLOY_BASE_REF_GO124=<digest>`
+in `sealed.env` to digest-pin the prod base; the default `:latest`
+is for dev only.
+
+The pre-PR-2 staging recipe remains valid for boxes that haven't
+upgraded imaged yet — see `images/runner-go124.Dockerfile` comments
+for `docker build` + `mkfs.ext4 -O '^has_journal' -d <staging>` argv.
+
+## Alpine variant (opt-in)
+
+For customers running a `go124` app on the alpine runtime id, the base
+rootfs switches from `golang:1.24-bookworm` (glibc, ~350 MB) to
+`golang:1.24-alpine` (musl, ~250 MB target). ~100 MB savings on
+drive0, amortized via the two-drive scheme.
+
+**Customer opt-in:** set `runtime: go124-alpine` on the function or app
+manifest. The platform resolves the base via `pkg/imaged/base.go::baseRefFor`.
+The default `go124` (bookworm) is unchanged; existing customers see no
+behavior change.
+
+**CGO constraint:** customers with cgo bindings (e.g.
+`mattn/go-sqlite3`) must ensure their bindings link against musl —
+rebuild the binary against `FROM golang:1.24-alpine AS build` in their
+Dockerfile. `CGO_ENABLED=0` (Railpack's default) works on both bases;
+the alpine variant is a drop-in for the common case. The libc
+mismatch surfaces as `exec format error` on first wake — see the
+failure-mode table below.
+
+**Operator staging:** auto-staged by imaged the same way as the
+bookworm base (above, Tier 1 PR 2); set `FAAS_DEPLOY_BASE_REF_GO124_ALPINE`
+to a digest-pinned prod ref. The pre-PR-2 recipe (`docker build` +
+`mkfs.ext4 -O '^has_journal' -d <staging>` copied to
+`/srv/fc/base/runner-go124-alpine.ext4`) remains valid for boxes
+that haven't upgraded imaged yet.
+
+**Source:** `images/runner-go124-alpine.Dockerfile`
+(`FROM golang:1.24-alpine`).
+
+**Migration:** `00043_app_runtime_go124_alpine.sql` widens the
+`apps_runtime_check` constraint to accept `'go124-alpine'` alongside
+the older three runtimes. No default-flip is performed in this PR.
+Future PRs may flip the default once fleet-wide `snapshot_fleet_avg_mb`
+is measured with both bases co-resident
+(`pkg/api/limits.go::FleetSnapshotAvgTargetMB = 130`, alarm 160).
+
+## Detection priority
+
+`pkg/builderd/detect.go` priority order is
+`docker > node > python > go`. A tarball containing both a `Dockerfile`
+and a `go.mod` builds as an image (buildctl), not a Railpack go app.
+A tarball with both `go.mod` and `requirements.txt` builds as a Python
+app (Railpack python plan) — if the customer really wants Go, drop
+`requirements.txt`.
+
+## Failure modes
+
+| Symptom | Cause | Fix |
+|---|---|---|
+| `unknown archive shape` | no `go.mod`, `package.json`, `requirements.txt`, or `Dockerfile` | add `go.mod` |
+| `railpack: plan "go" failed` | upstream plan shifted; binary path changed | check `build-image-builder` log; set `dep.Handler` to override |
+| handler exec fails with `exec format error` | CGO binary mismatched with base libc | rebuild with the matching libc (bookworm/alpine) |
+| `exec format error` on first wake, alpine runtime | cgo binary links glibc, musl base rejects it | rebuild against `FROM golang:1.24-alpine AS build` in customer Dockerfile |
+| `unsupported function runtime "go124-alpine"` | migration `00043` not applied, or base image not staged at `/srv/fc/base/runner-go124-alpine.ext4` | apply the migration; stage the alpine base ext4 per the Operator staging recipe |
+| `app.Cmd empty` manifest error | `manifestFromImageConfig` regression | revert the field flip in `pkg/imaged/handler.go` |
+
+## See also
+
+- `docs/STATUS.md` — runtime roster
+- `pkg/api/build.go::FrameworkRailpackGo` — wire contract
+- `pkg/builderd/dispatch.go::MapFramework` — detection → wire
+- `guest/init/main_linux.go` — in-VM `--plan go` dispatch
+- `guest/runners/go124/main.go` — function runner shim
+- `images/runner-go124.Dockerfile` — base image
+
+<!-- CI status: migration 00037_app_runtime_go124.sql verified on PR #201; 00043_app_runtime_go124_alpine.sql added in Tier 2 PR. -->

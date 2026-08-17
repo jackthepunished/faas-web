@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as DashboardRouteImport } from './routes/dashboard'
+import { Route as DocsRouteImport } from './routes/docs'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as OnboardingRouteImport } from './routes/onboarding'
 import { Route as SignupRouteImport } from './routes/signup'
@@ -40,6 +41,8 @@ import { Route as DashboardTracesRouteImport } from './routes/dashboard.traces'
 import { Route as DashboardUsageRouteImport } from './routes/dashboard.usage'
 import { Route as DashboardWebhooksRouteImport } from './routes/dashboard.webhooks'
 import { Route as DashboardWorkersRouteImport } from './routes/dashboard.workers'
+import { Route as DocsIndexRouteImport } from './routes/docs.index'
+import { Route as DocsSlugRouteImport } from './routes/docs.$slug'
 import { Route as DashboardWorkflowsIndexRouteImport } from './routes/dashboard.workflows.index'
 import { Route as DashboardWorkflowsWorkflowIdRouteImport } from './routes/dashboard.workflows.$workflowId'
 import { Route as DashboardWorkflowsNewRouteImport } from './routes/dashboard.workflows.new'
@@ -52,6 +55,11 @@ const IndexRoute = IndexRouteImport.update({
 const DashboardRoute = DashboardRouteImport.update({
   id: '/dashboard',
   path: '/dashboard',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DocsRoute = DocsRouteImport.update({
+  id: '/docs',
+  path: '/docs',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LoginRoute = LoginRouteImport.update({
@@ -199,6 +207,16 @@ const DashboardWorkersRoute = DashboardWorkersRouteImport.update({
   path: '/workers',
   getParentRoute: () => DashboardRoute,
 } as any)
+const DocsIndexRoute = DocsIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => DocsRoute,
+} as any)
+const DocsSlugRoute = DocsSlugRouteImport.update({
+  id: '/$slug',
+  path: '/$slug',
+  getParentRoute: () => DocsRoute,
+} as any)
 const DashboardWorkflowsIndexRoute = DashboardWorkflowsIndexRouteImport.update({
   id: '/workflows/',
   path: '/workflows/',
@@ -219,6 +237,7 @@ const DashboardWorkflowsNewRoute = DashboardWorkflowsNewRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/dashboard': typeof DashboardRouteWithChildren
+  '/docs': typeof DocsRouteWithChildren
   '/login': typeof LoginRoute
   '/onboarding': typeof OnboardingRoute
   '/signup': typeof SignupRoute
@@ -247,7 +266,9 @@ export interface FileRoutesByFullPath {
   '/dashboard/usage': typeof DashboardUsageRoute
   '/dashboard/webhooks': typeof DashboardWebhooksRoute
   '/dashboard/workers': typeof DashboardWorkersRoute
+  '/docs/$slug': typeof DocsSlugRoute
   '/dashboard/': typeof DashboardIndexRoute
+  '/docs/': typeof DocsIndexRoute
   '/dashboard/workflows/$workflowId': typeof DashboardWorkflowsWorkflowIdRoute
   '/dashboard/workflows/new': typeof DashboardWorkflowsNewRoute
   '/dashboard/workflows/': typeof DashboardWorkflowsIndexRoute
@@ -282,7 +303,9 @@ export interface FileRoutesByTo {
   '/dashboard/usage': typeof DashboardUsageRoute
   '/dashboard/webhooks': typeof DashboardWebhooksRoute
   '/dashboard/workers': typeof DashboardWorkersRoute
+  '/docs/$slug': typeof DocsSlugRoute
   '/dashboard': typeof DashboardIndexRoute
+  '/docs': typeof DocsIndexRoute
   '/dashboard/workflows/$workflowId': typeof DashboardWorkflowsWorkflowIdRoute
   '/dashboard/workflows/new': typeof DashboardWorkflowsNewRoute
   '/dashboard/workflows': typeof DashboardWorkflowsIndexRoute
@@ -291,6 +314,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/dashboard': typeof DashboardRouteWithChildren
+  '/docs': typeof DocsRouteWithChildren
   '/login': typeof LoginRoute
   '/onboarding': typeof OnboardingRoute
   '/signup': typeof SignupRoute
@@ -319,7 +343,9 @@ export interface FileRoutesById {
   '/dashboard/usage': typeof DashboardUsageRoute
   '/dashboard/webhooks': typeof DashboardWebhooksRoute
   '/dashboard/workers': typeof DashboardWorkersRoute
+  '/docs/$slug': typeof DocsSlugRoute
   '/dashboard/': typeof DashboardIndexRoute
+  '/docs/': typeof DocsIndexRoute
   '/dashboard/workflows/$workflowId': typeof DashboardWorkflowsWorkflowIdRoute
   '/dashboard/workflows/new': typeof DashboardWorkflowsNewRoute
   '/dashboard/workflows/': typeof DashboardWorkflowsIndexRoute
@@ -329,6 +355,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/dashboard'
+    | '/docs'
     | '/login'
     | '/onboarding'
     | '/signup'
@@ -357,7 +384,9 @@ export interface FileRouteTypes {
     | '/dashboard/usage'
     | '/dashboard/webhooks'
     | '/dashboard/workers'
+    | '/docs/$slug'
     | '/dashboard/'
+    | '/docs/'
     | '/dashboard/workflows/$workflowId'
     | '/dashboard/workflows/new'
     | '/dashboard/workflows/'
@@ -392,7 +421,9 @@ export interface FileRouteTypes {
     | '/dashboard/usage'
     | '/dashboard/webhooks'
     | '/dashboard/workers'
+    | '/docs/$slug'
     | '/dashboard'
+    | '/docs'
     | '/dashboard/workflows/$workflowId'
     | '/dashboard/workflows/new'
     | '/dashboard/workflows'
@@ -400,6 +431,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/dashboard'
+    | '/docs'
     | '/login'
     | '/onboarding'
     | '/signup'
@@ -428,7 +460,9 @@ export interface FileRouteTypes {
     | '/dashboard/usage'
     | '/dashboard/webhooks'
     | '/dashboard/workers'
+    | '/docs/$slug'
     | '/dashboard/'
+    | '/docs/'
     | '/dashboard/workflows/$workflowId'
     | '/dashboard/workflows/new'
     | '/dashboard/workflows/'
@@ -437,6 +471,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   DashboardRoute: typeof DashboardRouteWithChildren
+  DocsRoute: typeof DocsRouteWithChildren
   LoginRoute: typeof LoginRoute
   OnboardingRoute: typeof OnboardingRoute
   SignupRoute: typeof SignupRoute
@@ -456,6 +491,13 @@ declare module '@tanstack/react-router' {
       path: '/dashboard'
       fullPath: '/dashboard'
       preLoaderRoute: typeof DashboardRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/docs': {
+      id: '/docs'
+      path: '/docs'
+      fullPath: '/docs'
+      preLoaderRoute: typeof DocsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/login': {
@@ -661,6 +703,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DashboardWorkersRouteImport
       parentRoute: typeof DashboardRoute
     }
+    '/docs/': {
+      id: '/docs/'
+      path: '/'
+      fullPath: '/docs/'
+      preLoaderRoute: typeof DocsIndexRouteImport
+      parentRoute: typeof DocsRoute
+    }
+    '/docs/$slug': {
+      id: '/docs/$slug'
+      path: '/$slug'
+      fullPath: '/docs/$slug'
+      preLoaderRoute: typeof DocsSlugRouteImport
+      parentRoute: typeof DocsRoute
+    }
     '/dashboard/workflows/': {
       id: '/dashboard/workflows/'
       path: '/workflows'
@@ -753,9 +809,22 @@ const DashboardRouteWithChildren = DashboardRoute._addFileChildren(
   DashboardRouteChildren,
 )
 
+interface DocsRouteChildren {
+  DocsSlugRoute: typeof DocsSlugRoute
+  DocsIndexRoute: typeof DocsIndexRoute
+}
+
+const DocsRouteChildren: DocsRouteChildren = {
+  DocsSlugRoute: DocsSlugRoute,
+  DocsIndexRoute: DocsIndexRoute,
+}
+
+const DocsRouteWithChildren = DocsRoute._addFileChildren(DocsRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   DashboardRoute: DashboardRouteWithChildren,
+  DocsRoute: DocsRouteWithChildren,
   LoginRoute: LoginRoute,
   OnboardingRoute: OnboardingRoute,
   SignupRoute: SignupRoute,

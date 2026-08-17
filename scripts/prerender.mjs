@@ -19,11 +19,20 @@ import { dirname, join } from 'node:path';
  * auth and has nothing to say to a crawler.
  */
 
-const ROUTES = ['/', '/login', '/signup'];
+/**
+ * Docs routes are derived from the manifest rather than listed here, so adding
+ * a page to the table of contents cannot leave it unprerendered and absent from
+ * the sitemap. Same reasoning as generating robots.txt below.
+ */
+const { DOC_ENTRIES } = await import('../src/lib/docs-manifest.ts');
+const DOC_ROUTES = ['/docs', ...DOC_ENTRIES.map((entry) => `/docs/${entry.slug}`)];
+
+const ROUTES = ['/', '/login', '/signup', ...DOC_ROUTES];
 
 /** Routes worth indexing. /login and /signup are prerendered so their link
- *  previews are right, but they are not search results. */
-const INDEXABLE = ['/'];
+ *  previews are right, but they are not search results. Docs are the opposite:
+ *  they are most of the reason anyone would find this site through a search. */
+const INDEXABLE = ['/', ...DOC_ROUTES];
 
 const DIST = 'dist';
 const TEMPLATE = join(DIST, 'index.html');
@@ -146,7 +155,10 @@ for (const route of ROUTES) {
   mkdirSync(dirname(outFile), { recursive: true });
   writeFileSync(outFile, doc);
 
-  const text = html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+  const text = html
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
   console.log(`  prerendered ${route.padEnd(9)} ${text.length} chars of text`);
   written++;
 }
