@@ -3,7 +3,6 @@ import { Link } from '@tanstack/react-router';
 import { ArrowRight, ArrowUpRight, Check, Copy, Wind } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { SweepLink } from '@/components/sweep-link';
-import { STATUS_COPY, useApiStatus } from '@/lib/api/status';
 import { Reveal } from './reveal';
 import { TextReveal } from './text-reveal';
 import { DitherFade } from './shaders/dither-fade';
@@ -154,9 +153,6 @@ function FooterAnchor({ link }: { link: FooterLink }) {
 }
 
 export function Footer() {
-  const status = useApiStatus();
-  const { label, token } = STATUS_COPY[status];
-
   return (
     <footer className="relative overflow-hidden border-t border-border">
       {/* Dissolve across the whole footer, clipped by its overflow. Densest
@@ -263,29 +259,6 @@ export function Footer() {
             </Link>
             <p className="mt-4 max-w-[26ch] text-sm leading-relaxed text-muted-foreground">
               Scale-to-zero serverless on real microVMs. Snapshot cold starts under 350ms.
-            </p>
-
-            {/* A live probe, not a decoration. See `lib/api/status.ts` — this
-                badge was hardcoded to green, which is exactly the wrong answer
-                during an outage. It is a status readout, so it is not a link:
-                there is no status page to send anyone to. */}
-            <p
-              role="status"
-              className="mt-6 inline-flex items-center gap-2 rounded-full border border-border bg-card/60 px-3 py-1.5 text-xs text-muted-foreground"
-            >
-              <span className="relative flex h-1.5 w-1.5">
-                {status === 'operational' && (
-                  <span
-                    className="absolute inline-flex h-full w-full animate-ping rounded-full opacity-75 motion-reduce:animate-none"
-                    style={{ background: token }}
-                  />
-                )}
-                <span
-                  className="relative inline-flex h-1.5 w-1.5 rounded-full"
-                  style={{ background: token }}
-                />
-              </span>
-              {label}
             </p>
           </div>
 
