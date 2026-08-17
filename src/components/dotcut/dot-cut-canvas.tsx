@@ -12,16 +12,23 @@ interface DotCutCanvasProps {
    * render would tear the canvas down and rebuild it every render.
    */
   scenes?: Scene[];
+  /**
+   * Grid width in cells. Defaults to 42.
+   *
+   * Raise it when a scene needs detail the default cannot carry — a wordmark
+   * being the obvious case. Dots get smaller as this grows.
+   */
+  columns?: number;
 }
 
-export function DotCutCanvas({ className, scenes }: DotCutCanvasProps) {
+export function DotCutCanvas({ className, scenes, columns }: DotCutCanvasProps) {
   const hostRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const host = hostRef.current;
     if (!host) return;
 
-    const dotcut = new DotCut(host, { fontFamily: "'Inter', sans-serif", scenes });
+    const dotcut = new DotCut(host, { fontFamily: "'Inter', sans-serif", scenes, cols: columns });
     if (!dotcut.ok) {
       return () => dotcut.destroy();
     }
@@ -73,7 +80,7 @@ export function DotCutCanvas({ className, scenes }: DotCutCanvasProps) {
       host.removeEventListener('pointerleave', onPointerLeave);
       dotcut.destroy();
     };
-  }, [scenes]);
+  }, [scenes, columns]);
 
   return <div ref={hostRef} className={className} aria-hidden="true" />;
 }

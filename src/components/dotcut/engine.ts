@@ -13,6 +13,15 @@ export interface DotCutOptions {
   fontFamily?: string;
   /** Scene cycle to run. Defaults to `SCENES`; an empty array is ignored. */
   scenes?: Scene[];
+  /**
+   * Grid width in cells. Defaults to 42.
+   *
+   * This is the resolution knob. Dot size is the panel width divided by this,
+   * so raising it buys detail at the cost of smaller dots — which is the trade
+   * a wordmark needs: legible letterforms want cells to spare, and 42 columns
+   * cannot spell a seven-letter word.
+   */
+  cols?: number;
 }
 
 const COLS = 42;
@@ -98,6 +107,8 @@ export class DotCut {
     if (options.fontFamily) this.fontFamily = options.fontFamily;
     // An empty array would divide by zero in `advance`, so it is ignored.
     if (options.scenes?.length) this.scenes = options.scenes;
+    // Before `resize`, which reads it to lay out the grid.
+    if (options.cols) this.params.cols = options.cols;
     this.canvas = document.createElement('canvas');
     this.canvas.style.cssText = 'display:block;width:100%;height:100%';
     host.appendChild(this.canvas);

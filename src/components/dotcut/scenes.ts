@@ -4,6 +4,15 @@ export interface Scene {
   transition: TransitionKind;
   palette: number;
   style?: StyleKind;
+  /**
+   * Fraction of the grid width a `text` scene may occupy, 0–1.
+   *
+   * Defaults to 0.36, which suits a single glyph. A word needs far more: at 42
+   * columns the default leaves about fifteen cells, so a seven-letter string
+   * gets two cells per letter and rasterises to a smear. Widen it for
+   * wordmarks.
+   */
+  fit?: number;
 }
 
 export type TransitionKind = 'wipe' | 'ripple' | 'scatter' | 'collapse' | 'columns';
@@ -227,7 +236,7 @@ export function rasterize(
 
   let size = rows * 0.8;
   ctx.font = `600 ${size}px ${fontFamily}`;
-  const maxW = cols * 0.36;
+  const maxW = cols * (scene.fit ?? 0.36);
   const m = ctx.measureText(text);
   if (m.width > maxW) {
     size *= maxW / m.width;
