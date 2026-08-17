@@ -70,7 +70,9 @@ function AlertsPage() {
       key: 'scope',
       label: 'Scope',
       width: 'w-28',
-      render: (a) => <Pill label={a.scope} color={a.scope === 'account' ? 'var(--brand)' : undefined} />,
+      render: (a) => (
+        <Pill label={a.scope} color={a.scope === 'account' ? 'var(--brand)' : undefined} />
+      ),
     },
     {
       key: 'enabled',

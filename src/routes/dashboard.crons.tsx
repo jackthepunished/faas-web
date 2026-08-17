@@ -119,7 +119,11 @@ function CronsPage() {
                 .mutateAsync(c.id)
                 .then(() => toast({ kind: 'success', title: 'Cron deleted' }))
                 .catch((err: unknown) =>
-                  toast({ kind: 'error', title: 'Could not delete', description: errorMessage(err) })
+                  toast({
+                    kind: 'error',
+                    title: 'Could not delete',
+                    description: errorMessage(err),
+                  })
                 );
             }}
             className="text-muted-foreground transition-colors hover:text-foreground"

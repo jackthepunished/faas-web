@@ -113,9 +113,11 @@ function KeysPage() {
       label: 'Scopes',
       render: (k) => (
         <span className="flex flex-wrap gap-1">
-          {k.scopes
-            ? k.scopes.split(', ').map((s) => <Pill key={s} label={s} />)
-            : <span className="text-xs text-muted-foreground">—</span>}
+          {k.scopes ? (
+            k.scopes.split(', ').map((s) => <Pill key={s} label={s} />)
+          ) : (
+            <span className="text-xs text-muted-foreground">—</span>
+          )}
         </span>
       ),
     },
@@ -123,7 +125,9 @@ function KeysPage() {
       key: 'lastUsedAt',
       label: 'Last used',
       numeric: true,
-      render: (k) => <span className="text-xs text-muted-foreground">{formatWhen(k.lastUsedAt)}</span>,
+      render: (k) => (
+        <span className="text-xs text-muted-foreground">{formatWhen(k.lastUsedAt)}</span>
+      ),
     },
     {
       key: 'id',
@@ -146,7 +150,11 @@ function KeysPage() {
                   });
                 })
                 .catch((err: unknown) =>
-                  toast({ kind: 'error', title: 'Could not rotate', description: errorMessage(err) })
+                  toast({
+                    kind: 'error',
+                    title: 'Could not rotate',
+                    description: errorMessage(err),
+                  })
                 );
             }}
             className="text-muted-foreground transition-colors hover:text-foreground"
@@ -161,7 +169,11 @@ function KeysPage() {
                 .mutateAsync(k.id)
                 .then(() => toast({ kind: 'success', title: 'Key revoked' }))
                 .catch((err: unknown) =>
-                  toast({ kind: 'error', title: 'Could not revoke', description: errorMessage(err) })
+                  toast({
+                    kind: 'error',
+                    title: 'Could not revoke',
+                    description: errorMessage(err),
+                  })
                 );
             }}
             className="text-muted-foreground transition-colors hover:text-foreground"
@@ -197,7 +209,11 @@ function KeysPage() {
                 setPlaintext(result.plaintext ?? null);
               })
               .catch((err: unknown) =>
-                toast({ kind: 'error', title: 'Could not create key', description: errorMessage(err) })
+                toast({
+                  kind: 'error',
+                  title: 'Could not create key',
+                  description: errorMessage(err),
+                })
               );
           }}
         >

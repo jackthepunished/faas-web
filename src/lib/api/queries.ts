@@ -349,7 +349,8 @@ export function useDeleteCron() {
 export function useRunCron() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (id: string) => unwrap(api.POST('/v1/crons/{id}/run', { params: { path: { id } } })),
+    mutationFn: (id: string) =>
+      unwrap(api.POST('/v1/crons/{id}/run', { params: { path: { id } } })),
     onSuccess: () => qc.invalidateQueries({ queryKey: keys.crons }),
   });
 }
@@ -415,7 +416,8 @@ export function useReplayInvocation() {
 export function useTrace(traceId: string) {
   return useQuery({
     queryKey: ['traces', traceId],
-    queryFn: () => unwrap(api.GET('/v1/traces/{trace_id}', { params: { path: { trace_id: traceId } } })),
+    queryFn: () =>
+      unwrap(api.GET('/v1/traces/{trace_id}', { params: { path: { trace_id: traceId } } })),
     enabled: Boolean(traceId),
   });
 }
@@ -528,6 +530,21 @@ export function useDeadLetter(slug: string) {
   });
 }
 
+/**
+ * External services an app talks to, from `/v1/apps/{slug}/upstreams`.
+ *
+ * Mostly discovered rather than declared — `source: 'inferred'` means the
+ * platform observed the egress. Hostnames are only ever returned hashed, so the
+ * console can show that an app reaches *a* Postgres without leaking which one.
+ */
+export function useUpstreams(slug: string) {
+  return useQuery({
+    queryKey: ['apps', slug, 'upstreams'],
+    queryFn: () => unwrap(api.GET('/v1/apps/{slug}/upstreams', { params: { path: { slug } } })),
+    enabled: Boolean(slug),
+  });
+}
+
 /* ------------------------------------------------------------------ *
  * Builds and supply chain
  * ------------------------------------------------------------------ */
@@ -584,6 +601,20 @@ export function useStorageUsage(day: string) {
 export function useBillingPortal() {
   return useMutation({
     mutationFn: () => unwrap(api.GET('/v1/billing/portal', {})),
+  });
+}
+
+/**
+ * Switches the billing plan. This changes the subscription server-side and can
+ * bill immediately, so callers must confirm before invoking it — a 402 here
+ * means payment is required and carries a link to the provider's checkout.
+ */
+export function useChangePlan() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (plan: components['schemas']['ChangePlanRequest']['plan']) =>
+      unwrap(api.PATCH('/v1/account/plan', { body: { plan } })),
+    onSuccess: () => qc.invalidateQueries({ queryKey: keys.account }),
   });
 }
 

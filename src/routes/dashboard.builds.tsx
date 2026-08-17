@@ -117,7 +117,9 @@ function BuildsPage() {
       key: 'enqueuedAt',
       label: 'Queued',
       numeric: true,
-      render: (b) => <span className="text-xs text-muted-foreground">{formatWhen(b.enqueuedAt)}</span>,
+      render: (b) => (
+        <span className="text-xs text-muted-foreground">{formatWhen(b.enqueuedAt)}</span>
+      ),
     },
   ];
 

@@ -70,17 +70,27 @@ function QueuesPage() {
   );
 
   const pendingColumns: Column<MessageRow>[] = [
-    { key: 'id', label: 'Message', render: (m) => <span className="font-mono text-xs">{m.id}</span> },
+    {
+      key: 'id',
+      label: 'Message',
+      render: (m) => <span className="font-mono text-xs">{m.id}</span>,
+    },
     {
       key: 'createdAt',
       label: 'Enqueued',
       numeric: true,
-      render: (m) => <span className="text-xs text-muted-foreground">{formatWhen(m.createdAt)}</span>,
+      render: (m) => (
+        <span className="text-xs text-muted-foreground">{formatWhen(m.createdAt)}</span>
+      ),
     },
   ];
 
   const deadColumns: Column<MessageRow>[] = [
-    { key: 'id', label: 'Message', render: (m) => <span className="font-mono text-xs">{m.id}</span> },
+    {
+      key: 'id',
+      label: 'Message',
+      render: (m) => <span className="font-mono text-xs">{m.id}</span>,
+    },
     {
       key: 'attempts',
       label: 'Attempts',
@@ -92,7 +102,9 @@ function QueuesPage() {
       key: 'failedAt',
       label: 'Failed',
       numeric: true,
-      render: (m) => <span className="text-xs text-muted-foreground">{formatWhen(m.failedAt)}</span>,
+      render: (m) => (
+        <span className="text-xs text-muted-foreground">{formatWhen(m.failedAt)}</span>
+      ),
     },
   ];
 
@@ -107,7 +119,10 @@ function QueuesPage() {
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatTile label="Depth" value={String(state.data?.depth ?? '—')} />
         <StatTile label="In flight" value={String(state.data?.in_flight ?? '—')} />
-        <StatTile label="Oldest pending" value={formatAge(state.data?.oldest_pending_age_seconds)} />
+        <StatTile
+          label="Oldest pending"
+          value={formatAge(state.data?.oldest_pending_age_seconds)}
+        />
         <StatTile label="Plan cap" value={String(state.data?.plan_cap ?? '—')} />
       </div>
 

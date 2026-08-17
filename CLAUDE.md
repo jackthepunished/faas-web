@@ -30,12 +30,19 @@ should not add to that count, and does not need to reduce it.
   REST-shaped URL — the surface is ~190 operations and not always predictable.
 - **Branch on `ApiError.code`, not on status or message.** Every error is
   RFC 7807 with a stable `code`; the prose is for humans and can change.
-- **Some pages still show fixtures.** `lib/mock-data.ts` and
-  `lib/mock-resources.ts` still back logs, metrics, queues, domains, crons,
-  keys, secrets, env, alerts, usage, and invoices — see the list in
-  `README.md`. Do not describe those pages as live.
-- **The API has no projects and no regions.** Both were removed from the UI
-  rather than faked. Do not reintroduce either.
+- **Every console page is live.** `lib/mock-data.ts` is now only formatters and
+  a couple of types; `lib/mock-resources.ts` is unused by routes. Do not add
+  fixture data back — if an endpoint cannot answer something, say so in the UI
+  rather than inventing a plausible number.
+- **The API has no projects, no regions, and no time-series metrics.** All were
+  removed from the UI rather than faked. Do not reintroduce any of them, and in
+  particular do not add charts to the console: `/v1/apps/{slug}/metrics` returns
+  scalars, so a line chart there would be fabricated.
+- **Per-app resources need an app picker.** Secrets, env, alerts, webhooks,
+  queues, upstreams, routes, and logs are all `/v1/apps/{slug}/…` with no
+  account-wide read. Use `useSelectedApp` + `AppSelect`.
+- **Logs are SSE, not JSON.** They use `EventSource` in `lib/api/logs.ts`, not
+  the `openapi-fetch` client and not TanStack Query.
 - **Tests are Vitest + React Testing Library**, in `*.test.ts(x)` beside the
   code. `npm run test`. Vitest does not typecheck, so a green test run does
   not mean `npm run check` passes — run the latter before claiming done.

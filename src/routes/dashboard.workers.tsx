@@ -75,15 +75,15 @@ function WorkersPage() {
       label: 'RAM',
       numeric: true,
       width: 'w-28',
-      render: (i) => (
-        <span className="[font-variant-numeric:tabular-nums]">{i.ramMb} MB</span>
-      ),
+      render: (i) => <span className="[font-variant-numeric:tabular-nums]">{i.ramMb} MB</span>,
     },
     {
       key: 'startedAt',
       label: 'Started',
       numeric: true,
-      render: (i) => <span className="text-xs text-muted-foreground">{formatWhen(i.startedAt)}</span>,
+      render: (i) => (
+        <span className="text-xs text-muted-foreground">{formatWhen(i.startedAt)}</span>
+      ),
     },
     {
       key: 'lastRequestAt',

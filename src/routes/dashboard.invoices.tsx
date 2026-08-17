@@ -98,7 +98,9 @@ function InvoicesPage() {
       key: 'createdAt',
       label: 'Issued',
       numeric: true,
-      render: (i) => <span className="text-xs text-muted-foreground">{formatDay(i.createdAt)}</span>,
+      render: (i) => (
+        <span className="text-xs text-muted-foreground">{formatDay(i.createdAt)}</span>
+      ),
     },
   ];
 

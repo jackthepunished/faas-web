@@ -75,7 +75,9 @@ function InvocationsPage() {
       key: 'createdAt',
       label: 'When',
       numeric: true,
-      render: (i) => <span className="text-xs text-muted-foreground">{formatWhen(i.createdAt)}</span>,
+      render: (i) => (
+        <span className="text-xs text-muted-foreground">{formatWhen(i.createdAt)}</span>
+      ),
     },
     {
       key: 'app',
@@ -104,7 +106,9 @@ function InvocationsPage() {
       label: 'Tries',
       numeric: true,
       width: 'w-20',
-      render: (i) => <span className="[font-variant-numeric:tabular-nums]">{i.attempts || '—'}</span>,
+      render: (i) => (
+        <span className="[font-variant-numeric:tabular-nums]">{i.attempts || '—'}</span>
+      ),
     },
     {
       key: 'id',

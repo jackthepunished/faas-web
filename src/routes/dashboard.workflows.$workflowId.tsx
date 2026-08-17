@@ -1,12 +1,10 @@
-import { useId, useMemo, useRef, useState } from 'react';
+import { useId, useRef, useState } from 'react';
 import { createFileRoute, Link, useParams } from '@tanstack/react-router';
-import { ArrowLeft, ExternalLink, RotateCw } from 'lucide-react';
+import { ArrowLeft, ArrowRight, ExternalLink, RotateCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { AreaChart, PercentileChart } from '@/components/dashboard/charts';
 import {
   EmptyState,
   ErrorState,
-  LevelTag,
   LoadingState,
   PageHeader,
   Panel,
@@ -14,21 +12,15 @@ import {
   StatTile,
   StateBadge,
 } from '@/components/dashboard/primitives';
-import {
-  LOGS,
-  RANGES,
-  buildSeries,
-  formatClock,
-  formatCompact,
-  formatMs,
-  formatRelative,
-  type RangeKey,
-} from '@/lib/mock-data';
+import { formatCompact, formatMs, formatRelative } from '@/lib/mock-data';
+import { useAppMetrics, type MetricsRange } from '@/lib/api/queries';
 import { useData } from '@/lib/store';
 import { useToast } from '@/components/ui/toast';
 import { errorMessage } from '@/lib/api/errors';
 import { cn } from '@/lib/utils';
 import { pageHead, useDocumentTitle } from '@/lib/seo';
+
+const METRIC_RANGES: MetricsRange[] = ['5m', '15m', '1h', '6h', '24h', '7d', '15d'];
 
 const TABS = ['Metrics', 'Deployments', 'Logs', 'Configuration'] as const;
 type Tab = (typeof TABS)[number];
@@ -64,7 +56,7 @@ function FunctionDetailPage() {
     tabRefs.current[next]?.focus();
     setTab(TABS[next]);
   };
-  const [range, setRange] = useState<RangeKey>('24h');
+  const [range, setRange] = useState<MetricsRange>('24h');
   const { getWorkflow, deploymentsFor, redeploy, loading, error, refresh } = useData();
   const { toast } = useToast();
 
@@ -73,11 +65,9 @@ function FunctionDetailPage() {
   // once the store resolves it. Above the early return — it is a hook.
   useDocumentTitle(fn?.name ?? 'Function not found');
 
-  const seedOffset = useMemo(
-    () => workflowId.split('').reduce((a, c) => a + c.charCodeAt(0), 0),
-    [workflowId]
-  );
-  const series = useMemo(() => buildSeries(range, seedOffset, 0.12), [range, seedOffset]);
+  // Real per-app aggregates for the Metrics tab. Called with the slug, which is
+  // what `workflowId` is.
+  const metrics = useAppMetrics(workflowId, range);
 
   // Order matters: the app list arrives over the network now, so "not in the
   // list" means "not loaded yet" until the request settles. Claiming 404 first
@@ -111,9 +101,6 @@ function FunctionDetailPage() {
 
   const deployments = deploymentsFor(fn.id);
   const isDeploying = fn.state === 'deploying';
-  const logs = LOGS.filter((l) => l.workflowId === fn.id).slice(0, 40);
-  const totalInvocations = series.reduce((a, s) => a + s.invocations, 0);
-  const coldStarts = series.reduce((a, s) => a + s.coldStarts, 0);
 
   return (
     <div className="flex flex-col gap-6">
@@ -215,39 +202,47 @@ function FunctionDetailPage() {
               <RangeSelector
                 value={range}
                 onChange={setRange}
-                options={RANGES.map((r) => ({ key: r.key, label: r.key }))}
+                options={METRIC_RANGES.map((r) => ({ key: r, label: r }))}
               />
             </div>
 
+            {/* Scalars, not a series: `/v1/apps/{slug}/metrics` returns one
+                aggregate per window. The sparkline charts that used to sit here
+                were drawn from a seeded PRNG and are gone with it. */}
             <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
               <StatTile
-                label="Invocations"
-                value={formatCompact(totalInvocations)}
-                series={series.map((s) => s.invocations)}
+                label="Requests"
+                value={metrics.data ? formatCompact(metrics.data.request_count) : '—'}
+              />
+              <StatTile
+                label="Error rate"
+                value={metrics.data ? metrics.data.error_rate_pct.toFixed(2) : '—'}
+                unit="%"
+                deltaGood={false}
               />
               <StatTile
                 label="Cold starts"
-                value={formatCompact(coldStarts)}
-                series={series.map((s) => s.coldStarts)}
-                color="var(--chart-3)"
-              />
-              <StatTile label="Cold start p50" value={formatMs(fn.coldStartP50Ms)} />
-              <StatTile
-                label="Error rate"
-                value={fn.errorRatePct.toFixed(2)}
+                value={metrics.data ? metrics.data.cold_start_pct.toFixed(2) : '—'}
                 unit="%"
-                series={series.map((s) => s.errors)}
-                color="var(--chart-2)"
-                deltaGood={false}
+              />
+              <StatTile
+                label="Wake p95 (fleet)"
+                value={metrics.data ? formatMs(metrics.data.wake_p95_ms) : '—'}
               />
             </div>
 
-            <Panel title="Response latency" description="Percentile distribution over time">
-              <PercentileChart data={series} range={range} />
-            </Panel>
-
-            <Panel title="Invocations">
-              <AreaChart data={series} range={range} metric="invocations" label="invocations" />
+            <Panel title="Response latency" description="2xx traffic over the selected window">
+              {metrics.error ? (
+                <ErrorState error={metrics.error} onRetry={() => void metrics.refetch()} />
+              ) : metrics.isPending ? (
+                <LoadingState message="Querying metrics…" />
+              ) : (
+                <div className="grid gap-4 p-5 sm:grid-cols-3">
+                  <StatTile label="p50" value={formatMs(metrics.data?.latency_p50_ms ?? 0)} />
+                  <StatTile label="p95" value={formatMs(metrics.data?.latency_p95_ms ?? 0)} />
+                  <StatTile label="p99" value={formatMs(metrics.data?.latency_p99_ms ?? 0)} />
+                </div>
+              )}
             </Panel>
           </div>
         )}
@@ -288,28 +283,20 @@ function FunctionDetailPage() {
         )}
 
         {tab === 'Logs' && (
-          <Panel title="Recent logs" description={`Last ${logs.length} entries`}>
-            {logs.length === 0 ? (
-              <EmptyState message="No log entries in this window." />
-            ) : (
-              <ul className="flex flex-col gap-0.5 font-mono text-xs">
-                {logs.map((log) => (
-                  <li
-                    key={log.id}
-                    className="flex items-start gap-3 rounded px-2 py-1.5 transition-colors hover:bg-muted/50"
-                  >
-                    <span className="shrink-0 text-muted-foreground [font-variant-numeric:tabular-nums]">
-                      {formatClock(log.ts)}
-                    </span>
-                    <LevelTag level={log.level} />
-                    <span className="min-w-0 flex-1">{log.message}</span>
-                    <span className="shrink-0 text-muted-foreground [font-variant-numeric:tabular-nums]">
-                      {log.durationMs}ms
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            )}
+          <Panel title="Logs">
+            {/* Logs are an SSE stream, not a list this page can hold. The Logs
+                page owns the connection, the tail, and the grep. */}
+            <div className="flex flex-col items-start gap-3 p-5">
+              <p className="text-sm text-muted-foreground">
+                Logs stream live from this app&rsquo;s instances.
+              </p>
+              <Button asChild size="sm" variant="outline" className="gap-1.5">
+                <Link to="/dashboard/logs">
+                  Open the log stream
+                  <ArrowRight className="h-3.5 w-3.5" />
+                </Link>
+              </Button>
+            </div>
           </Panel>
         )}
 

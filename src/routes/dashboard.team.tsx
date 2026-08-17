@@ -91,7 +91,9 @@ function TeamPage() {
       key: 'joinedAt',
       label: 'Joined',
       numeric: true,
-      render: (m) => <span className="text-xs text-muted-foreground">{formatWhen(m.joinedAt)}</span>,
+      render: (m) => (
+        <span className="text-xs text-muted-foreground">{formatWhen(m.joinedAt)}</span>
+      ),
     },
   ];
 

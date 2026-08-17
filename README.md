@@ -106,21 +106,45 @@ Providers wrap the app in `src/routes/__root.tsx`:
   can fail, so callers must await and report.
 - **`ToastProvider`** (`components/ui/toast.tsx`) — `useToast().toast({ … })`.
 
-### What is live and what is not
+### What is live
 
-Wired to the API: sign in / sign up / sign out / password reset, the account
-whoami, the functions list and detail pages, app creation, rollback, and the
-deployments feed.
+**Every console page reads from the API.** No page renders fixture data any
+more; `lib/mock-data.ts` survives only for formatters (`formatRelative`,
+`formatCompact`) and a couple of shared types.
 
-Still reading `lib/mock-data.ts` and `lib/mock-resources.ts`: logs, traces,
-metrics charts, queues, domains, crons, keys, secrets, env, alerts, usage,
-invoices, storage, databases, and workers. Every one has a real endpoint in the
-spec — `queries.ts` already has hooks for several — but the pages have not been
-moved yet. **Anything on this list is showing fixtures, not your account.**
+Logs are the one exception to the client above: `/v1/apps/{slug}/logs` is an SSE
+stream, so it uses `EventSource` in `lib/api/logs.ts` rather than
+`openapi-fetch`. There is no single response to cache, so no TanStack Query
+either.
 
-Two concepts in the UI do not exist in the API and were removed rather than
-faked: **projects** (apps are flat per account; the real grouping is orgs) and
-**regions** (it is one box).
+Not surfaced, deliberately: the `/v1/admin/*` routes (operator-only, not a
+customer surface), the CLI device-code flow, OAuth callbacks, and the Stripe
+webhook receiver. These are not UI features.
+
+### Where the UI and the API disagreed
+
+Several pages showed things the platform does not have. They now show what it
+does, rather than being kept honest-looking with invented data:
+
+| Page      | Was                            | Is                                                |
+| --------- | ------------------------------ | ------------------------------------------------- |
+| Workers   | A pool of long-lived workers   | **Instances** — microVMs that park when idle      |
+| Traces    | A span waterfall               | **Invocations** — with replay                     |
+| Databases | Managed databases              | **Upstreams** — observed egress, hostnames hashed |
+| Storage   | Object-storage buckets         | VM snapshots and image layers                     |
+| APIs      | Invented routes                | Routes observed at the gateway                    |
+| Metrics   | Line charts from a seeded PRNG | Scalar aggregates per window                      |
+| Plans     | Invented dollar prices         | Real quotas; pricing links to the portal          |
+
+Two concepts were removed entirely rather than faked: **projects** (apps are
+flat per account; the real grouping is orgs, on the Team page) and **regions**
+(it is one box).
+
+**There are no charts in the console any more.** `/v1/apps/{slug}/metrics`
+returns scalar aggregates over a window, not a time series — one p50, one error
+rate. The charts that used to be here were drawn from a seeded PRNG. Plotting a
+curve between two real numbers would be inventing the shape of an outage, so the
+figures are shown as figures. `dither-kit` is still used by the landing page.
 
 ### Theming
 

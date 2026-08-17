@@ -84,7 +84,9 @@ function SecurityPage() {
       key: 'issuedAt',
       label: 'Signed in',
       numeric: true,
-      render: (s) => <span className="text-xs text-muted-foreground">{formatWhen(s.issuedAt)}</span>,
+      render: (s) => (
+        <span className="text-xs text-muted-foreground">{formatWhen(s.issuedAt)}</span>
+      ),
     },
     {
       key: 'lastSeenAt',
@@ -107,7 +109,11 @@ function SecurityPage() {
                 .mutateAsync(s.id)
                 .then(() => toast({ kind: 'success', title: 'Session revoked' }))
                 .catch((err: unknown) =>
-                  toast({ kind: 'error', title: 'Could not revoke', description: errorMessage(err) })
+                  toast({
+                    kind: 'error',
+                    title: 'Could not revoke',
+                    description: errorMessage(err),
+                  })
                 );
             }}
             className="text-xs text-muted-foreground transition-colors hover:text-foreground"
@@ -140,7 +146,11 @@ function SecurityPage() {
                   })
                 )
                 .catch((err: unknown) =>
-                  toast({ kind: 'error', title: 'Could not revoke', description: errorMessage(err) })
+                  toast({
+                    kind: 'error',
+                    title: 'Could not revoke',
+                    description: errorMessage(err),
+                  })
                 );
             }}
           >

@@ -1,169 +1,114 @@
-import { useMemo, useState } from 'react';
 import { createFileRoute } from '@tanstack/react-router';
-import { Download } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { UsageBars } from '@/components/dashboard/charts';
-import { useToast } from '@/components/ui/toast';
-import { PageHeader, Panel, RangeSelector, StatTile } from '@/components/dashboard/primitives';
 import {
-  RANGES,
-  buildSeries,
-  buildUsage,
-  formatCompact,
-  formatNumber,
-  formatUsd,
-  type RangeKey,
-} from '@/lib/mock-data';
+  ErrorState,
+  LoadingState,
+  PageHeader,
+  Panel,
+  StatTile,
+} from '@/components/dashboard/primitives';
+import { useUsageSummary } from '@/lib/api/queries';
+import { useAuth } from '@/lib/auth';
 import { consoleHead } from '@/lib/seo';
 
 export const Route = createFileRoute('/dashboard/usage')({
-  head: () => consoleHead('usage'),
   component: UsagePage,
+  head: () => consoleHead('usage'),
 });
 
-/** RFC 4180 quoting — fields containing a comma, quote, or newline get wrapped. */
-function csvCell(value: string | number): string {
-  const s = String(value);
-  return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+/**
+ * Billing-period usage, from `/v1/usage/summary`.
+ *
+ * The unit that matters is GB-hours: memory multiplied by time, which is how a
+ * scale-to-zero platform charges. An idle app costs nothing, so a low number
+ * here next to a lot of apps is the platform working as advertised.
+ *
+ * Plan limits come from `/v1/account` rather than being hardcoded, so a plan
+ * change is reflected without a deploy.
+ */
+function formatNumber(value: number | undefined, digits = 2): string {
+  if (value == null) return '—';
+  return value.toLocaleString(undefined, { maximumFractionDigits: digits });
+}
+
+function formatMoney(cents: number | undefined): string {
+  if (cents == null) return '—';
+  return new Intl.NumberFormat(undefined, { style: 'currency', currency: 'EUR' }).format(
+    cents / 100
+  );
 }
 
 function UsagePage() {
-  const [range, setRange] = useState<RangeKey>('30d');
-  const series = useMemo(() => buildSeries(range), [range]);
-  const usage = useMemo(() => buildUsage(), []);
-  const { toast } = useToast();
+  const { data, isPending, error, refetch } = useUsageSummary();
+  const { account } = useAuth();
 
-  const totalCost = usage.reduce((a, l) => a + l.cost, 0);
-  const gbSeconds = series.reduce((a, s) => a + s.gbSeconds, 0);
-  const invocations = series.reduce((a, s) => a + s.invocations, 0);
-
-  const exportCsv = () => {
-    const rows = [
-      ['line_item', 'quantity', 'unit', 'included', 'billable', 'unit_price_usd', 'cost_usd'],
-      ...usage.map((l) => [
-        l.label,
-        l.quantity,
-        l.unit,
-        l.included,
-        Math.max(0, l.quantity - l.included),
-        l.unitPrice,
-        l.cost.toFixed(2),
-      ]),
-      [],
-      ['total_usd', totalCost.toFixed(2)],
-    ];
-
-    const csv = rows.map((r) => r.map(csvCell).join(',')).join('\n');
-    const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8;' }));
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `gregale-usage-${range}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
-
-    toast({ kind: 'success', title: 'Export ready', description: `gregale-usage-${range}.csv` });
-  };
+  const used = data?.used_gb_hours ?? 0;
+  const included = data?.included_gb_hours ?? 0;
+  // Guard the divide: a plan with no included allowance would otherwise render
+  // the bar as NaN% wide.
+  const pct = included > 0 ? Math.min(100, (used / included) * 100) : 0;
+  const over = (data?.overage_gb_hours ?? 0) > 0;
 
   return (
     <div className="flex flex-col gap-6">
       <PageHeader
-        title="Usage & billing"
-        description="Metered against real compute. Idle workflows cost nothing."
-        actions={
-          <Button variant="outline" size="sm" className="gap-1.5" onClick={exportCsv}>
-            <Download className="h-3.5 w-3.5" />
-            Export CSV
-          </Button>
-        }
+        title="Usage"
+        description="This billing period. GB-hours are memory × time — a parked app accrues none."
       />
 
-      <div className="grid gap-4 sm:grid-cols-3">
-        <StatTile
-          label="Current bill"
-          value={formatUsd(totalCost)}
-          series={series.map((s) => s.gbSeconds)}
-          color="var(--chart-3)"
-        />
-        <StatTile label="Compute" value={formatCompact(Math.round(gbSeconds))} unit="GB-s" />
-        <StatTile label="Invocations" value={formatCompact(invocations)} />
-      </div>
+      {error ? (
+        <ErrorState error={error} onRetry={() => void refetch()} />
+      ) : isPending ? (
+        <LoadingState message="Loading usage…" />
+      ) : (
+        <>
+          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+            <StatTile label="GB-hours used" value={formatNumber(used)} />
+            <StatTile label="Included" value={formatNumber(included)} />
+            <StatTile label="Overage" value={formatNumber(data?.overage_gb_hours)} />
+            <StatTile label="Overage cost" value={formatMoney(data?.overage_cents)} />
+          </div>
 
-      <Panel
-        title="Compute consumption"
-        description="GB-seconds billed per bucket"
-        actions={
-          <RangeSelector
-            value={range}
-            onChange={setRange}
-            options={RANGES.map((r) => ({ key: r.key, label: r.key }))}
-          />
-        }
-      >
-        <UsageBars data={series} range={range} />
-      </Panel>
+          <Panel title={`Allowance — ${data?.month ?? 'this month'}`}>
+            <div className="flex flex-col gap-3 p-5">
+              <div
+                className="h-2 w-full overflow-hidden rounded-full bg-muted"
+                role="meter"
+                aria-valuenow={Math.round(pct)}
+                aria-valuemin={0}
+                aria-valuemax={100}
+                aria-label="Included allowance used"
+              >
+                <div
+                  className="h-full rounded-full transition-all"
+                  style={{
+                    width: `${pct}%`,
+                    background: over ? 'var(--status-warning)' : 'var(--brand)',
+                  }}
+                />
+              </div>
+              <p className="text-xs text-muted-foreground">
+                {formatNumber(used)} of {formatNumber(included)} GB-hours
+                {over ? ' — you are into overage for this period.' : '.'}
+              </p>
+            </div>
+          </Panel>
 
-      {/* The table IS the accessible view of the billing data */}
-      <Panel title="Billing breakdown" description="Billing period to date">
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[640px] text-sm">
-            <thead>
-              <tr className="border-b border-border text-left">
-                {['Line item', 'Quantity', 'Included', 'Billable', 'Unit price', 'Cost'].map(
-                  (h, i) => (
-                    <th
-                      key={h}
-                      className={`label-mono px-3 py-2.5 font-medium text-muted-foreground ${
-                        i > 0 ? 'text-right' : ''
-                      }`}
-                    >
-                      {h}
-                    </th>
-                  )
-                )}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border">
-              {usage.map((line) => (
-                <tr key={line.label}>
-                  <td className="px-3 py-3">
-                    <p className="font-medium">{line.label}</p>
-                    <p className="mt-0.5 text-xs text-muted-foreground">{line.unit}</p>
-                  </td>
-                  <td className="px-3 py-3 text-right [font-variant-numeric:tabular-nums]">
-                    {formatNumber(line.quantity)}
-                  </td>
-                  <td className="px-3 py-3 text-right text-muted-foreground [font-variant-numeric:tabular-nums]">
-                    −{formatNumber(line.included)}
-                  </td>
-                  <td className="px-3 py-3 text-right [font-variant-numeric:tabular-nums]">
-                    {formatNumber(Math.max(0, line.quantity - line.included))}
-                  </td>
-                  <td className="px-3 py-3 text-right text-muted-foreground [font-variant-numeric:tabular-nums]">
-                    ${line.unitPrice.toFixed(7).replace(/0+$/, '')}
-                  </td>
-                  <td className="px-3 py-3 text-right font-medium [font-variant-numeric:tabular-nums]">
-                    {formatUsd(line.cost)}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-            <tfoot>
-              <tr className="border-t border-border">
-                <td colSpan={5} className="px-3 py-3 text-right text-sm text-muted-foreground">
-                  Total due
-                </td>
-                <td className="px-3 py-3 text-right text-base font-semibold [font-variant-numeric:tabular-nums]">
-                  {formatUsd(totalCost)}
-                </td>
-              </tr>
-            </tfoot>
-          </table>
-        </div>
+          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+            <StatTile label="CPU hours" value={formatNumber(data?.used_cpu_hours)} />
+            <StatTile label="Egress" value={`${formatNumber(data?.used_egress_gb)} GB`} />
+            <StatTile label="Ingress" value={`${formatNumber(data?.used_ingress_gb)} GB`} />
+            <StatTile label="Apps" value={String(account?.app_count ?? '—')} />
+          </div>
 
-        <p className="mt-4 text-xs text-muted-foreground">
-          Free tier: 1M invocations and 400,000 GB-seconds every month, deducted before billing.
-        </p>
-      </Panel>
+          {account?.limits && (
+            <p className="text-xs text-muted-foreground">
+              On the {account.plan} plan: {account.limits.deployed_apps} apps,{' '}
+              {account.limits.ram_mb} MB per app, {account.limits.max_concurrency} concurrent
+              instances.
+            </p>
+          )}
+        </>
+      )}
     </div>
   );
 }

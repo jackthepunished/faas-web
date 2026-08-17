@@ -61,7 +61,11 @@ function EnvPage() {
   );
 
   const columns: Column<EnvRow>[] = [
-    { key: 'key', label: 'Name', render: (v) => <span className="font-mono text-xs">{v.key}</span> },
+    {
+      key: 'key',
+      label: 'Name',
+      render: (v) => <span className="font-mono text-xs">{v.key}</span>,
+    },
     {
       key: 'scope',
       label: 'Scope',
@@ -72,7 +76,9 @@ function EnvPage() {
       key: 'updatedAt',
       label: 'Updated',
       numeric: true,
-      render: (v) => <span className="text-xs text-muted-foreground">{formatWhen(v.updatedAt)}</span>,
+      render: (v) => (
+        <span className="text-xs text-muted-foreground">{formatWhen(v.updatedAt)}</span>
+      ),
     },
     {
       key: 'id',

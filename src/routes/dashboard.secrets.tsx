@@ -60,7 +60,11 @@ function SecretsPage() {
   );
 
   const columns: Column<SecretRow>[] = [
-    { key: 'key', label: 'Name', render: (s) => <span className="font-mono text-xs">{s.key}</span> },
+    {
+      key: 'key',
+      label: 'Name',
+      render: (s) => <span className="font-mono text-xs">{s.key}</span>,
+    },
     {
       key: 'kid',
       label: 'Value',
@@ -72,7 +76,9 @@ function SecretsPage() {
       key: 'updatedAt',
       label: 'Updated',
       numeric: true,
-      render: (s) => <span className="text-xs text-muted-foreground">{formatWhen(s.updatedAt)}</span>,
+      render: (s) => (
+        <span className="text-xs text-muted-foreground">{formatWhen(s.updatedAt)}</span>
+      ),
     },
     {
       key: 'id',
@@ -148,7 +154,12 @@ function SecretsPage() {
               className="h-10 rounded-lg border border-border bg-background px-3 text-sm outline-none focus:border-brand"
             />
           </label>
-          <Button type="submit" size="sm" className="gap-1.5" disabled={setSecret.isPending || !slug}>
+          <Button
+            type="submit"
+            size="sm"
+            className="gap-1.5"
+            disabled={setSecret.isPending || !slug}
+          >
             <Plus className="h-3.5 w-3.5" />
             {setSecret.isPending ? 'Saving…' : 'Save secret'}
           </Button>

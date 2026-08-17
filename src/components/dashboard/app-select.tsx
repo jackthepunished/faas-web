@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useApps } from '@/lib/api/queries';
 
 /**
@@ -29,23 +29,22 @@ function remembered(): string {
  */
 export function useSelectedApp() {
   const { data: apps, isPending, error } = useApps();
-  const [slug, setSlug] = useState<string>(remembered);
+  const [chosen, setChosen] = useState<string>(remembered);
 
-  // Settle on a default once the list lands: the remembered app if it still
-  // exists, otherwise the first one. A remembered app that was deleted must not
-  // strand the page on an empty selection.
-  useEffect(() => {
-    if (!apps?.length) return;
-    const exists = apps.some((a) => a.slug === slug);
-    if (!exists) setSlug(apps[0].slug);
-  }, [apps, slug]);
+  // Derived, not synchronised. The default — the remembered app if it still
+  // exists, otherwise the first one — falls out of a computation rather than an
+  // effect that writes state, so there is no render where the selection is
+  // briefly wrong and no cascading re-render to correct it. A remembered app
+  // that has since been deleted simply stops matching.
+  const list = apps ?? [];
+  const slug = list.some((a) => a.slug === chosen) ? chosen : (list[0]?.slug ?? '');
 
   const select = (next: string) => {
-    setSlug(next);
+    setChosen(next);
     window.localStorage.setItem(STORAGE_KEY, next);
   };
 
-  return { slug, select, apps: apps ?? [], loadingApps: isPending, appsError: error };
+  return { slug, select, apps: list, loadingApps: isPending, appsError: error };
 }
 
 export function AppSelect({

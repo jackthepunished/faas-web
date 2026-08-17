@@ -1,83 +1,109 @@
+import { useMemo } from 'react';
 import { createFileRoute } from '@tanstack/react-router';
-import { Plus } from 'lucide-react';
-import { Button } from '@/components/ui/button';
 import { PageHeader } from '@/components/dashboard/primitives';
 import { Pill, ResourceTable, type Column } from '@/components/dashboard/resource-table';
-import { DATABASES, formatBytes, type Database } from '@/lib/mock-resources';
+import { AppSelect, useSelectedApp } from '@/components/dashboard/app-select';
+import { useUpstreams } from '@/lib/api/queries';
 import { consoleHead } from '@/lib/seo';
 
 export const Route = createFileRoute('/dashboard/databases')({
-  component: DatabasesPage,
+  component: UpstreamsPage,
   head: () => consoleHead('databases'),
 });
 
-const STATE_COLOR: Record<Database['state'], string> = {
-  available: 'var(--status-good)',
-  migrating: 'var(--status-warning)',
-  degraded: 'var(--status-critical)',
-};
+/**
+ * Upstream dependencies, from `/v1/apps/{slug}/upstreams`.
+ *
+ * This page used to list managed databases. **The platform does not host
+ * databases** — it runs functions, and those functions call out to services you
+ * run elsewhere. What the API can tell you is which upstreams each app actually
+ * reaches, mostly inferred by observing egress.
+ *
+ * Hostnames are returned only as a salted hash, by design: the console can show
+ * that an app talks to a Postgres somewhere without the dashboard becoming a
+ * place your connection strings leak from. So the host column shows a short
+ * fingerprint, which is enough to tell two upstreams apart.
+ */
+interface UpstreamRow {
+  id: string;
+  kind: string;
+  fingerprint: string;
+  port: number;
+  source: string;
+  scope: string;
+}
 
-const COLUMNS: Column<Database>[] = [
-  {
-    key: 'name',
-    label: 'Database',
-    render: (d) => (
-      <span className="flex flex-col">
-        <span className="font-mono">{d.name}</span>
-        <span className="mt-0.5 text-xs text-muted-foreground">
-          {d.engine} {d.version}
+function UpstreamsPage() {
+  const { slug, select, apps, loadingApps } = useSelectedApp();
+  const { data, isPending, error, refetch } = useUpstreams(slug);
+
+  const rows = useMemo<UpstreamRow[]>(
+    () =>
+      (data?.upstreams ?? []).map((u) => ({
+        id: u.id,
+        kind: u.kind,
+        fingerprint: u.host_redacted_hash.slice(0, 12),
+        port: u.port,
+        source: u.source,
+        scope: u.scope ?? '—',
+      })),
+    [data]
+  );
+
+  const columns: Column<UpstreamRow>[] = [
+    { key: 'kind', label: 'Kind', width: 'w-40', render: (u) => <Pill label={u.kind} /> },
+    {
+      key: 'fingerprint',
+      label: 'Host',
+      render: (u) => (
+        <span
+          className="font-mono text-xs text-muted-foreground"
+          title="Hostnames are never returned in the clear"
+        >
+          {u.fingerprint}…
         </span>
-      </span>
-    ),
-  },
-  {
-    key: 'state',
-    label: 'State',
-    width: 'w-32',
-    render: (d) => <Pill label={d.state} color={STATE_COLOR[d.state]} />,
-  },
-  {
-    key: 'region',
-    label: 'Region',
-    render: (d) => <span className="font-mono text-xs text-muted-foreground">{d.region}</span>,
-  },
-  { key: 'sizeBytes', label: 'Size', numeric: true, render: (d) => formatBytes(d.sizeBytes) },
-  {
-    key: 'connections',
-    label: 'Connections',
-    numeric: true,
-    render: (d) => {
-      const pct = (d.connections / d.maxConnections) * 100;
-      return (
-        <span style={pct > 80 ? { color: 'var(--status-critical)' } : undefined}>
-          {d.connections.toLocaleString('en-US')} / {d.maxConnections.toLocaleString('en-US')}
-        </span>
-      );
+      ),
     },
-  },
-];
+    {
+      key: 'port',
+      label: 'Port',
+      numeric: true,
+      width: 'w-24',
+      render: (u) => <span className="[font-variant-numeric:tabular-nums]">{u.port}</span>,
+    },
+    {
+      key: 'source',
+      label: 'Source',
+      width: 'w-32',
+      render: (u) => (
+        <Pill label={u.source} color={u.source === 'explicit' ? 'var(--brand)' : undefined} />
+      ),
+    },
+    {
+      key: 'scope',
+      label: 'Scope',
+      render: (u) => <span className="text-xs text-muted-foreground">{u.scope}</span>,
+    },
+  ];
 
-function DatabasesPage() {
   return (
     <div className="flex flex-col gap-6">
       <PageHeader
-        title="Databases"
-        description="Managed Postgres and Redis. Connection strings are injected as secrets at boot."
-        actions={
-          <Button size="sm" className="gap-1.5">
-            <Plus className="h-3.5 w-3.5" />
-            New database
-          </Button>
-        }
+        title="Upstreams"
+        description="External services this app reaches. Mostly discovered from egress; hostnames are hashed, never stored in the clear."
+        actions={<AppSelect slug={slug} onSelect={select} apps={apps} />}
       />
       <ResourceTable
-        rows={DATABASES}
-        columns={COLUMNS}
-        initialSort={{ key: 'sizeBytes', dir: 'desc' }}
-        searchKeys={['name', 'engine', 'region']}
-        searchPlaceholder="Filter by name, engine, or region…"
-        emptyMessage="No databases match these filters."
-        minWidth="min-w-[720px]"
+        rows={rows}
+        columns={columns}
+        initialSort={{ key: 'kind', dir: 'asc' }}
+        searchKeys={['kind', 'scope']}
+        searchPlaceholder="Filter by kind…"
+        emptyMessage={slug ? `No upstreams observed for ${slug}.` : 'Create an app first.'}
+        minWidth="min-w-[820px]"
+        loading={loadingApps || isPending}
+        error={error}
+        onRetry={() => void refetch()}
       />
     </div>
   );

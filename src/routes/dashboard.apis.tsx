@@ -38,7 +38,11 @@ function ApisPage() {
   );
 
   const columns: Column<RouteRow>[] = [
-    { key: 'path', label: 'Route', render: (r) => <span className="font-mono text-xs">{r.path}</span> },
+    {
+      key: 'path',
+      label: 'Route',
+      render: (r) => <span className="font-mono text-xs">{r.path}</span>,
+    },
   ];
 
   const unavailable = data?.source === 'unavailable';
@@ -57,7 +61,10 @@ function ApisPage() {
           className="flex items-start gap-2 rounded-lg border px-3 py-2 text-xs"
           style={{ borderColor: 'color-mix(in oklab, var(--status-warning) 40%, transparent)' }}
         >
-          <AlertTriangle className="mt-px h-3.5 w-3.5 shrink-0" style={{ color: 'var(--status-warning)' }} />
+          <AlertTriangle
+            className="mt-px h-3.5 w-3.5 shrink-0"
+            style={{ color: 'var(--status-warning)' }}
+          />
           Per-route metrics are not enabled for this app, so no routes can be listed. This is a paid
           plan feature.
         </p>
