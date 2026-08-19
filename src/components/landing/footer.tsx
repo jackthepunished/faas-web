@@ -273,7 +273,7 @@ export function Footer() {
           front of the dissolve, so it needs real ink: dark where it meets the
           link band, easing off as it drops out of the frame. */}
       <div aria-hidden className="pointer-events-none relative z-10 select-none overflow-hidden">
-        <p className="translate-y-[22%] bg-gradient-to-b from-foreground via-[#0f3d2b] to-brand bg-clip-text text-center text-[19vw] font-semibold leading-[0.75] tracking-[-0.055em] text-transparent">
+        <p className="translate-y-[22%] bg-gradient-to-b from-foreground via-[#0f3d2b] to-brand bg-clip-text text-center text-[19vw] font-semibold leading-[0.75] tracking-[-0.05em] text-transparent">
           GREGALE
         </p>
       </div>

@@ -54,7 +54,7 @@ export function Hero() {
 
           <motion.h1
             {...reveal(0.08)}
-            className="text-balance text-[42px] font-semibold leading-[1.04] tracking-[-0.034em] text-foreground sm:text-[58px] lg:text-[68px]"
+            className="text-balance text-[42px] font-semibold leading-[1.04] tracking-[-0.03em] text-foreground sm:text-[58px] lg:text-[68px]"
           >
             Serverless on real microVMs. Scale to zero. Wake in{' '}
             <span className="text-brand">under 350&nbsp;ms.</span>

@@ -6,9 +6,9 @@
 // same kind the DotCut canvas paints on the auth screen, drawn procedurally so
 // the card shares the site's one visual signature without a screenshot.
 //
-// Fonts: IBM Plex Sans / Mono, fetched from IBM's repository into a cache
-// directory on first run. The site loads the same families from Google Fonts,
-// so the card is set in the type the page is set in.
+// Fonts: Familjen Grotesk / Spline Sans Mono, fetched from the Google Fonts
+// API into a cache directory on first run. The site loads the same families
+// from Google Fonts, so the card is set in the type the page is set in.
 
 import { mkdir, readFile, writeFile, access } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
@@ -19,23 +19,30 @@ const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const cache = join(root, 'node_modules', '.cache', 'og-fonts');
 const out = join(root, 'public', 'og.png');
 
-const FONT_BASE = 'https://raw.githubusercontent.com/IBM/plex/master/packages';
 const FONTS = [
-  ['plex-sans', 'IBMPlexSans-SemiBold.ttf'],
-  ['plex-sans', 'IBMPlexSans-Regular.ttf'],
-  ['plex-mono', 'IBMPlexMono-Regular.ttf'],
+  ['Familjen Grotesk', 600],
+  ['Familjen Grotesk', 400],
+  ['Spline Sans Mono', 400],
 ];
 
 async function fontFiles() {
   await mkdir(cache, { recursive: true });
   const files = [];
-  for (const [pkg, file] of FONTS) {
-    const path = join(cache, file);
+  for (const [family, weight] of FONTS) {
+    const path = join(cache, `${family.replaceAll(' ', '')}-${weight}.ttf`);
     try {
       await access(path);
     } catch {
-      const res = await fetch(`${FONT_BASE}/${pkg}/fonts/complete/ttf/${file}`);
-      if (!res.ok) throw new Error(`font fetch failed: ${file} (${res.status})`);
+      // Both families ship as variable fonts, which resvg cannot instance.
+      // A legacy user agent makes the Google Fonts API answer with a static
+      // per-weight TTF instead of the variable woff2.
+      const api = `https://fonts.googleapis.com/css2?family=${family.replaceAll(' ', '+')}:wght@${weight}`;
+      const cssRes = await fetch(api, { headers: { 'User-Agent': 'curl/8' } });
+      if (!cssRes.ok) throw new Error(`font css fetch failed: ${family} ${weight} (${cssRes.status})`);
+      const url = (await cssRes.text()).match(/url\((https:[^)]+\.ttf)\)/)?.[1];
+      if (!url) throw new Error(`no static ttf offered for ${family} ${weight}`);
+      const res = await fetch(url);
+      if (!res.ok) throw new Error(`font fetch failed: ${family} ${weight} (${res.status})`);
       await writeFile(path, Buffer.from(await res.arrayBuffer()));
     }
     files.push(path);
@@ -116,26 +123,26 @@ const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" 
     <path d="M17.5 8a2.5 2.5 0 1 1 2 4H2"/>
     <path d="M9.8 4.4A2 2 0 1 1 11 8H2"/>
   </g>
-  <text x="140" y="110" font-family="IBM Plex Sans" font-weight="600" font-size="30" letter-spacing="-0.6" fill="${INK}">Gregale</text>
+  <text x="140" y="110" font-family="Familjen Grotesk" font-weight="600" font-size="30" letter-spacing="-0.6" fill="${INK}">Gregale</text>
 
   <!-- Headline -->
-  <text font-family="IBM Plex Sans" font-weight="600" font-size="60" letter-spacing="-2.1" fill="${INK}">
+  <text font-family="Familjen Grotesk" font-weight="600" font-size="60" letter-spacing="-1.8" fill="${INK}">
     <tspan x="80" y="300">Serverless on real</tspan>
     <tspan x="80" y="368">microVMs.</tspan>
   </text>
-  <text font-family="IBM Plex Sans" font-weight="600" font-size="60" letter-spacing="-2.1" fill="${INK}">
+  <text font-family="Familjen Grotesk" font-weight="600" font-size="60" letter-spacing="-1.8" fill="${INK}">
     <tspan x="80" y="436">Scale to zero. Wake in</tspan>
     <tspan x="80" y="504" fill="${MINT_11}">under 350 ms.</tspan>
   </text>
 
   <!-- Footer line -->
-  <text x="80" y="590" font-family="IBM Plex Mono" font-size="20" letter-spacing="1.4" fill="${MUTED}">gregale.dev  ·  OPEN SOURCE  ·  FIRECRACKER MICROVMS</text>
+  <text x="80" y="590" font-family="Spline Sans Mono" font-size="20" letter-spacing="1.4" fill="${MUTED}">gregale.dev  ·  OPEN SOURCE  ·  FIRECRACKER MICROVMS</text>
 </svg>`;
 
 const files = await fontFiles();
 const resvg = new Resvg(svg, {
   fitTo: { mode: 'width', value: W },
-  font: { fontFiles: files, loadSystemFonts: false, defaultFontFamily: 'IBM Plex Sans' },
+  font: { fontFiles: files, loadSystemFonts: false, defaultFontFamily: 'Familjen Grotesk' },
 });
 const png = resvg.render().asPng();
 await writeFile(out, png);

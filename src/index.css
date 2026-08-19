@@ -1,4 +1,4 @@
-/* IBM Plex type system — see index.html for the font loads. */
+/* Familjen Grotesk type system — see index.html for the font loads. */
 @import 'tailwindcss';
 @import 'tw-animate-css';
 
@@ -216,16 +216,17 @@
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
 
-  /* --- IBM Plex type system -----------------------------------------------
-     Sans — IBM Plex Sans: headlines, body, and UI. Engineered skeleton with
-            humanist details; the neutral-but-technical voice this product
-            wants. Display sizes lean on weight and tight tracking, not a
-            second family.
-     Mono — IBM Plex Mono: code and identifiers, and — following IBM's own
-            design language — eyebrows, labels, and metrics, where it does the
-            contrast work a display face would otherwise do. */
-  --font-sans: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  --font-mono: 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+  /* --- Familjen Grotesk type system ----------------------------------------
+     Sans — Familjen Grotesk: headlines, body, and UI. A grotesque with an
+            engineered skeleton and sly terminals (watch the g and the y) —
+            the same neutral-but-technical voice Plex carried, with more
+            character per glyph. Display sizes lean on weight and tight
+            tracking, not a second family.
+     Mono — Spline Sans Mono: code and identifiers, plus eyebrows, labels,
+            and metrics, where it does the contrast work a display face would
+            otherwise do. Drawn as a UI companion, so 11px labels stay crisp. */
+  --font-sans: 'Familjen Grotesk', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-mono: 'Spline Sans Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
   --font-serif: var(--font-sans);
 
   --animate-color-cycle: color-cycle 6s ease-in-out infinite;
@@ -352,26 +353,26 @@
     background-color: var(--color-background);
     color: var(--color-foreground);
     font-family: var(--font-sans);
-    letter-spacing: -0.006em;
+    letter-spacing: -0.004em;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
 
-  /* Plex Sans is generously fitted, so display sizes need real negative
-     tracking to stop headlines reading as loose. Weight carries the hierarchy
-     that a second family would otherwise provide. */
+  /* Familjen Grotesk is fitted a touch tighter than Plex was, so display
+     tracking eases off a step. Weight still carries the hierarchy that a
+     second family would otherwise provide. */
   h1,
   h2,
   h3,
   h4 {
     font-weight: 600;
-    letter-spacing: -0.02em;
+    letter-spacing: -0.018em;
   }
   h1 {
-    letter-spacing: -0.032em;
+    letter-spacing: -0.03em;
   }
   h2 {
-    letter-spacing: -0.026em;
+    letter-spacing: -0.024em;
   }
 
   @keyframes shake {
@@ -443,7 +444,7 @@
     }
   }
 
-  /* Plex Mono as the label voice: eyebrows, section kickers, metrics. */
+  /* Spline Sans Mono as the label voice: eyebrows, section kickers, metrics. */
   .label-mono {
     font-family: var(--font-mono);
     font-size: 0.6875rem;
