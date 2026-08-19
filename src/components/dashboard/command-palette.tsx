@@ -69,7 +69,7 @@ export function CommandPalette({
       })),
       {
         id: 'act-new',
-        label: 'Deploy a new workflow',
+        label: 'Deploy a new app',
         group: 'Actions',
         icon: Plus,
         run: go('/dashboard/workflows/new'),
@@ -77,7 +77,7 @@ export function CommandPalette({
       ...workflows.map((fn) => ({
         id: fn.id,
         label: fn.name,
-        group: 'Workflows',
+        group: 'Apps',
         hint: `${formatCompact(fn.invocations24h)} calls · ${fn.runtime}`,
         icon: GitBranch,
         run: () => {
@@ -226,7 +226,7 @@ export function CommandPalette({
                 ref={inputRef}
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                placeholder="Search workflows, jump to a page, run an action…"
+                placeholder="Search apps, jump to a page, run an action…"
                 aria-label="Search commands"
                 role="combobox"
                 aria-expanded={results.length > 0}

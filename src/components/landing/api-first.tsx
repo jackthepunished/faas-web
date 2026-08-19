@@ -15,7 +15,7 @@ import { TruchetTiles } from './shapes/truchet-tiles';
  */
 const FACTS = [
   {
-    title: '187 operations, one document',
+    title: '186 operations, one document',
     body: 'OpenAPI 3.1, served by the API itself. Generate a client, or hand it to an agent.',
   },
   {

@@ -79,7 +79,7 @@ function DeleteWorkspaceDialog({
           Delete this workspace?
         </h2>
         <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-          This destroys every function, snapshot, and volume in{' '}
+          This destroys every app, snapshot, and volume in{' '}
           <span className="font-mono text-foreground">{workspace}</span>. It cannot be undone.
         </p>
 
@@ -221,7 +221,7 @@ function SettingsPage() {
           <div>
             <p className="text-sm font-medium">Delete workspace</p>
             <p className="mt-1 text-xs text-muted-foreground">
-              Permanently destroys every function, snapshot, and volume. This cannot be undone.
+              Destroys every app, snapshot, and volume in this workspace. It cannot be undone.
             </p>
           </div>
           <Button variant="destructive" size="sm" onClick={() => setShowDelete(true)}>

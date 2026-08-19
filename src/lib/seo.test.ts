@@ -72,7 +72,7 @@ describe('titles across the app', () => {
       pageHead({ title: 'Create account' }),
       pageHead({ title: 'Get started' }),
       pageHead({ title: 'Overview' }),
-      pageHead({ title: 'New workflow' }),
+      pageHead({ title: 'New app' }),
       consoleHead('logs'),
       consoleHead('metrics'),
       consoleHead('workflows'),

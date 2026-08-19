@@ -35,7 +35,7 @@ const AUTH_SCENES: Scene[] = [
 ];
 
 const PROOF_POINTS = [
-  ['Cold start p50', 'under 350ms'],
+  ['Cold start p50', 'under 350 ms'],
   ['Idle cost', 'zero'],
   ['Isolation', 'hardware microVM'],
 ];

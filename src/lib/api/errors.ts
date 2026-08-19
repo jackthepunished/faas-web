@@ -126,5 +126,5 @@ export function errorMessage(error: unknown): string {
   if (error instanceof ApiError) return error.message;
   if (error instanceof Error && error.name === 'AbortError') return 'Request cancelled.';
   if (error instanceof TypeError) return 'Could not reach the API. Check your connection.';
-  return error instanceof Error ? error.message : 'Something went wrong.';
+  return error instanceof Error ? error.message : 'The API returned an error we did not expect.';
 }

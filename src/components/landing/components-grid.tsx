@@ -40,7 +40,7 @@ const CARDS = [
     Icon: Zap,
     name: 'Functions',
     description:
-      'Node, Python, or Go in a hardware-isolated microVM. Invoke sync or async; every wake restores the same snapshot.',
+      'Node and Python functions, Go up to full apps — each in its own hardware-isolated microVM. Invoke sync or async; every wake restores the same snapshot.',
     doc: 'runtime-node',
     cta: 'Runtimes',
     className: 'lg:col-span-2',
@@ -59,7 +59,7 @@ const CARDS = [
     Icon: GitBranch,
     name: 'Deploy from GitHub',
     description:
-      'One-shot, SHA-pinned deploys from CI. Every build carries an SBOM and provenance.',
+      'One-shot, SHA-pinned deploys from CI. SBOM and provenance for any build are one GET away.',
     doc: 'deploy-from-source',
     cta: 'Deploy from a ref',
     background: <DeployBeam />,
@@ -105,7 +105,7 @@ const CARDS = [
     Icon: GitPullRequest,
     name: 'Preview environments',
     description:
-      'Every pull request gets its own URL under your app, covered by the wildcard cert.',
+      'Every same-repo pull request gets its own URL under your wildcard cert, torn down after close. Fork PRs are refused — on purpose.',
     doc: 'preview-environments',
     cta: 'Previews',
     background: <PreviewsCard />,

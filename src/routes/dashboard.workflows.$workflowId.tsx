@@ -26,7 +26,7 @@ const TABS = ['Metrics', 'Deployments', 'Logs', 'Configuration'] as const;
 type Tab = (typeof TABS)[number];
 
 export const Route = createFileRoute('/dashboard/workflows/$workflowId')({
-  head: () => pageHead({ title: 'Workflow' }),
+  head: () => pageHead({ title: 'App' }),
   // Tab lives in the URL, so a refresh or a shared link lands on the same one.
   // Optional, so links elsewhere need not pass it and the default tab leaves
   // no query string behind.
@@ -63,7 +63,7 @@ function FunctionDetailPage() {
   const fn = getWorkflow(workflowId);
   // The route's `head` can only name the id, so the real name is applied here
   // once the store resolves it. Above the early return — it is a hook.
-  useDocumentTitle(fn?.name ?? 'Function not found');
+  useDocumentTitle(fn?.name ?? 'App not found');
 
   // Real per-app aggregates for the Metrics tab. Called with the slug, which is
   // what `workflowId` is.
@@ -93,8 +93,8 @@ function FunctionDetailPage() {
   if (!fn) {
     return (
       <div className="flex flex-col gap-6">
-        <PageHeader title="Function not found" />
-        <EmptyState message="This function does not exist or has been deleted." />
+        <PageHeader title="App not found" />
+        <EmptyState message="This app does not exist or has been deleted." />
       </div>
     );
   }
@@ -109,7 +109,7 @@ function FunctionDetailPage() {
         className="inline-flex w-fit items-center gap-1.5 text-xs text-muted-foreground transition-colors hover:text-foreground"
       >
         <ArrowLeft className="h-3 w-3" />
-        All workflows
+        All apps
       </Link>
 
       <PageHeader
@@ -159,11 +159,7 @@ function FunctionDetailPage() {
       </a>
 
       {/* Tabs */}
-      <div
-        role="tablist"
-        aria-label="Function detail"
-        className="flex gap-1 border-b border-border"
-      >
+      <div role="tablist" aria-label="App detail" className="flex gap-1 border-b border-border">
         {TABS.map((t, i) => (
           <button
             key={t}

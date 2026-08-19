@@ -3,10 +3,11 @@ import { EASE, Reveal } from './reveal';
 import { TextReveal } from './text-reveal';
 import { PixelBeams } from './shaders/pixel-beams';
 
-const METERS = [
-  { label: 'Compute', value: '$0.000012', unit: 'per GB-second' },
-  { label: 'Invocations', value: '$0.20', unit: 'per million' },
-  { label: 'Egress', value: '$0.01', unit: 'per GB' },
+const PLANS = [
+  { name: 'Free', price: '€0', detail: '1 app · concurrency 1 · scale-to-zero only' },
+  { name: 'Hobby', price: '€9/mo', detail: '5 apps · concurrency 2' },
+  { name: 'Pro', price: '25 apps', detail: 'concurrency 5 · --min up to 5' },
+  { name: 'Scale', price: '100 apps', detail: 'concurrency 20 · --min up to 20' },
 ];
 
 export function Pricing() {
@@ -24,7 +25,7 @@ export function Pricing() {
           segments={[
             { text: 'You only pay for what you use.' },
             {
-              text: 'Pricing tied to real compute — the milliseconds, storage, and bandwidth your functions actually consume. Scale-to-zero means idle costs nothing.',
+              text: 'Compute is metered in GB-hours — memory × time while an instance is actually resident. A parked app accrues none: scale-to-zero means idle costs nothing.',
               className: 'text-muted-foreground',
             },
           ]}
@@ -36,19 +37,19 @@ export function Pricing() {
         <div className="relative mt-12">
           <PixelBeams className="-inset-x-10 -top-24 -bottom-28" />
 
-          <div className="relative grid gap-3 sm:grid-cols-3">
-            {METERS.map((meter, i) => (
+          <div className="relative grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            {PLANS.map((plan, i) => (
               <motion.div
-                key={meter.label}
+                key={plan.name}
                 initial={{ opacity: 0, y: 16 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true, margin: '-60px' }}
                 transition={{ duration: 0.6, delay: i * 0.08, ease: EASE }}
                 className="rounded-lg border border-border bg-card/80 p-6 backdrop-blur-lg"
               >
-                <p className="label-mono text-muted-foreground">{meter.label}</p>
-                <p className="mt-3 font-mono text-2xl font-medium tracking-tight">{meter.value}</p>
-                <p className="mt-1 text-xs text-muted-foreground">{meter.unit}</p>
+                <p className="label-mono text-muted-foreground">{plan.name}</p>
+                <p className="mt-3 font-mono text-2xl font-medium tracking-tight">{plan.price}</p>
+                <p className="mt-1 text-xs text-muted-foreground">{plan.detail}</p>
               </motion.div>
             ))}
           </div>
@@ -57,7 +58,8 @@ export function Pricing() {
         {/* The "View detailed pricing" link went nowhere — there is no pricing
             page beyond this section, so the sentence stands on its own. */}
         <p className="mt-6 text-sm text-muted-foreground">
-          1M invocations and 400,000 GB-seconds free every month.
+          Warm pins (--min N) bill as N × RAM × uptime — the normal resident rate, no premium.
+          Overage is per GB-hour, invoiced in EUR.
         </p>
       </div>
     </section>

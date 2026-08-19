@@ -125,7 +125,7 @@ export function StatTile({
             >
               <Arrow className="h-3 w-3" />
               {positive ? '+' : ''}
-              {delta.toFixed(1)}%<span className="text-muted-foreground">vs prev period</span>
+              {delta.toFixed(1)}%<span className="text-muted-foreground">vs previous window</span>
             </p>
           )}
         </div>

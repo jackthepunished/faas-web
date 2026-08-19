@@ -22,7 +22,7 @@ const STEPS = [
     glyph: '⟳',
     state: 'waking',
     title: 'A request arrives.',
-    body: 'The snapshot restores into a fresh Firecracker microVM: its own kernel, hardware isolation, locked-down defaults. Under 350 ms p50, and the response says so with x-faas-wake: cold.',
+    body: 'The snapshot restores into a fresh Firecracker microVM — jailed to its own uid, default-deny seccomp, its own cgroup. Under 350 ms p50, and the response admits it: x-faas-wake: cold.',
     code: 'x-faas-wake: cold',
   },
   {

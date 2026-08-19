@@ -147,10 +147,7 @@ function Breadcrumbs() {
 
   if (section === 'workflows' && detail) {
     trail.push({
-      label:
-        detail === 'new'
-          ? 'New workflow'
-          : (workflows.find((w) => w.id === detail)?.name ?? 'Workflow'),
+      label: detail === 'new' ? 'New app' : (workflows.find((w) => w.id === detail)?.name ?? 'App'),
     });
   }
 
@@ -461,7 +458,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
               className="flex h-8 items-center gap-1.5 rounded-lg bg-primary px-3 text-sm font-medium text-primary-foreground transition-opacity hover:opacity-90"
             >
               <Plus className="h-3.5 w-3.5" />
-              <span className="hidden sm:inline">New function</span>
+              <span className="hidden sm:inline">New app</span>
             </Link>
 
             <span className="mx-1 hidden h-5 w-px bg-border sm:block" />

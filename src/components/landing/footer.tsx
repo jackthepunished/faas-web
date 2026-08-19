@@ -80,7 +80,11 @@ const LINK_GROUPS: { title: string; links: FooterLink[] }[] = [
   },
 ];
 
-const TRUST_POINTS = ['No credit card', '1M invocations free', 'Under 350ms cold starts'];
+const TRUST_POINTS = [
+  'Free plan to start',
+  'Parked apps bill nothing',
+  'Under 350 ms p50 cold starts',
+];
 
 const LINK_CLASS =
   'group inline-flex items-center gap-1 text-sm text-muted-foreground transition-colors hover:text-foreground';
@@ -202,7 +206,7 @@ export function Footer() {
               have landed. */}
           <Reveal delay={0.45}>
             <p className="relative mx-auto mt-4 max-w-md text-balance text-muted-foreground">
-              One command from repository to running microVM. Scale-to-zero means idle costs
+              One command from repository to running microVM. Parked apps hold no RAM and bill
               nothing.
             </p>
 
@@ -245,7 +249,7 @@ export function Footer() {
               <span className="font-medium tracking-tight">Gregale</span>
             </Link>
             <p className="mt-4 max-w-[26ch] text-sm leading-relaxed text-muted-foreground">
-              Scale-to-zero serverless on real microVMs. Snapshot cold starts under 350ms.
+              Scale-to-zero serverless on real microVMs. Snapshot cold starts under 350 ms.
             </p>
           </div>
 

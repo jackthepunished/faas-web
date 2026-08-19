@@ -116,7 +116,7 @@ export function Nav() {
             to="/signup"
             className="rounded-full bg-primary px-4 py-1.5 text-sm font-medium text-primary-foreground transition-opacity duration-200 hover:opacity-90"
           >
-            Get started
+            Start deploying
           </SweepLink>
 
           <button

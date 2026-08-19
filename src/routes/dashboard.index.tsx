@@ -163,7 +163,7 @@ function OverviewPage() {
           ) : loading ? (
             <LoadingState />
           ) : recent.length === 0 ? (
-            <EmptyState message="Nothing deployed yet." />
+            <EmptyState message="Nothing deployed yet. Run gregale deploy against a repo to serve traffic." />
           ) : (
             <ul className="flex flex-col">
               {recent.map((d) => (

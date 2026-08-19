@@ -37,7 +37,7 @@ type SortKey =
   | 'lastDeployedAt';
 
 const COLUMNS: { key: SortKey; label: string; numeric: boolean }[] = [
-  { key: 'name', label: 'Function', numeric: false },
+  { key: 'name', label: 'App', numeric: false },
   { key: 'state', label: 'State', numeric: false },
   { key: 'runtime', label: 'Runtime', numeric: false },
   { key: 'invocations24h', label: 'Invocations 24h', numeric: true },
@@ -96,13 +96,13 @@ function FunctionsPage() {
   return (
     <div className="flex flex-col gap-6">
       <PageHeader
-        title="Functions"
-        description="Every deployed function across this workspace."
+        title="Apps"
+        description="Every deployed app across this workspace."
         actions={
           <Button asChild size="sm" className="gap-1.5">
             <Link to="/dashboard/workflows/new">
               <Plus className="h-3.5 w-3.5" />
-              New function
+              New app
             </Link>
           </Button>
         }
@@ -165,9 +165,7 @@ function FunctionsPage() {
       ) : rows.length === 0 ? (
         <EmptyState
           message={
-            workflows.length === 0
-              ? 'No apps on this account yet.'
-              : 'No workflows match these filters.'
+            workflows.length === 0 ? 'No apps on this account yet.' : 'No apps match these filters.'
           }
         />
       ) : (

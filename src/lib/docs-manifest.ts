@@ -50,7 +50,7 @@ export const DOC_SECTIONS: DocSection[] = [
         source: 'docs/cold-wake.md',
         title: 'How scaling to zero works',
         summary:
-          'Parked apps hold zero resident RAM. The first request pays the wake cost — around 350ms — and the rest run warm.',
+          'Parked apps hold zero resident RAM. The first request pays the wake cost — around 350 ms — and the rest run warm.',
       },
       {
         slug: 'storage',

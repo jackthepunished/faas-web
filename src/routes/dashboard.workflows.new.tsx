@@ -14,7 +14,7 @@ import { cn } from '@/lib/utils';
 import { pageHead } from '@/lib/seo';
 
 export const Route = createFileRoute('/dashboard/workflows/new')({
-  head: () => pageHead({ title: 'New workflow' }),
+  head: () => pageHead({ title: 'New app' }),
   component: NewFunctionPage,
 });
 
@@ -142,7 +142,7 @@ function NewFunctionPage() {
                 size="sm"
                 onClick={() => navigate({ to: '/dashboard/workflows' })}
               >
-                All workflows
+                All apps
               </Button>
               <Button
                 variant="cta"
@@ -174,7 +174,7 @@ function NewFunctionPage() {
         className="inline-flex w-fit items-center gap-1.5 text-xs text-muted-foreground transition-colors hover:text-foreground"
       >
         <ArrowLeft className="h-3 w-3" />
-        All workflows
+        All apps
       </Link>
 
       <PageHeader title="New function" description="Deploy a function to bare metal." />
@@ -272,7 +272,7 @@ function NewFunctionPage() {
             <Panel>
               <div className="grid gap-5 sm:grid-cols-2">
                 <label className="flex flex-col gap-1.5">
-                  <span className="label-mono text-muted-foreground">Function name</span>
+                  <span className="label-mono text-muted-foreground">App name</span>
                   <input
                     value={name}
                     onChange={(e) => setName(e.target.value.toLowerCase())}
@@ -354,7 +354,7 @@ function NewFunctionPage() {
                 <div>
                   <p className="text-sm font-medium">Scale to zero</p>
                   <p className="mt-1 max-w-md text-xs leading-relaxed text-muted-foreground">
-                    Snapshot the microVM after 60s idle. Wakes in under 350ms on the next request.
+                    Snapshot the microVM after 60s idle. Wakes in under 350 ms on the next request.
                   </p>
                 </div>
                 <Switch

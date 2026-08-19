@@ -148,6 +148,6 @@ describe('errorMessage', () => {
   });
 
   it('has something to say about a value that is not an Error at all', () => {
-    expect(errorMessage('nope')).toBe('Something went wrong.');
+    expect(errorMessage('nope')).toBe('The API returned an error we did not expect.');
   });
 });

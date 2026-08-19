@@ -55,7 +55,7 @@ export const NAV_GROUPS: NavGroup[] = [
   {
     title: 'Build',
     items: [
-      { to: '/dashboard/workflows', label: 'Workflows', icon: WorkflowIcon },
+      { to: '/dashboard/workflows', label: 'Apps', icon: WorkflowIcon },
       { to: '/dashboard/apis', label: 'APIs', icon: Network },
       { to: '/dashboard/crons', label: 'Cron Jobs', icon: AlarmClock },
       { to: '/dashboard/queues', label: 'Queue Jobs', icon: ListTree },

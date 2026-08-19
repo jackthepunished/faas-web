@@ -39,7 +39,7 @@ const COPY = {
   },
   signup: {
     title: 'Create your workspace',
-    subtitle: 'Start with 1M invocations free every month. No credit card.',
+    subtitle: 'Start on the free plan — one app that scales to zero.',
     cta: 'Create account',
     pendingLabel: 'Creating account…',
     switchText: 'Already have an account?',
