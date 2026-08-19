@@ -11,6 +11,7 @@ import {
   type MetricsRange,
 } from './api/queries';
 import { slugIndex, toDeployment, toWorkflow } from './api/adapters';
+import { useAuth } from './auth';
 import { NOW, type Deployment, type Runtime, type Workflow } from './mock-data';
 
 /**
@@ -61,12 +62,25 @@ const DEFAULT_RANGE: MetricsRange = '24h';
 export function DataProvider({ children }: { children: ReactNode }) {
   const qc = useQueryClient();
 
-  const appsQuery = useApps();
-  const deploymentsQuery = useDeployments();
+  /**
+   * This provider wraps the whole app, sign-in screen included, so it must not
+   * read the account until there is a session to read it with.
+   *
+   * Ungated, the three queries below fired on `/login` and answered 401 three
+   * times before the visitor had typed anything. That is not just noise: the
+   * client turns any 401 outside `AUTH_ROUTES` into `onUnauthorized()`, which
+   * clears the session hint — so a reply landing just after a successful
+   * sign-in would sign the user back out.
+   */
+  const { user } = useAuth();
+  const signedIn = user !== null;
+
+  const appsQuery = useApps({ enabled: signedIn });
+  const deploymentsQuery = useDeployments(50, { enabled: signedIn });
   // Metrics are a separate query on purpose: a degraded Prometheus zeroes this
   // response without taking the app list down with it, and the list is what the
   // console is actually for.
-  const metricsQuery = useAppsMetrics(DEFAULT_RANGE);
+  const metricsQuery = useAppsMetrics(DEFAULT_RANGE, { enabled: signedIn });
 
   const createApp = useCreateApp();
   const rollback = useRollback();
@@ -99,7 +113,9 @@ export function DataProvider({ children }: { children: ReactNode }) {
       deployments,
       // Metrics are excluded: the list should paint as soon as the apps land
       // rather than waiting on a Prometheus round-trip that may be degraded.
-      loading: appsQuery.isPending || deploymentsQuery.isPending,
+      // A disabled query reports `pending` indefinitely, so without the
+      // `signedIn` term every signed-out consumer would spin forever.
+      loading: signedIn && (appsQuery.isPending || deploymentsQuery.isPending),
       error: appsQuery.error ?? deploymentsQuery.error ?? null,
       getWorkflow: (id) => workflows.find((f) => f.id === id),
       deploymentsFor: (id) => deployments.filter((d) => d.workflowId === id),
@@ -130,6 +146,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
     [
       workflows,
       deployments,
+      signedIn,
       appsQuery.isPending,
       appsQuery.error,
       deploymentsQuery.isPending,

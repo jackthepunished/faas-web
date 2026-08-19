@@ -16,6 +16,7 @@ import type { components } from './schema';
 
 export type App = components['schemas']['AppResponse'];
 export type Deployment = components['schemas']['DeploymentResponse'];
+export type DeploymentList = components['schemas']['DeploymentListResponse'];
 export type AppMetrics = components['schemas']['AppMetricsResponse'];
 export type MetricsRange = AppMetrics['range'];
 
@@ -115,10 +116,11 @@ export function useAppRoutes(slug: string) {
  * Deployments
  * ------------------------------------------------------------------ */
 
-export function useDeployments(limit = 50) {
+export function useDeployments(limit = 50, options?: Options<DeploymentList>) {
   return useQuery({
     queryKey: [...keys.deployments, limit],
     queryFn: () => unwrap(api.GET('/v1/deployments', { params: { query: { limit } } })),
+    ...options,
   });
 }
 
