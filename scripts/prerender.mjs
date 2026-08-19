@@ -112,7 +112,11 @@ for (const route of ROUTES) {
     perRoute.push(`<link rel="canonical" href="${attr(absolute(route))}" />`);
     perRoute.push(`<meta property="og:url" content="${attr(absolute(route))}" />`);
     if (existsSync(join('public', OG_IMAGE))) {
-      perRoute.push(`<meta property="og:image" content="${attr(SITE_URL + '/' + OG_IMAGE)}" />`);
+      const image = SITE_URL + '/' + OG_IMAGE;
+      perRoute.push(`<meta property="og:image" content="${attr(image)}" />`);
+      perRoute.push('<meta property="og:image:width" content="1200" />');
+      perRoute.push('<meta property="og:image:height" content="630" />');
+      perRoute.push(`<meta name="twitter:image" content="${attr(image)}" />`);
     }
   }
   // Keeps a non-indexable page out of results without hiding it from the

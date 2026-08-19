@@ -1,6 +1,5 @@
 /* IBM Plex type system — see index.html for the font loads. */
 @import 'tailwindcss';
-@import './originkit-section-theme.css';
 @import 'tw-animate-css';
 
 @custom-variant dark (&:is(.dark *));
@@ -229,21 +228,31 @@
   --font-mono: 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
   --font-serif: var(--font-sans);
 
-  /* Originkit sections ship their own font tokens (Outfit / Clash / Audiowide /
-     Inter Tight / Helvetica Neue). All fold into Plex Sans — one family, so
-     the kit sections stop announcing themselves as foreign. */
-  --font-outfit: var(--font-sans);
-  --font-tight: var(--font-sans);
-  --font-instrument: var(--font-sans);
-  --font-aeonik: var(--font-sans);
-  --font-helvetica-neue: var(--font-sans);
-  --font-clash: var(--font-sans);
-  --font-audiowide: var(--font-sans);
-
   --animate-color-cycle: color-cycle 6s ease-in-out infinite;
   --animate-glow-breathe: glow-breathe 7s ease-in-out infinite;
   --animate-dither-drift-a: dither-drift-a 10s linear infinite;
   --animate-dither-drift-b: dither-drift-b 16s linear infinite;
+  /* Magic UI marquee (components/ui/marquee.tsx). Duration and gap are set
+     per instance as --duration / --gap. */
+  --animate-marquee: marquee var(--duration) linear infinite;
+  --animate-marquee-vertical: marquee-vertical var(--duration) linear infinite;
+
+  @keyframes marquee {
+    from {
+      transform: translateX(0);
+    }
+    to {
+      transform: translateX(calc(-100% - var(--gap)));
+    }
+  }
+  @keyframes marquee-vertical {
+    from {
+      transform: translateY(0);
+    }
+    to {
+      transform: translateY(calc(-100% - var(--gap)));
+    }
+  }
 
   /* Gentle pulse for the blurred color wash. */
   @keyframes glow-breathe {
@@ -297,7 +306,9 @@
   @media (prefers-reduced-motion: reduce) {
     .animate-glow-breathe,
     .animate-dither-drift-a,
-    .animate-dither-drift-b {
+    .animate-dither-drift-b,
+    .animate-marquee,
+    .animate-marquee-vertical {
       animation: none;
     }
   }

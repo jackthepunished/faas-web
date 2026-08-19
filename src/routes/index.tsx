@@ -1,10 +1,10 @@
 import { createFileRoute } from '@tanstack/react-router';
 import { MotionConfig } from 'framer-motion';
 import { Nav } from '@/components/landing/nav';
-import OriginkitHero from '@/components/originkit/hero-05';
-import OriginkitFeatures from '@/components/originkit/features-04';
+import { Hero } from '@/components/landing/hero';
+import { HowItWorks } from '@/components/landing/how-it-works';
 import { ComponentsGrid } from '@/components/landing/components-grid';
-import { CustomComponents } from '@/components/landing/custom-components';
+import { ApiFirst } from '@/components/landing/api-first';
 import { Pricing } from '@/components/landing/pricing';
 import { Footer } from '@/components/landing/footer';
 
@@ -21,10 +21,10 @@ function LandingPage() {
         </a>
         <Nav />
         <main id="main">
-          <OriginkitHero />
-          <OriginkitFeatures />
+          <Hero />
+          <HowItWorks />
           <ComponentsGrid />
-          <CustomComponents />
+          <ApiFirst />
           <Pricing />
         </main>
         <Footer />

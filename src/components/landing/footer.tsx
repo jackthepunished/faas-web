@@ -1,13 +1,11 @@
-import { useEffect, useRef, useState } from 'react';
 import { Link } from '@tanstack/react-router';
-import { ArrowRight, ArrowUpRight, Check, Copy, Wind } from 'lucide-react';
+import { ArrowRight, ArrowUpRight, Check, Wind } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { SweepLink } from '@/components/sweep-link';
+import { InstallCommand } from './install-command';
 import { Reveal } from './reveal';
 import { TextReveal } from './text-reveal';
-import { DitherFade } from './shaders/dither-fade';
-
-const INSTALL_COMMAND = 'brew install gregale';
+import { FloorGlow } from './floor-glow';
 
 const REPO = 'https://github.com/poyrazK/faas';
 
@@ -45,7 +43,7 @@ const LINK_GROUPS: { title: string; links: FooterLink[] }[] = [
   {
     title: 'Product',
     links: [
-      { label: 'How it works', href: '#deploy' },
+      { label: 'How it works', href: '#how' },
       { label: 'Pricing', href: '#pricing' },
       { label: 'Console', href: '/dashboard', route: '/dashboard' },
       { label: 'Start free', href: '/signup', route: '/signup' },
@@ -83,49 +81,6 @@ const LINK_GROUPS: { title: string; links: FooterLink[] }[] = [
 ];
 
 const TRUST_POINTS = ['No credit card', '1M invocations free', 'Under 350ms cold starts'];
-
-function CopyCommand() {
-  const [copied, setCopied] = useState(false);
-  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  useEffect(() => () => void (timer.current && clearTimeout(timer.current)), []);
-
-  const copy = async () => {
-    try {
-      await navigator.clipboard.writeText(INSTALL_COMMAND);
-      setCopied(true);
-      if (timer.current) clearTimeout(timer.current);
-      timer.current = setTimeout(() => setCopied(false), 1800);
-    } catch {
-      // Clipboard blocked (insecure context or denied permission) — leave the
-      // command visible so it can still be selected by hand.
-    }
-  };
-
-  return (
-    <button
-      type="button"
-      onClick={copy}
-      aria-label={`Copy install command: ${INSTALL_COMMAND}`}
-      className="group flex h-11 items-center gap-3 rounded-full border border-border bg-card/70 pl-5 pr-2 font-mono text-sm text-muted-foreground backdrop-blur-sm transition-all duration-200 hover:border-brand/40 hover:bg-card hover:text-foreground"
-    >
-      <span aria-hidden className="text-brand transition-colors">
-        $
-      </span>
-      <span className="tracking-tight">{INSTALL_COMMAND}</span>
-      <span
-        className={`flex h-7 w-7 items-center justify-center rounded-full transition-colors ${
-          copied ? 'bg-brand-muted' : 'bg-muted group-hover:bg-secondary'
-        }`}
-      >
-        {copied ? <Check className="h-3.5 w-3.5 text-brand" /> : <Copy className="h-3.5 w-3.5" />}
-      </span>
-      <span aria-live="polite" className="sr-only">
-        {copied ? 'Copied to clipboard' : ''}
-      </span>
-    </button>
-  );
-}
 
 const LINK_CLASS =
   'group inline-flex items-center gap-1 text-sm text-muted-foreground transition-colors hover:text-foreground';
@@ -186,18 +141,19 @@ function FooterAnchor({ link }: { link: FooterLink }) {
 export function Footer() {
   return (
     <footer className="relative overflow-hidden border-t border-border">
-      {/* Dissolve across the whole footer, clipped by its overflow. Densest
-          low, behind the wordmark, thinning upward toward the CTA. */}
-      <DitherFade className="inset-0" intensity={0.85} />
+      {/* The floor glow — Dia's footer gradient in the mint ramp. Anchored to
+          the very bottom and rising into view; the wordmark and bottom bar
+          sit in front of it, the CTA panel above it. */}
+      <FloorGlow blur={28} className="absolute inset-x-0 bottom-0 h-[56%] sm:h-[50%]" />
 
-      {/* Readability scrim: heaviest over the CTA and link bands, lifting
-          toward the base so the dissolve stays plainly visible there. */}
+      {/* Readability scrim over the CTA and link bands, clearing before the
+          glow's brightest band so the floor stays plainly lit. */}
       <div
         aria-hidden
         className="pointer-events-none absolute inset-0"
         style={{
           background:
-            'linear-gradient(to bottom, rgba(251,252,251,0.86) 0%, rgba(251,252,251,0.74) 42%, rgba(251,252,251,0.36) 72%, rgba(251,252,251,0.05) 100%)',
+            'linear-gradient(to bottom, color-mix(in srgb, var(--background) 92%, transparent) 0%, color-mix(in srgb, var(--background) 82%, transparent) 55%, color-mix(in srgb, var(--background) 40%, transparent) 74%, transparent 88%)',
         }}
       />
 
@@ -262,7 +218,7 @@ export function Footer() {
                   <ArrowRight className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-0.5" />
                 </SweepLink>
               </Button>
-              <CopyCommand />
+              <InstallCommand />
             </div>
 
             <ul className="relative mt-9 flex flex-wrap items-center justify-center gap-x-5 gap-y-2">

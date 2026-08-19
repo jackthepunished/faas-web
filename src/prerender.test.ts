@@ -14,7 +14,7 @@ const PAGES = [
   {
     route: '/',
     file: 'dist/index.html',
-    title: 'Gregale — Serverless cloud for humans and agents',
+    title: 'Gregale — Serverless on real microVMs',
   },
   { route: '/login', file: 'dist/login/index.html', title: 'Sign in · Gregale' },
   { route: '/signup', file: 'dist/signup/index.html', title: 'Create account · Gregale' },
