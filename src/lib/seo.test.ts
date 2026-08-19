@@ -11,7 +11,7 @@ const metaOf = (head: ReturnType<typeof pageHead>, key: string) =>
 
 describe('pageHead', () => {
   it('gives the untitled (landing) case the bare brand string', () => {
-    expect(titleOf(pageHead())).toBe('Gregale — Serverless cloud for humans and agents');
+    expect(titleOf(pageHead())).toBe('Gregale — Serverless on real microVMs');
   });
 
   it('suffixes the brand so the distinguishing half survives a narrow tab', () => {

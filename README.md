@@ -33,6 +33,7 @@ API_ORIGIN=http://localhost:8081 npm run dev
 | `npm run api:types`  | Regenerate API types from `api/openapi.yaml`        |
 | `npm run api:pull`   | Re-fetch the spec from upstream, then regenerate    |
 | `npm run docs:pull`  | Re-fetch the vendored docs from upstream            |
+| `npm run og`         | Re-render `public/og.png`, the social preview card  |
 | `npm run lint`       | ESLint                                              |
 | `npm run test`       | Vitest, once                                        |
 | `npm run test:watch` | Vitest in watch mode                                |
@@ -48,7 +49,6 @@ src/
   lib/api/         The API client: generated types, fetch wrapper, queries.
   components/
     landing/       Marketing page sections
-    originkit/     Vendored hero + features sections
     dashboard/     Console shell, nav, palette, tables, charts
     dither-kit/    The in-house chart library
     dotcut/        Canvas dithering engine for the landing visuals
@@ -180,7 +180,7 @@ There is one brand rendered in two polarities, both defined in `src/index.css`:
 
 - `:root` — the light **paper** surface: marketing, auth, 404.
 - `.console` — the dark surface, applied by `DashboardShell` (and by the
-  product shot embedded in the landing hero).
+  terminal session embedded in the landing hero).
 
 Every component is written in tokens (`bg-card`, `text-muted-foreground`,
 `var(--status-good)`), so **no component knows which polarity it is in**. That
