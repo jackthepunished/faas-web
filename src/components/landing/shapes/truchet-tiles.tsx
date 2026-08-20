@@ -209,7 +209,7 @@ export function TruchetTiles({ className = '' }: { className?: string }) {
       className={`pointer-events-none absolute inset-0 h-full w-full ${className}`}
     >
       {/* The rule set. */}
-      <g fill="none" stroke="var(--brand)" strokeOpacity={0.09} strokeWidth={1}>
+      <g fill="none" stroke="var(--brand)" strokeOpacity={0.11} strokeWidth={1}>
         {LATTICE.map((d, i) => (
           <path key={i} d={d} />
         ))}
@@ -219,7 +219,7 @@ export function TruchetTiles({ className = '' }: { className?: string }) {
           paths read as being derived from the lattice rather than laid over
           it. Reduced motion keeps the paths and drops the drawing.
 
-          0.30 against the lattice's 0.09 is a ~3x step — enough that the eye
+          0.30 against the lattice's 0.11 is a ~3x step — enough that the eye
           follows a route across the section, light enough that the paragraph it
           crosses stays readable. Heavier weights were tried and start eating
           the body copy; holding the routes off the text with a second mask was
