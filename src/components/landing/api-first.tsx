@@ -2,7 +2,7 @@ import { ArrowUpRight } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { Reveal } from './reveal';
 import { TextReveal } from './text-reveal';
-import { TruchetTiles } from './shapes/truchet-tiles';
+import { FlowLines } from './shapes/flow-lines';
 
 /**
  * The API, as the product.
@@ -78,11 +78,11 @@ function Mk({ k, quiet, children }: { k: string; quiet?: boolean; children: Reac
 export function ApiFirst() {
   return (
     <section id="api" className="relative scroll-mt-24 overflow-hidden border-t border-border">
-      {/* Truchet tiles: one small rule set that can never produce an invalid
-          join — a fair picture of an API whose every response has the same
-          shape. The mask is narrower than the section so the lattice lives in
-          the gutter between the columns instead of smudging under the copy;
-          the routes it traces need clear ground to read as routes. */}
+      {/* Flow lines: evenly spaced streamlines of one wind field — the
+          gregale itself, blowing through the section. Every line obeys the
+          same spacing rule and none may cross, which is a fair picture of an
+          API whose every response has the same shape. The mask keeps the
+          field densest in the gutter and off the copy. */}
       <div
         className="pointer-events-none absolute inset-0"
         style={{
@@ -90,7 +90,7 @@ export function ApiFirst() {
           maskImage: 'radial-gradient(56% 86% at 52% 50%, black, transparent 76%)',
         }}
       >
-        <TruchetTiles />
+        <FlowLines />
       </div>
 
       <div className="relative mx-auto grid max-w-6xl items-start gap-12 px-4 py-24 sm:px-6 lg:grid-cols-2">
