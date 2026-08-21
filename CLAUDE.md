@@ -47,6 +47,14 @@ should not add to that count, and does not need to reduce it.
   imports it. It is the sanctioned way to see populated console states while
   `apid` is down — the "no fixture data" rule above is about `src/`, and still
   holds. An unmocked path answers `404 not_mocked` and logs to the dev server.
+  `MOCK_EMPTY=1` boots the same account with nothing in it, and `MOCK_LATENCY`
+  slows responses — between them every read state can be seen on demand.
+- **Loading, empty, error, and unreachable are four different states.** Get the
+  precedence from `queryPhase()` in `dashboard/primitives.tsx` rather than
+  writing the ternary again, and never pass a _disabled_ query's `isPending` as
+  `loading` — TanStack reports a query that never ran as pending forever, which
+  is a spinner nothing resolves. Per-app pages gate on `<AppScope>` for exactly
+  this reason.
 - **Logs are SSE, not JSON.** They use `EventSource` in `lib/api/logs.ts`, not
   the `openapi-fetch` client and not TanStack Query.
 - **`content/docs/*.md` is vendored**, pulled by `npm run docs:pull` from

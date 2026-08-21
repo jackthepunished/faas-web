@@ -478,7 +478,9 @@ export function mockApi(): Plugin {
     name: 'gregale-mock-api',
     apply: 'serve',
     configureServer(server) {
-      server.config.logger.info('  ➜  mock api: serving /v1/* from mock/ — no backend needed');
+      server.config.logger.info(
+        `  ➜  mock api: serving /v1/* from mock/ — no backend needed${db.EMPTY ? ' (empty workspace)' : ''}`
+      );
       server.middlewares.use((req, res, next) => {
         const url = new URL(req.url ?? '/', 'http://localhost');
         const method = req.method ?? 'GET';

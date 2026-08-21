@@ -803,3 +803,45 @@ export function logLine(app: App): string {
   const status = rand() < 0.94 ? 200 : pick([201, 204, 400, 404, 500]);
   return `${ts} INFO  ${app.slug} ${pick(['GET', 'GET', 'POST', 'PUT'])} ${pick(LOG_PATHS)} ${status} ${int(3, 240)}ms`;
 }
+
+/* --- Empty workspace --------------------------------------------------------
+   `MOCK_EMPTY=1` boots the same account with nothing in it, which is the
+   state a real first sign-in lands on and the one the console has always been
+   hardest to see. Built first and cleared afterwards rather than branched at
+   every seed: the fixtures reference each other, and half of them would have
+   to grow a "unless empty" case.
+   ---------------------------------------------------------------------------- */
+
+export const EMPTY = process.env.MOCK_EMPTY === '1';
+
+if (EMPTY) {
+  for (const list of [
+    apps,
+    deployments,
+    builds,
+    domains,
+    crons,
+    keys,
+    edgeRules,
+    invocations,
+    instances,
+    audit,
+    storage,
+    invoices,
+    invitations,
+  ] as { length: number }[]) {
+    list.length = 0;
+  }
+  for (const map of [secrets, env, upstreams, alerts, webhooks]) map.clear();
+  account.app_count = 0;
+  account.usage_gb_hours = 0;
+  Object.assign(usage, {
+    used_gb_hours: 0,
+    overage_gb_hours: 0,
+    overage_cents: 0,
+    used_cpu_hours: 0,
+    used_egress_gb: 0,
+    used_ingress_gb: 0,
+    cold_boots: 0,
+  });
+}
