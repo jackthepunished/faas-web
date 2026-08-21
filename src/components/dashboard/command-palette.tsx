@@ -2,7 +2,7 @@ import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
 import { useNavigate } from '@tanstack/react-router';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import { UTurnArrowLeft, GitBranch, Plus, Search } from 'iconoir-react';
-import { NAV_ITEMS, type NavIcon } from './nav-config';
+import { APP_TABS, NAV_ITEMS, SECTION_LABELS, type NavIcon } from './nav-config';
 import { EASE } from './motion';
 import { useData } from '@/lib/store';
 import { formatCompact } from '@/lib/mock-data';
@@ -66,6 +66,16 @@ export function CommandPalette({
         group: 'Go to',
         icon: item.icon,
         run: go(item.to),
+      })),
+      // The per-app resources left the sidebar for the app's own tabs, but
+      // they are still whole pages with a picker, and ⌘K is how you reach a
+      // page you know the name of.
+      ...APP_TABS.map((t) => ({
+        id: `nav-app-${t.segment}`,
+        label: SECTION_LABELS[t.segment] ?? t.tab,
+        group: 'Go to',
+        icon: Search,
+        run: go(`/dashboard/${t.segment}`),
       })),
       {
         id: 'act-new',

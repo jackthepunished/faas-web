@@ -151,9 +151,7 @@ function Breadcrumbs() {
   if (section === 'workflows' && detail) {
     trail.push({
       label:
-        detail === 'new'
-          ? 'New workflow'
-          : (workflows.find((w) => w.id === detail)?.name ?? 'Workflow'),
+        detail === 'new' ? 'New app' : (workflows.find((w) => w.id === detail)?.name ?? 'Workflow'),
     });
   }
 
