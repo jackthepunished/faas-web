@@ -56,6 +56,20 @@ export class ApiError extends Error {
   }
 
   /**
+   * True when nothing coherent came back — the box is down, a proxy answered
+   * for it, or the deploy is mid-restart.
+   *
+   * The tell is a synthesised code: `apid` answers every error it authors with
+   * problem+json carrying a real `code`, so a `http_5xx` code means the body
+   * was unparseable and no part of the API actually spoke. Worth separating
+   * from a genuine server-side failure, because the two need different words
+   * and only one of them is the user's problem.
+   */
+  get isUnreachable(): boolean {
+    return this.status >= 500 && this.code.startsWith('http_');
+  }
+
+  /**
    * A 402 carries a link to whichever billing provider the box runs on, so the
    * UI can send the customer straight there instead of to a dead end.
    */
@@ -89,7 +103,14 @@ export async function toApiError(response: Response, parsed?: unknown): Promise<
       response.status,
       code,
       response.statusText || 'Request failed',
-      response.status === 429 ? 'Too many attempts. Wait a minute and try again.' : undefined
+      response.status === 429
+        ? 'Too many attempts. Wait a minute and try again.'
+        : response.status >= 500
+          ? // Otherwise this surfaces as the gateway's own "Internal Server
+            // Error", which reads as *your app* broke rather than the API
+            // being unavailable.
+            'Could not reach the API. It may be restarting.'
+          : undefined
     )
   );
 }

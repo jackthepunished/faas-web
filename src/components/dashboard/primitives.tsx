@@ -4,12 +4,13 @@ import {
   AlertTriangle,
   CheckCircle2,
   CircleDashed,
+  CloudOff,
   Loader2,
   TrendingDown,
   TrendingUp,
 } from 'lucide-react';
 import type { LogLevel, RunState } from '@/lib/mock-data';
-import { errorMessage } from '@/lib/api/errors';
+import { ApiError, errorMessage } from '@/lib/api/errors';
 import { Sparkline } from './charts';
 import {
   DitherButton,
@@ -84,6 +85,7 @@ export function LevelTag({ level }: { level: LogLevel }) {
 export function StatTile({
   label,
   value,
+  state = 'ready',
   unit,
   delta,
   deltaGood = true,
@@ -92,7 +94,15 @@ export function StatTile({
   tone,
 }: {
   label: string;
-  value: string;
+  value?: string;
+  /**
+   * Whether the figure is known.
+   *
+   * A tile fed straight from a query renders `0` for a failed read, which is a
+   * number the server never confirmed — the one thing a console must not do.
+   * `unavailable` says so instead, and `loading` holds the space.
+   */
+  state?: 'ready' | 'loading' | 'unavailable';
   unit?: string;
   delta?: number;
   /** Whether a rising delta is a good thing (invocations) or bad (errors). */
@@ -113,12 +123,23 @@ export function StatTile({
 
       <div className="mt-3 flex items-end justify-between gap-4">
         <div>
-          <p className="text-3xl leading-none font-semibold tracking-tight">
-            {value}
-            {unit && <span className="ml-1 text-base text-muted-foreground">{unit}</span>}
-          </p>
+          {state === 'loading' ? (
+            <Skeleton className="h-[30px] w-20" />
+          ) : state === 'unavailable' ? (
+            <p
+              className="text-3xl leading-none font-semibold tracking-tight text-muted-foreground"
+              title="The API did not answer, so this figure is unknown."
+            >
+              —<span className="sr-only">unavailable</span>
+            </p>
+          ) : (
+            <p className="text-3xl leading-none font-semibold tracking-tight">
+              {value}
+              {unit && <span className="ml-1 text-base text-muted-foreground">{unit}</span>}
+            </p>
+          )}
 
-          {delta !== undefined && (
+          {state === 'ready' && delta !== undefined && (
             <p
               className="mt-2 flex items-center gap-1 text-xs [font-variant-numeric:tabular-nums]"
               style={{ color: good ? 'var(--status-good)' : 'var(--status-critical)' }}
@@ -130,7 +151,8 @@ export function StatTile({
           )}
         </div>
 
-        {series &&
+        {state === 'ready' &&
+          series &&
           series.length > 1 &&
           (tone ? (
             <DitherSparkline
@@ -271,11 +293,89 @@ export function RangeSelector<T extends string>({
   );
 }
 
-export function EmptyState({ message }: { message: string }) {
+/* ------------------------------------------------------------------ *
+ * Read states
+ * ------------------------------------------------------------------ */
+
+/**
+ * The four ways a networked panel can be, in the order they must be checked.
+ *
+ * Precedence lives here and nowhere else: a failed read is not an empty list,
+ * and neither is a read still in flight. Collapsing them is how a broken
+ * console ends up looking like a working one with no data.
+ *
+ * **Never pass `loading` for a disabled query.** TanStack reports `isPending`
+ * for a query that is gated off and has therefore never run, so a page that
+ * forwards it renders a spinner nothing will ever resolve — which is exactly
+ * what the per-app pages did before `AppScope` gated them on having an app.
+ */
+export type QueryPhase = 'unreachable' | 'error' | 'loading' | 'empty' | 'ready';
+
+export function queryPhase({
+  error,
+  loading,
+  isEmpty,
+}: {
+  error?: unknown;
+  loading?: boolean;
+  isEmpty?: boolean;
+}): QueryPhase {
+  if (error) return error instanceof ApiError && error.isUnreachable ? 'unreachable' : 'error';
+  if (loading) return 'loading';
+  return isEmpty ? 'empty' : 'ready';
+}
+
+/** A grey bar standing in for text that has not arrived. */
+export function Skeleton({ className }: { className?: string }) {
   return (
-    <div className="flex flex-col items-center justify-center gap-2 rounded-lg border border-dashed border-border px-6 py-14 text-center">
+    <span
+      aria-hidden
+      className={cn('block rounded bg-muted-foreground/15 motion-safe:animate-pulse', className)}
+    />
+  );
+}
+
+export function EmptyState({
+  message,
+  action,
+}: {
+  message: string;
+  /** A way out of the empty state — usually "create the first one". */
+  action?: ReactNode;
+}) {
+  return (
+    <div className="flex flex-col items-center justify-center gap-3 rounded-lg border border-dashed border-border px-6 py-14 text-center">
       <CircleDashed className="h-5 w-5 text-muted-foreground" />
       <p className="text-sm text-muted-foreground">{message}</p>
+      {action}
+    </div>
+  );
+}
+
+/**
+ * Nothing answered. Deliberately quieter than `ErrorState` — an unreachable
+ * API is an outage to wait out, not a fault the reader can act on, and
+ * painting it red on every panel of every page reads as catastrophe.
+ */
+export function UnreachableState({ onRetry }: { onRetry?: () => void }) {
+  return (
+    <div
+      role="status"
+      className="flex flex-col items-center justify-center gap-3 rounded-lg border border-dashed border-border px-6 py-14 text-center"
+    >
+      <CloudOff className="h-5 w-5 text-muted-foreground" />
+      <p className="max-w-sm text-sm text-muted-foreground">
+        Could not reach the API. Nothing is shown rather than something stale.
+      </p>
+      {onRetry && (
+        <button
+          type="button"
+          onClick={onRetry}
+          className="text-xs text-brand transition-colors hover:text-brand-hover"
+        >
+          Try again
+        </button>
+      )}
     </div>
   );
 }
