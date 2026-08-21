@@ -49,6 +49,12 @@ should not add to that count, and does not need to reduce it.
   holds. An unmocked path answers `404 not_mocked` and logs to the dev server.
   `MOCK_EMPTY=1` boots the same account with nothing in it, and `MOCK_LATENCY`
   slows responses — between them every read state can be seen on demand.
+- **`npm run tour` walks the console and fails on what a unit test cannot see** —
+  an error boundary, a spinner nothing resolves, a path the mock does not
+  answer, a page that threw. Point it at a running dev server
+  (`BASE_URL=http://localhost:3000`), optionally with `SHOTS=<dir>` for
+  screenshots. Playwright is deliberately not a dependency — the script prints
+  the one-line install when it is missing.
 - **Loading, empty, error, and unreachable are four different states.** Get the
   precedence from `queryPhase()` in `dashboard/primitives.tsx` rather than
   writing the ternary again, and never pass a _disabled_ query's `isPending` as
