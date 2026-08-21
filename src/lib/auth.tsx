@@ -8,7 +8,7 @@ import {
   useState,
   type ReactNode,
 } from 'react';
-import { api, setUnauthorizedHandler, unwrap } from './api/client';
+import { api, csrfToken, setUnauthorizedHandler, unwrap } from './api/client';
 import type { components } from './api/schema';
 
 /**
@@ -229,13 +229,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
    * The server call is best-effort for the same reason — a failed logout leaves
    * a cookie the server expires on its own, and refusing to sign someone out
    * because the network blipped is the worse failure.
+   *
+   * Logout is a CSRF-checked action: the server wants the `faas_csrf` cookie
+   * echoed back, via a `csrf_token` body field or the `X-CSRF-Token` header.
+   * The generated schema declares no body for this route, so the header is the
+   * form that typechecks. Without it the server answers 400 `csrf_mismatch`
+   * and the session cookie silently stays valid for its full seven days.
    */
   const signOut = useCallback(async () => {
     setSession(null);
     try {
-      await unwrap(api.POST('/v1/auth/logout', {}));
-    } catch {
-      // Intentionally ignored — see above.
+      await unwrap(api.POST('/v1/auth/logout', { headers: { 'X-CSRF-Token': csrfToken() } }));
+    } catch (err) {
+      // Best-effort — see above. Loud in dev so a rejected logout is not
+      // mistaken for a successful one.
+      if (import.meta.env.DEV) console.warn('Sign-out was not acknowledged by the server:', err);
     }
   }, [setSession]);
 
