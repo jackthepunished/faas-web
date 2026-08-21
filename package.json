@@ -11,6 +11,7 @@
     "api:types": "openapi-typescript api/openapi.yaml -o src/lib/api/schema.d.ts",
     "api:pull": "curl -fsSL https://raw.githubusercontent.com/poyrazK/faas/main/api/openapi.yaml -o api/openapi.yaml && npm run api:types",
     "docs:pull": "node scripts/pull-docs.mjs",
+    "og": "node scripts/og-image.mjs",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "format": "prettier --write \"**/*.{ts,tsx,css,json,md}\"",
@@ -29,6 +30,7 @@
     "d3-shape": "^3.2.0",
     "framer-motion": "^13.1.0",
     "glimm": "^0.3.0",
+    "iconoir-react": "^7.12.1",
     "lucide-react": "^0.539.0",
     "motion": "^13.1.0",
     "openapi-fetch": "^0.17.0",
@@ -40,6 +42,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
+    "@resvg/resvg-js": "^2.6.2",
     "@tailwindcss/vite": "^4.1.11",
     "@tanstack/router-plugin": "^1.130.2",
     "@testing-library/jest-dom": "^7.0.1",
