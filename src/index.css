@@ -399,26 +399,6 @@
     }
   }
 
-  /* Brand mark — the Wind glyph's disc. Was four copies of a white/10 border
-     over a white/10 gradient, which only exists on a dark ground. Now one
-     class, expressed in tokens, so it inverts with the surface. */
-  .brand-mark {
-    display: flex;
-    height: 1.75rem;
-    width: 1.75rem;
-    flex-shrink: 0;
-    align-items: center;
-    justify-content: center;
-    border-radius: 9999px;
-    border: 1px solid color-mix(in oklab, var(--brand) 22%, transparent);
-    background-image: linear-gradient(
-      to bottom,
-      color-mix(in oklab, var(--brand) 14%, transparent),
-      transparent
-    );
-    color: var(--brand);
-  }
-
   /* Route-pending dots. Opacity only — no transform — so the three dots hold
      their baseline and read as a pulse rather than a bounce. Reduced motion
      is covered by the `[class*='animate-']` rule above only for animate-*
