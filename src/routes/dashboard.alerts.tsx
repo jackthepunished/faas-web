@@ -3,7 +3,7 @@ import { createFileRoute } from '@tanstack/react-router';
 import { Trash2 } from 'lucide-react';
 import { PageHeader } from '@/components/dashboard/primitives';
 import { Pill, ResourceTable, type Column } from '@/components/dashboard/resource-table';
-import { AppSelect, useSelectedApp } from '@/components/dashboard/app-select';
+import { AppScope, AppSelect, useSelectedApp } from '@/components/dashboard/app-select';
 import { useToast } from '@/components/ui/toast';
 import { useAlerts, useDeleteAlert } from '@/lib/api/queries';
 import { errorMessage } from '@/lib/api/errors';
@@ -36,7 +36,8 @@ const COMPARISON: Record<string, string> = { gt: '>', gte: '≥', lt: '<', lte: 
 
 function AlertsPage() {
   const { toast } = useToast();
-  const { slug, select, apps, loadingApps } = useSelectedApp();
+  const appState = useSelectedApp();
+  const { slug, select, apps } = appState;
   const { data, isPending, error, refetch } = useAlerts(slug);
   const deleteAlert = useDeleteAlert(slug);
 
@@ -116,18 +117,21 @@ function AlertsPage() {
         description="Threshold rules on your app metrics. A breach POSTs a signed payload to the rule's webhook."
         actions={<AppSelect slug={slug} onSelect={select} apps={apps} />}
       />
-      <ResourceTable
-        rows={rows}
-        columns={columns}
-        initialSort={{ key: 'name', dir: 'asc' }}
-        searchKeys={['name', 'condition']}
-        searchPlaceholder="Filter by rule name…"
-        emptyMessage={slug ? `No alert rules for ${slug}.` : 'Create an app first.'}
-        minWidth="min-w-[880px]"
-        loading={loadingApps || isPending}
-        error={error}
-        onRetry={() => void refetch()}
-      />
+
+      <AppScope state={appState} resource="alert rules">
+        <ResourceTable
+          rows={rows}
+          columns={columns}
+          initialSort={{ key: 'name', dir: 'asc' }}
+          searchKeys={['name', 'condition']}
+          searchPlaceholder="Filter by rule name…"
+          emptyMessage={`No alert rules for ${slug}.`}
+          minWidth="min-w-[880px]"
+          loading={isPending}
+          error={error}
+          onRetry={() => void refetch()}
+        />
+      </AppScope>
     </div>
   );
 }

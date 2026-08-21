@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import { createFileRoute } from '@tanstack/react-router';
 import { PageHeader, Panel, StatTile } from '@/components/dashboard/primitives';
 import { ResourceTable, type Column } from '@/components/dashboard/resource-table';
-import { AppSelect, useSelectedApp } from '@/components/dashboard/app-select';
+import { AppScope, AppSelect, useSelectedApp } from '@/components/dashboard/app-select';
 import { useDeadLetter, useQueuePeek, useQueueState } from '@/lib/api/queries';
 import { consoleHead } from '@/lib/seo';
 
@@ -42,7 +42,8 @@ function formatAge(seconds: number | null | undefined): string {
 }
 
 function QueuesPage() {
-  const { slug, select, apps, loadingApps } = useSelectedApp();
+  const appState = useSelectedApp();
+  const { slug, select, apps } = appState;
   const state = useQueueState(slug);
   const peek = useQueuePeek(slug);
   const dlq = useDeadLetter(slug);
@@ -116,39 +117,41 @@ function QueuesPage() {
         actions={<AppSelect slug={slug} onSelect={select} apps={apps} />}
       />
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <StatTile label="Depth" value={String(state.data?.depth ?? '—')} />
-        <StatTile label="In flight" value={String(state.data?.in_flight ?? '—')} />
-        <StatTile
-          label="Oldest pending"
-          value={formatAge(state.data?.oldest_pending_age_seconds)}
-        />
-        <StatTile label="Plan cap" value={String(state.data?.plan_cap ?? '—')} />
-      </div>
+      <AppScope state={appState} resource="queue jobs">
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          <StatTile label="Depth" value={String(state.data?.depth ?? '—')} />
+          <StatTile label="In flight" value={String(state.data?.in_flight ?? '—')} />
+          <StatTile
+            label="Oldest pending"
+            value={formatAge(state.data?.oldest_pending_age_seconds)}
+          />
+          <StatTile label="Plan cap" value={String(state.data?.plan_cap ?? '—')} />
+        </div>
 
-      <Panel title="Pending">
-        <ResourceTable
-          rows={pending}
-          columns={pendingColumns}
-          emptyMessage={slug ? 'The queue is empty.' : 'Create an app first.'}
-          minWidth="min-w-[600px]"
-          loading={loadingApps || peek.isPending}
-          error={peek.error}
-          onRetry={() => void peek.refetch()}
-        />
-      </Panel>
+        <Panel title="Pending">
+          <ResourceTable
+            rows={pending}
+            columns={pendingColumns}
+            emptyMessage={slug ? 'The queue is empty.' : 'Create an app first.'}
+            minWidth="min-w-[600px]"
+            loading={peek.isPending}
+            error={peek.error}
+            onRetry={() => void peek.refetch()}
+          />
+        </Panel>
 
-      <Panel title="Dead letter">
-        <ResourceTable
-          rows={dead}
-          columns={deadColumns}
-          emptyMessage="Nothing has been dead-lettered."
-          minWidth="min-w-[600px]"
-          loading={loadingApps || dlq.isPending}
-          error={dlq.error}
-          onRetry={() => void dlq.refetch()}
-        />
-      </Panel>
+        <Panel title="Dead letter">
+          <ResourceTable
+            rows={dead}
+            columns={deadColumns}
+            emptyMessage="Nothing has been dead-lettered."
+            minWidth="min-w-[600px]"
+            loading={dlq.isPending}
+            error={dlq.error}
+            onRetry={() => void dlq.refetch()}
+          />
+        </Panel>
+      </AppScope>
     </div>
   );
 }

@@ -4,7 +4,7 @@ import { Plus, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { PageHeader, Panel } from '@/components/dashboard/primitives';
 import { ResourceTable, type Column } from '@/components/dashboard/resource-table';
-import { AppSelect, useSelectedApp } from '@/components/dashboard/app-select';
+import { AppScope, AppSelect, useSelectedApp } from '@/components/dashboard/app-select';
 import { useToast } from '@/components/ui/toast';
 import { useAppEnv, useDeleteEnv, useSetEnv } from '@/lib/api/queries';
 import { errorMessage } from '@/lib/api/errors';
@@ -41,7 +41,8 @@ function formatWhen(value: string | undefined): string {
 
 function EnvPage() {
   const { toast } = useToast();
-  const { slug, select, apps, loadingApps } = useSelectedApp();
+  const appState = useSelectedApp();
+  const { slug, select, apps } = appState;
   const { data, isPending, error, refetch } = useAppEnv(slug);
   const setEnv = useSetEnv(slug);
   const deleteEnv = useDeleteEnv(slug);
@@ -116,61 +117,68 @@ function EnvPage() {
         actions={<AppSelect slug={slug} onSelect={select} apps={apps} />}
       />
 
-      <Panel title="Set a variable">
-        <form
-          className="flex flex-wrap items-end gap-3 p-5"
-          onSubmit={(e) => {
-            e.preventDefault();
-            if (!key.trim() || setEnv.isPending) return;
-            void setEnv
-              .mutateAsync({ key: key.trim(), value })
-              .then(() => {
-                setKey('');
-                setValue('');
-                toast({ kind: 'success', title: 'Variable saved' });
-              })
-              .catch((err: unknown) =>
-                toast({ kind: 'error', title: 'Could not save', description: errorMessage(err) })
-              );
-          }}
-        >
-          <label className="flex min-w-44 flex-1 flex-col gap-1.5">
-            <span className="label-mono text-muted-foreground">Name</span>
-            <input
-              value={key}
-              onChange={(e) => setKey(e.target.value)}
-              placeholder="LOG_LEVEL"
-              className="h-10 rounded-lg border border-border bg-background px-3 font-mono text-sm outline-none focus:border-brand"
-            />
-          </label>
-          <label className="flex min-w-56 flex-[2] flex-col gap-1.5">
-            <span className="label-mono text-muted-foreground">Value</span>
-            <input
-              value={value}
-              onChange={(e) => setValue(e.target.value)}
-              placeholder="debug"
-              className="h-10 rounded-lg border border-border bg-background px-3 font-mono text-sm outline-none focus:border-brand"
-            />
-          </label>
-          <Button type="submit" size="sm" className="gap-1.5" disabled={setEnv.isPending || !slug}>
-            <Plus className="h-3.5 w-3.5" />
-            {setEnv.isPending ? 'Saving…' : 'Save variable'}
-          </Button>
-        </form>
-      </Panel>
+      <AppScope state={appState} resource="environment variables">
+        <Panel title="Set a variable">
+          <form
+            className="flex flex-wrap items-end gap-3 p-5"
+            onSubmit={(e) => {
+              e.preventDefault();
+              if (!key.trim() || setEnv.isPending) return;
+              void setEnv
+                .mutateAsync({ key: key.trim(), value })
+                .then(() => {
+                  setKey('');
+                  setValue('');
+                  toast({ kind: 'success', title: 'Variable saved' });
+                })
+                .catch((err: unknown) =>
+                  toast({ kind: 'error', title: 'Could not save', description: errorMessage(err) })
+                );
+            }}
+          >
+            <label className="flex min-w-44 flex-1 flex-col gap-1.5">
+              <span className="label-mono text-muted-foreground">Name</span>
+              <input
+                value={key}
+                onChange={(e) => setKey(e.target.value)}
+                placeholder="LOG_LEVEL"
+                className="h-10 rounded-lg border border-border bg-background px-3 font-mono text-sm outline-none focus:border-brand"
+              />
+            </label>
+            <label className="flex min-w-56 flex-[2] flex-col gap-1.5">
+              <span className="label-mono text-muted-foreground">Value</span>
+              <input
+                value={value}
+                onChange={(e) => setValue(e.target.value)}
+                placeholder="debug"
+                className="h-10 rounded-lg border border-border bg-background px-3 font-mono text-sm outline-none focus:border-brand"
+              />
+            </label>
+            <Button
+              type="submit"
+              size="sm"
+              className="gap-1.5"
+              disabled={setEnv.isPending || !slug}
+            >
+              <Plus className="h-3.5 w-3.5" />
+              {setEnv.isPending ? 'Saving…' : 'Save variable'}
+            </Button>
+          </form>
+        </Panel>
 
-      <ResourceTable
-        rows={rows}
-        columns={columns}
-        initialSort={{ key: 'key', dir: 'asc' }}
-        searchKeys={['key', 'scope']}
-        searchPlaceholder="Filter by name…"
-        emptyMessage={slug ? `No variables set for ${slug}.` : 'Create an app first.'}
-        minWidth="min-w-[720px]"
-        loading={loadingApps || isPending}
-        error={error}
-        onRetry={() => void refetch()}
-      />
+        <ResourceTable
+          rows={rows}
+          columns={columns}
+          initialSort={{ key: 'key', dir: 'asc' }}
+          searchKeys={['key', 'scope']}
+          searchPlaceholder="Filter by name…"
+          emptyMessage={`No variables set for ${slug}.`}
+          minWidth="min-w-[720px]"
+          loading={isPending}
+          error={error}
+          onRetry={() => void refetch()}
+        />
+      </AppScope>
     </div>
   );
 }

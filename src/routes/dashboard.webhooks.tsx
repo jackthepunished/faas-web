@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import { createFileRoute } from '@tanstack/react-router';
 import { PageHeader } from '@/components/dashboard/primitives';
 import { Pill, ResourceTable, type Column } from '@/components/dashboard/resource-table';
-import { AppSelect, useSelectedApp } from '@/components/dashboard/app-select';
+import { AppScope, AppSelect, useSelectedApp } from '@/components/dashboard/app-select';
 import { useWebhooks } from '@/lib/api/queries';
 import { consoleHead } from '@/lib/seo';
 
@@ -30,7 +30,8 @@ interface WebhookRow {
 }
 
 function WebhooksPage() {
-  const { slug, select, apps, loadingApps } = useSelectedApp();
+  const appState = useSelectedApp();
+  const { slug, select, apps } = appState;
   const { data, isPending, error, refetch } = useWebhooks(slug);
 
   const rows = useMemo<WebhookRow[]>(
@@ -82,18 +83,21 @@ function WebhooksPage() {
         description="Signed outbound deliveries. Failed attempts back off and dead-letter after seven tries."
         actions={<AppSelect slug={slug} onSelect={select} apps={apps} />}
       />
-      <ResourceTable
-        rows={rows}
-        columns={columns}
-        initialSort={{ key: 'target', dir: 'asc' }}
-        searchKeys={['target', 'events']}
-        searchPlaceholder="Filter by target URL…"
-        emptyMessage={slug ? `No webhooks for ${slug}.` : 'Create an app first.'}
-        minWidth="min-w-[900px]"
-        loading={loadingApps || isPending}
-        error={error}
-        onRetry={() => void refetch()}
-      />
+
+      <AppScope state={appState} resource="webhooks">
+        <ResourceTable
+          rows={rows}
+          columns={columns}
+          initialSort={{ key: 'target', dir: 'asc' }}
+          searchKeys={['target', 'events']}
+          searchPlaceholder="Filter by target URL…"
+          emptyMessage={`No webhooks for ${slug}.`}
+          minWidth="min-w-[900px]"
+          loading={isPending}
+          error={error}
+          onRetry={() => void refetch()}
+        />
+      </AppScope>
     </div>
   );
 }

@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import { createFileRoute } from '@tanstack/react-router';
 import { PageHeader } from '@/components/dashboard/primitives';
 import { Pill, ResourceTable, type Column } from '@/components/dashboard/resource-table';
-import { AppSelect, useSelectedApp } from '@/components/dashboard/app-select';
+import { AppScope, AppSelect, useSelectedApp } from '@/components/dashboard/app-select';
 import { useUpstreams } from '@/lib/api/queries';
 import { consoleHead } from '@/lib/seo';
 
@@ -34,7 +34,8 @@ interface UpstreamRow {
 }
 
 function UpstreamsPage() {
-  const { slug, select, apps, loadingApps } = useSelectedApp();
+  const appState = useSelectedApp();
+  const { slug, select, apps } = appState;
   const { data, isPending, error, refetch } = useUpstreams(slug);
 
   const rows = useMemo<UpstreamRow[]>(
@@ -93,18 +94,21 @@ function UpstreamsPage() {
         description="External services this app reaches. Mostly discovered from egress; hostnames are hashed, never stored in the clear."
         actions={<AppSelect slug={slug} onSelect={select} apps={apps} />}
       />
-      <ResourceTable
-        rows={rows}
-        columns={columns}
-        initialSort={{ key: 'kind', dir: 'asc' }}
-        searchKeys={['kind', 'scope']}
-        searchPlaceholder="Filter by kind…"
-        emptyMessage={slug ? `No upstreams observed for ${slug}.` : 'Create an app first.'}
-        minWidth="min-w-[820px]"
-        loading={loadingApps || isPending}
-        error={error}
-        onRetry={() => void refetch()}
-      />
+
+      <AppScope state={appState} resource="upstreams">
+        <ResourceTable
+          rows={rows}
+          columns={columns}
+          initialSort={{ key: 'kind', dir: 'asc' }}
+          searchKeys={['kind', 'scope']}
+          searchPlaceholder="Filter by kind…"
+          emptyMessage={`No upstreams observed for ${slug}.`}
+          minWidth="min-w-[820px]"
+          loading={isPending}
+          error={error}
+          onRetry={() => void refetch()}
+        />
+      </AppScope>
     </div>
   );
 }

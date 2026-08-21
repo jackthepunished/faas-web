@@ -3,7 +3,7 @@ import { createFileRoute } from '@tanstack/react-router';
 import { AlertTriangle } from 'lucide-react';
 import { PageHeader } from '@/components/dashboard/primitives';
 import { ResourceTable, type Column } from '@/components/dashboard/resource-table';
-import { AppSelect, useSelectedApp } from '@/components/dashboard/app-select';
+import { AppScope, AppSelect, useSelectedApp } from '@/components/dashboard/app-select';
 import { useAppRoutes } from '@/lib/api/queries';
 import { consoleHead } from '@/lib/seo';
 
@@ -29,7 +29,8 @@ interface RouteRow {
 }
 
 function ApisPage() {
-  const { slug, select, apps, loadingApps } = useSelectedApp();
+  const appState = useSelectedApp();
+  const { slug, select, apps } = appState;
   const { data, isPending, error, refetch } = useAppRoutes(slug);
 
   const rows = useMemo<RouteRow[]>(
@@ -55,45 +56,47 @@ function ApisPage() {
         actions={<AppSelect slug={slug} onSelect={select} apps={apps} />}
       />
 
-      {unavailable && (
-        <p
-          role="status"
-          className="flex items-start gap-2 rounded-lg border px-3 py-2 text-xs"
-          style={{ borderColor: 'color-mix(in oklab, var(--status-warning) 40%, transparent)' }}
-        >
-          <AlertTriangle
-            className="mt-px h-3.5 w-3.5 shrink-0"
-            style={{ color: 'var(--status-warning)' }}
-          />
-          Per-route metrics are not enabled for this app, so no routes can be listed. This is a paid
-          plan feature.
-        </p>
-      )}
+      <AppScope state={appState} resource="routes">
+        {unavailable && (
+          <p
+            role="status"
+            className="flex items-start gap-2 rounded-lg border px-3 py-2 text-xs"
+            style={{ borderColor: 'color-mix(in oklab, var(--status-warning) 40%, transparent)' }}
+          >
+            <AlertTriangle
+              className="mt-px h-3.5 w-3.5 shrink-0"
+              style={{ color: 'var(--status-warning)' }}
+            />
+            Per-route metrics are not enabled for this app, so no routes can be listed. This is a
+            paid plan feature.
+          </p>
+        )}
 
-      {data?.cap_hit && (
-        <p className="text-xs text-muted-foreground">
-          The route list hit its cap — some low-traffic routes are not shown.
-        </p>
-      )}
+        {data?.cap_hit && (
+          <p className="text-xs text-muted-foreground">
+            The route list hit its cap — some low-traffic routes are not shown.
+          </p>
+        )}
 
-      <ResourceTable
-        rows={rows}
-        columns={columns}
-        initialSort={{ key: 'path', dir: 'asc' }}
-        searchKeys={['path']}
-        searchPlaceholder="Filter by path…"
-        emptyMessage={
-          unavailable
-            ? 'Route metrics are disabled for this app.'
-            : slug
-              ? `No routes observed for ${slug} yet.`
-              : 'Create an app first.'
-        }
-        minWidth="min-w-[600px]"
-        loading={loadingApps || isPending}
-        error={error}
-        onRetry={() => void refetch()}
-      />
+        <ResourceTable
+          rows={rows}
+          columns={columns}
+          initialSort={{ key: 'path', dir: 'asc' }}
+          searchKeys={['path']}
+          searchPlaceholder="Filter by path…"
+          emptyMessage={
+            unavailable
+              ? 'Route metrics are disabled for this app.'
+              : slug
+                ? `No routes observed for ${slug} yet.`
+                : 'Create an app first.'
+          }
+          minWidth="min-w-[600px]"
+          loading={isPending}
+          error={error}
+          onRetry={() => void refetch()}
+        />
+      </AppScope>
     </div>
   );
 }
