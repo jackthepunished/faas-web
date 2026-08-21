@@ -5,6 +5,7 @@ import { PageHeader } from '@/components/dashboard/primitives';
 import { Pill, ResourceTable, type Column } from '@/components/dashboard/resource-table';
 import { AppScope, AppSelect, useSelectedApp } from '@/components/dashboard/app-select';
 import { useToast } from '@/components/ui/toast';
+import { useConfirm } from '@/components/ui/confirm';
 import { useAlerts, useDeleteAlert } from '@/lib/api/queries';
 import { errorMessage } from '@/lib/api/errors';
 import { consoleHead } from '@/lib/seo';
@@ -43,6 +44,7 @@ const COMPARISON: Record<string, string> = { gt: '>', gte: '≥', lt: '<', lte: 
  */
 export function AlertsBody({ slug }: { slug: string }) {
   const { toast } = useToast();
+  const confirm = useConfirm();
   const { data, isPending, error, refetch } = useAlerts(slug);
   const deleteAlert = useDeleteAlert(slug);
 
@@ -99,7 +101,17 @@ export function AlertsBody({ slug }: { slug: string }) {
         <button
           type="button"
           aria-label={`Delete rule ${a.name}`}
-          onClick={() => {
+          onClick={async () => {
+            if (
+              !(await confirm({
+                title: `Delete ${a.name}?`,
+                description:
+                  'The rule stops evaluating immediately and its webhook secret is discarded.',
+                confirmLabel: 'Delete rule',
+                destructive: true,
+              }))
+            )
+              return;
             void deleteAlert
               .mutateAsync(a.id)
               .then(() => toast({ kind: 'success', title: 'Rule deleted' }))

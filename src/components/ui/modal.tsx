@@ -1,7 +1,6 @@
 import { useEffect, useRef, type ReactNode } from 'react';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import { Xmark } from 'iconoir-react';
-import { Button } from './button';
 import { useFocusTrap } from '@/lib/use-focus-trap';
 import { EASE } from '@/components/dashboard/motion';
 
@@ -112,50 +111,5 @@ export function Modal({
         </div>
       )}
     </AnimatePresence>
-  );
-}
-
-/** Confirmation dialog for destructive or irreversible actions. */
-export function ConfirmDialog({
-  open,
-  onClose,
-  onConfirm,
-  title,
-  description,
-  confirmLabel = 'Confirm',
-  destructive = false,
-}: {
-  open: boolean;
-  onClose: () => void;
-  onConfirm: () => void;
-  title: string;
-  description: string;
-  confirmLabel?: string;
-  destructive?: boolean;
-}) {
-  return (
-    <Modal
-      open={open}
-      onClose={onClose}
-      title={title}
-      description={description}
-      footer={
-        <>
-          <Button variant="ghost" size="sm" onClick={onClose}>
-            Cancel
-          </Button>
-          <Button
-            variant={destructive ? 'destructive' : 'default'}
-            size="sm"
-            onClick={() => {
-              onConfirm();
-              onClose();
-            }}
-          >
-            {confirmLabel}
-          </Button>
-        </>
-      }
-    />
   );
 }

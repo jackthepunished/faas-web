@@ -16,6 +16,7 @@ import { formatCompact, formatMs, formatRelative } from '@/lib/mock-data';
 import { useAppMetrics, type MetricsRange } from '@/lib/api/queries';
 import { useData } from '@/lib/store';
 import { useToast } from '@/components/ui/toast';
+import { useConfirm } from '@/components/ui/confirm';
 import { errorMessage } from '@/lib/api/errors';
 import { cn } from '@/lib/utils';
 import { LogsBody } from './dashboard.logs';
@@ -88,6 +89,7 @@ function FunctionDetailPage() {
   const [range, setRange] = useState<MetricsRange>('24h');
   const { getWorkflow, deploymentsFor, redeploy, loading, error, refresh } = useData();
   const { toast } = useToast();
+  const confirm = useConfirm();
 
   const fn = getWorkflow(workflowId);
   // The route's `head` can only name the id, so the real name is applied here
@@ -152,7 +154,16 @@ function FunctionDetailPage() {
               size="sm"
               className="gap-1.5"
               disabled={isDeploying}
-              onClick={() => {
+              onClick={async () => {
+                if (
+                  !(await confirm({
+                    title: `Roll back ${fn.name}?`,
+                    description:
+                      'Traffic moves to the previous successful deployment. The current one stays available to roll forward to.',
+                    confirmLabel: 'Roll back',
+                  }))
+                )
+                  return;
                 // `POST /v1/apps/{slug}/rollback` — a real write, so the toast
                 // reports what happened rather than announcing it up front.
                 void redeploy(fn.id)

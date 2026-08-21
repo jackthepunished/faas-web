@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { PageHeader, Panel } from '@/components/dashboard/primitives';
 import { Pill, ResourceTable, type Column } from '@/components/dashboard/resource-table';
 import { useToast } from '@/components/ui/toast';
+import { useConfirm } from '@/components/ui/confirm';
 import { useApiKeys, useCreateApiKey, useDeleteApiKey, useRotateApiKey } from '@/lib/api/queries';
 import { errorMessage } from '@/lib/api/errors';
 import { consoleHead } from '@/lib/seo';
@@ -81,6 +82,7 @@ function PlaintextPanel({ value, onDismiss }: { value: string; onDismiss: () => 
 
 function KeysPage() {
   const { toast } = useToast();
+  const confirm = useConfirm();
   const { data, isPending, error, refetch } = useApiKeys();
   const createKey = useCreateApiKey();
   const deleteKey = useDeleteApiKey();
@@ -138,7 +140,16 @@ function KeysPage() {
           <button
             type="button"
             aria-label={`Rotate ${k.label}`}
-            onClick={() => {
+            onClick={async () => {
+              if (
+                !(await confirm({
+                  title: `Rotate ${k.label}?`,
+                  description:
+                    'A new key is minted and shown once. The current key keeps working for its grace window, then stops.',
+                  confirmLabel: 'Rotate key',
+                }))
+              )
+                return;
               void rotateKey
                 .mutateAsync(k.id)
                 .then((result) => {
@@ -164,7 +175,17 @@ function KeysPage() {
           <button
             type="button"
             aria-label={`Revoke ${k.label}`}
-            onClick={() => {
+            onClick={async () => {
+              if (
+                !(await confirm({
+                  title: `Revoke ${k.label}?`,
+                  description:
+                    'Anything using this key — CI, the CLI — fails on its next request. There is no grace window.',
+                  confirmLabel: 'Revoke key',
+                  destructive: true,
+                }))
+              )
+                return;
               void deleteKey
                 .mutateAsync(k.id)
                 .then(() => toast({ kind: 'success', title: 'Key revoked' }))

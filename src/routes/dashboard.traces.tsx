@@ -4,6 +4,7 @@ import { Refresh } from 'iconoir-react';
 import { PageHeader } from '@/components/dashboard/primitives';
 import { Pill, ResourceTable, type Column } from '@/components/dashboard/resource-table';
 import { useToast } from '@/components/ui/toast';
+import { useConfirm } from '@/components/ui/confirm';
 import { useApps, useInvocations, useReplayInvocation } from '@/lib/api/queries';
 import { slugIndex } from '@/lib/api/adapters';
 import { errorMessage } from '@/lib/api/errors';
@@ -54,6 +55,7 @@ function formatWhen(value: string | undefined): string {
 
 function InvocationsPage() {
   const { toast } = useToast();
+  const confirm = useConfirm();
   const { data, isPending, error, refetch } = useInvocations();
   const { data: apps } = useApps();
   const replay = useReplayInvocation();
@@ -124,7 +126,16 @@ function InvocationsPage() {
         <button
           type="button"
           aria-label={`Replay invocation ${i.id}`}
-          onClick={() => {
+          onClick={async () => {
+            if (
+              !(await confirm({
+                title: 'Replay this invocation?',
+                description:
+                  'It is re-issued to the app with the same payload. If the handler is not idempotent, that work happens twice.',
+                confirmLabel: 'Replay',
+              }))
+            )
+              return;
             void replay
               .mutateAsync(i.id)
               .then(() => toast({ kind: 'success', title: 'Replayed' }))

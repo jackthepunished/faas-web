@@ -4,6 +4,7 @@ import { Trash } from 'iconoir-react';
 import { PageHeader } from '@/components/dashboard/primitives';
 import { Pill, ResourceTable, type Column } from '@/components/dashboard/resource-table';
 import { useToast } from '@/components/ui/toast';
+import { useConfirm } from '@/components/ui/confirm';
 import { useApps, useDeleteEdgeRule, useEdgeRules } from '@/lib/api/queries';
 import { slugIndex } from '@/lib/api/adapters';
 import { errorMessage } from '@/lib/api/errors';
@@ -40,6 +41,7 @@ interface EdgeRuleRow {
 
 function EdgeRulesPage() {
   const { toast } = useToast();
+  const confirm = useConfirm();
   const { data, isPending, error, refetch } = useEdgeRules();
   const { data: apps } = useApps();
   const deleteRule = useDeleteEdgeRule();
@@ -107,7 +109,17 @@ function EdgeRulesPage() {
         <button
           type="button"
           aria-label={`Delete rule ${r.id}`}
-          onClick={() => {
+          onClick={async () => {
+            if (
+              !(await confirm({
+                title: 'Delete this edge rule?',
+                description:
+                  'It stops matching traffic immediately and cannot be restored — the console cannot recreate it.',
+                confirmLabel: 'Delete rule',
+                destructive: true,
+              }))
+            )
+              return;
             void deleteRule
               .mutateAsync(r.id)
               .then(() => toast({ kind: 'success', title: 'Rule deleted' }))

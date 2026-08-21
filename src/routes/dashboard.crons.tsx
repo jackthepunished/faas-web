@@ -4,6 +4,7 @@ import { Play, Trash } from 'iconoir-react';
 import { PageHeader } from '@/components/dashboard/primitives';
 import { Pill, ResourceTable, type Column } from '@/components/dashboard/resource-table';
 import { useToast } from '@/components/ui/toast';
+import { useConfirm } from '@/components/ui/confirm';
 import { useApps, useCrons, useDeleteCron, useRunCron } from '@/lib/api/queries';
 import { slugIndex } from '@/lib/api/adapters';
 import { errorMessage } from '@/lib/api/errors';
@@ -39,6 +40,7 @@ function formatWhen(value: string | null | undefined): string {
 
 function CronsPage() {
   const { toast } = useToast();
+  const confirm = useConfirm();
   const { data, isPending, error, refetch } = useCrons();
   const { data: apps } = useApps();
   const runCron = useRunCron();
@@ -115,7 +117,16 @@ function CronsPage() {
           <button
             type="button"
             aria-label={`Delete cron ${c.id}`}
-            onClick={() => {
+            onClick={async () => {
+              if (
+                !(await confirm({
+                  title: 'Delete this cron?',
+                  description: `${c.schedule} → ${c.path} stops firing. This cannot be undone.`,
+                  confirmLabel: 'Delete cron',
+                  destructive: true,
+                }))
+              )
+                return;
               void deleteCron
                 .mutateAsync(c.id)
                 .then(() => toast({ kind: 'success', title: 'Cron deleted' }))
