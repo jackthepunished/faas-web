@@ -1,11 +1,10 @@
 import { useRef, useState } from 'react';
 import { Link, createFileRoute, useNavigate } from '@tanstack/react-router';
-import { WarningTriangle, ArrowRight, RefreshDouble } from 'iconoir-react';
+import { WarningTriangle, ArrowRight } from 'iconoir-react';
 import { Button } from '@/components/ui/button';
-import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/components/ui/toast';
 import { PageHeader, Panel } from '@/components/dashboard/primitives';
-import { clearWorkspace, readWorkspace, useAuth } from '@/lib/auth';
+import { clearWorkspace, readWorkspace, saveWorkspace, useAuth } from '@/lib/auth';
 import { useFocusTrap } from '@/lib/use-focus-trap';
 import { consoleHead } from '@/lib/seo';
 
@@ -14,26 +13,32 @@ export const Route = createFileRoute('/dashboard/settings')({
   component: SettingsPage,
 });
 
-const TOGGLES = [
-  {
-    id: 'scale-to-zero',
-    label: 'Scale to zero',
-    description: 'Suspend microVMs to snapshot after 60s idle. Disable to keep instances warm.',
-    on: true,
-  },
-  {
-    id: 'deploy-alerts',
-    label: 'Deployment alerts',
-    description: 'Email the workspace when a deployment fails.',
-    on: true,
-  },
-  {
-    id: 'agent-access',
-    label: 'Agent API access',
-    description: 'Allow agents to propose deployments through the declarative API.',
-    on: false,
-  },
-];
+/**
+ * Where the settings people come here looking for actually live.
+ *
+ * This panel used to be three switches. None of them were wired to anything:
+ * `handleSave` slept 700ms and toasted "Settings saved" while the state stayed
+ * in the component and died on reload. Two of the three are real controls —
+ * they are just per-app, because that is where the API keeps them — and the
+ * third ("Agent API access") had no endpoint behind it at all.
+ */
+const ELSEWHERE: { label: string; description: string; to: '/dashboard/workflows'; cta: string }[] =
+  [
+    {
+      label: 'Scale to zero',
+      description:
+        'How long an app idles before it snapshots, and how many instances stay resident. Set per app, since a queue consumer and a public API want different answers.',
+      to: '/dashboard/workflows',
+      cta: 'Open an app',
+    },
+    {
+      label: 'Deployment alerts',
+      description:
+        'Threshold rules that POST to a webhook when an app breaches them. Set per app, on its Alerts tab.',
+      to: '/dashboard/workflows',
+      cta: 'Open an app',
+    },
+  ];
 
 /** Type-to-confirm dialog for the irreversible action. */
 function DeleteWorkspaceDialog({
@@ -113,19 +118,19 @@ function SettingsPage() {
   const { signOut } = useAuth();
   const navigate = useNavigate();
 
-  const [toggles, setToggles] = useState(() =>
-    Object.fromEntries(TOGGLES.map((t) => [t.id, t.on]))
-  );
   const [workspace, setWorkspace] = useState(readWorkspace);
-  const [region, setRegion] = useState('fra-metal-1');
-  const [saving, setSaving] = useState(false);
   const [showDelete, setShowDelete] = useState(false);
 
-  const handleSave = async () => {
-    setSaving(true);
-    await new Promise((r) => setTimeout(r, 700));
-    setSaving(false);
-    toast({ kind: 'success', title: 'Settings saved', description: `${workspace} · ${region}` });
+  // The workspace name is a label this console shows in its own chrome; the
+  // API has no account-name field to put it in. Stored where it is used, and
+  // described as what it is rather than dressed up as an account setting.
+  const handleSave = () => {
+    saveWorkspace(workspace);
+    toast({
+      kind: 'success',
+      title: 'Workspace name saved',
+      description: 'Stored in this browser. It labels the console, not the account.',
+    });
   };
 
   // Local reset only. Real account deletion is `DELETE /v1/account` — it stages
@@ -148,56 +153,50 @@ function SettingsPage() {
     <div className="flex flex-col gap-6">
       <PageHeader title="Settings" description="Workspace configuration and credentials." />
 
-      <Panel title="Workspace">
+      <Panel
+        title="Workspace"
+        description="The name this console shows in its own chrome. Stored in this browser — the API has no account name to sync it to."
+      >
         <div className="grid gap-5 sm:grid-cols-2">
           <label className="flex flex-col gap-1.5">
-            <span className="label-mono text-muted-foreground">Workspace name</span>
+            <span className="label-mono text-muted-foreground">Display name</span>
             <input
               value={workspace}
               onChange={(e) => setWorkspace(e.target.value)}
               className="h-9 rounded-md border border-border bg-background px-3 text-sm outline-none focus:border-brand/50"
             />
           </label>
-          <label className="flex flex-col gap-1.5">
-            <span className="label-mono text-muted-foreground">Default region</span>
-            <select
-              value={region}
-              onChange={(e) => setRegion(e.target.value)}
-              className="h-9 rounded-md border border-border bg-background px-3 text-sm outline-none focus:border-brand/50"
-            >
-              <option value="fra-metal-1">fra-metal-1</option>
-              <option value="iad-metal-1">iad-metal-1</option>
-              <option value="sin-metal-1">sin-metal-1</option>
-            </select>
-          </label>
         </div>
         <div className="mt-5 flex justify-end">
-          <Button size="sm" disabled={saving} onClick={handleSave} className="gap-1.5">
-            {saving && <RefreshDouble className="h-3.5 w-3.5 animate-spin" />}
-            {saving ? 'Saving…' : 'Save changes'}
+          <Button size="sm" onClick={handleSave}>
+            Save name
           </Button>
         </div>
       </Panel>
 
-      <Panel title="Runtime behavior">
+      <Panel
+        title="Runtime behaviour"
+        description="Set per app rather than per account — the API keeps these on the app."
+      >
         <ul className="flex flex-col divide-y divide-border">
-          {TOGGLES.map((t) => (
+          {ELSEWHERE.map((item) => (
             <li
-              key={t.id}
-              className="flex items-start justify-between gap-6 py-4 first:pt-0 last:pb-0"
+              key={item.label}
+              className="flex flex-wrap items-start justify-between gap-x-6 gap-y-2 py-4 first:pt-0 last:pb-0"
             >
               <div>
-                <p className="text-sm font-medium">{t.label}</p>
+                <p className="text-sm font-medium">{item.label}</p>
                 <p className="mt-1 max-w-lg text-xs leading-relaxed text-muted-foreground">
-                  {t.description}
+                  {item.description}
                 </p>
               </div>
-              <Switch
-                checked={toggles[t.id]}
-                onCheckedChange={(on) => setToggles((prev) => ({ ...prev, [t.id]: on }))}
-                aria-label={t.label}
-                className="mt-1 data-[state=checked]:bg-brand"
-              />
+              <Link
+                to={item.to}
+                className="inline-flex shrink-0 items-center gap-1.5 text-sm font-medium text-brand hover:underline"
+              >
+                {item.cta}
+                <ArrowRight className="h-3.5 w-3.5" />
+              </Link>
             </li>
           ))}
         </ul>
