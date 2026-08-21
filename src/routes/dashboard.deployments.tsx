@@ -17,7 +17,7 @@ const STATE_COLOR: Record<Deployment['state'], string> = {
 };
 
 function DeploymentsPage() {
-  const { deployments, getWorkflow } = useData();
+  const { deployments, getWorkflow, loading, error, refresh } = useData();
   const navigate = useNavigate();
 
   const columns: Column<Deployment>[] = [
@@ -80,6 +80,9 @@ function DeploymentsPage() {
         searchKeys={['message', 'commit', 'author', 'version']}
         searchPlaceholder="Filter by commit, author, or version…"
         emptyMessage="No deployments match these filters."
+        loading={loading}
+        error={error}
+        onRetry={refresh}
         onRowClick={(d) =>
           navigate({
             to: '/dashboard/workflows/$workflowId',

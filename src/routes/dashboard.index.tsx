@@ -10,6 +10,8 @@ import {
   Panel,
   StatTile,
   StateBadge,
+  UnreachableState,
+  queryPhase,
 } from '@/components/dashboard/primitives';
 import { useData } from '@/lib/store';
 import { useAuth } from '@/lib/auth';
@@ -33,6 +35,21 @@ function OverviewPage() {
   const { workflows, deployments, loading, error, refresh } = useData();
   const { account, user } = useAuth();
   const usage = useUsageSummary();
+
+  const phase = queryPhase({ error, loading });
+  // A failed read leaves the derived counts at zero, which would present an
+  // outage as a healthy, empty account. The tiles say "unknown" instead.
+  const tile = error
+    ? ('unavailable' as const)
+    : loading
+      ? ('loading' as const)
+      : ('ready' as const);
+
+  const usageTile = usage.error
+    ? ('unavailable' as const)
+    : usage.isPending
+      ? ('loading' as const)
+      : ('ready' as const);
 
   const stats = useMemo(() => {
     const running = workflows.filter((w) => w.state === 'running').length;
@@ -68,41 +85,46 @@ function OverviewPage() {
       />
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <StatTile label="Apps" value={String(workflows.length)} />
-        <StatTile label="Running" value={String(stats.running)} />
+        <StatTile label="Apps" value={String(workflows.length)} state={tile} />
+        <StatTile label="Running" value={String(stats.running)} state={tile} />
         <StatTile
           label="Failing"
           value={String(stats.failing)}
+          state={tile}
           tone={stats.failing > 0 ? 'red' : undefined}
         />
         <StatTile
           label="Requests (24h)"
           value={stats.invocations ? formatCompact(stats.invocations) : '—'}
+          state={tile}
         />
       </div>
 
-      {usage.data && (
+      {(usage.data || usage.error || usage.isPending) && (
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
           <StatTile
             label="GB-hours used"
-            value={usage.data.used_gb_hours.toLocaleString(undefined, {
+            value={usage.data?.used_gb_hours.toLocaleString(undefined, {
               maximumFractionDigits: 2,
             })}
+            state={usageTile}
           />
           <StatTile
             label="Included"
-            value={usage.data.included_gb_hours.toLocaleString(undefined, {
+            value={usage.data?.included_gb_hours.toLocaleString(undefined, {
               maximumFractionDigits: 2,
             })}
+            state={usageTile}
           />
           <StatTile
             label="Overage"
-            value={usage.data.overage_gb_hours.toLocaleString(undefined, {
+            value={usage.data?.overage_gb_hours.toLocaleString(undefined, {
               maximumFractionDigits: 2,
             })}
-            tone={usage.data.overage_gb_hours > 0 ? 'orange' : undefined}
+            state={usageTile}
+            tone={usage.data && usage.data.overage_gb_hours > 0 ? 'orange' : undefined}
           />
-          <StatTile label="Billing period" value={usage.data.month} />
+          <StatTile label="Billing period" value={usage.data?.month} state={usageTile} />
         </div>
       )}
 
@@ -119,9 +141,11 @@ function OverviewPage() {
             </Link>
           }
         >
-          {error ? (
+          {phase === 'unreachable' ? (
+            <UnreachableState onRetry={refresh} />
+          ) : phase === 'error' ? (
             <ErrorState error={error} onRetry={refresh} />
-          ) : loading ? (
+          ) : phase === 'loading' ? (
             <LoadingState />
           ) : workflows.length === 0 ? (
             <EmptyState message="No apps yet. Create one to get started." />
@@ -158,9 +182,11 @@ function OverviewPage() {
             </Link>
           }
         >
-          {error ? (
+          {phase === 'unreachable' ? (
+            <UnreachableState onRetry={refresh} />
+          ) : phase === 'error' ? (
             <ErrorState error={error} onRetry={refresh} />
-          ) : loading ? (
+          ) : phase === 'loading' ? (
             <LoadingState />
           ) : recent.length === 0 ? (
             <EmptyState message="Nothing deployed yet." />

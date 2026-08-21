@@ -1,12 +1,14 @@
 import { useMemo, useState, type ReactNode } from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
 import { ArrowDown, ArrowUp, Search, X } from 'lucide-react';
-import { EmptyState, ErrorState, LoadingState } from './primitives';
+import { EmptyState, ErrorState, Skeleton, UnreachableState, queryPhase } from './primitives';
 import { EASE } from './motion';
 import { cn } from '@/lib/utils';
 
 /** Rows past this index appear together — a stagger that long reads as lag. */
 const STAGGER_CAP = 15;
+/** Enough to fill the fold without pretending to know the row count. */
+const SKELETON_ROWS = 6;
 const STAGGER_STEP = 0.02;
 
 /**
@@ -96,6 +98,8 @@ export function ResourceTable<T extends { id: string }>({
     });
   }, [rows, query, sort, stableSearchKeys]);
 
+  const phase = queryPhase({ error, loading, isEmpty: visible.length === 0 });
+
   const toggleSort = (col: Column<T>) => {
     if (col.sortable === false) return;
     setSort((prev) =>
@@ -147,19 +151,23 @@ export function ResourceTable<T extends { id: string }>({
             aria-live="polite"
             className="ml-auto text-xs text-muted-foreground [font-variant-numeric:tabular-nums]"
           >
-            {visible.length} of {rows.length}
+            {/* "0 of 0" while the read is still out states a count nobody has. */}
+            {phase === 'loading' || phase === 'unreachable'
+              ? ''
+              : `${visible.length} of ${rows.length}`}
           </span>
         </div>
       )}
 
-      {/* Order matters: a failed fetch is not an empty list, and neither is a
-          fetch still in flight. Collapsing all three into "nothing here" is how
-          a broken console looks like a working one. */}
-      {error ? (
+      {/* Precedence lives in `queryPhase`: a failed fetch is not an empty
+          list, and neither is a fetch still in flight. An in-flight read keeps
+          the table chrome and fills it with skeleton rows, so the headers stay
+          put and nothing jumps when the data lands. */}
+      {phase === 'unreachable' ? (
+        <UnreachableState onRetry={onRetry} />
+      ) : phase === 'error' ? (
         <ErrorState error={error} onRetry={onRetry} />
-      ) : loading ? (
-        <LoadingState />
-      ) : visible.length === 0 ? (
+      ) : phase === 'empty' ? (
         <EmptyState message={emptyMessage} />
       ) : (
         <div className="overflow-hidden rounded-xl border border-border bg-card">
@@ -205,6 +213,26 @@ export function ResourceTable<T extends { id: string }>({
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
+                {phase === 'loading'
+                  ? Array.from({ length: SKELETON_ROWS }, (_, i) => (
+                      <tr key={`skeleton-${i}`} aria-hidden>
+                        {columns.map((col) => (
+                          <td key={col.key} className="px-4 py-3">
+                            <Skeleton
+                              className={cn('h-3.5', col.numeric ? 'ml-auto w-10' : 'w-24')}
+                            />
+                          </td>
+                        ))}
+                      </tr>
+                    ))
+                  : null}
+                {phase === 'loading' && (
+                  <tr className="sr-only">
+                    <td colSpan={columns.length} role="status">
+                      Loading…
+                    </td>
+                  </tr>
+                )}
                 {visible.map((row, i) => (
                   // Keyed by id, so rows entering the filtered set rise in
                   // and rows that stay put do not re-animate. No `layout` —
