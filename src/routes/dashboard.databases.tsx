@@ -33,9 +33,14 @@ interface UpstreamRow {
   scope: string;
 }
 
-function UpstreamsPage() {
-  const appState = useSelectedApp();
-  const { slug, select, apps } = appState;
+/**
+ * The databases body, without the page chrome around it.
+ *
+ * Rendered both by this route and as a tab on the app detail page, so
+ * the two can never drift into two different implementations of the
+ * same resource.
+ */
+export function UpstreamsBody({ slug }: { slug: string }) {
   const { data, isPending, error, refetch } = useUpstreams(slug);
 
   const rows = useMemo<UpstreamRow[]>(
@@ -89,6 +94,27 @@ function UpstreamsPage() {
 
   return (
     <div className="flex flex-col gap-6">
+      <ResourceTable
+        rows={rows}
+        columns={columns}
+        initialSort={{ key: 'kind', dir: 'asc' }}
+        searchKeys={['kind', 'scope']}
+        searchPlaceholder="Filter by kind…"
+        emptyMessage={`No upstreams observed for ${slug}.`}
+        minWidth="min-w-[820px]"
+        loading={isPending}
+        error={error}
+        onRetry={() => void refetch()}
+      />
+    </div>
+  );
+}
+
+function UpstreamsPage() {
+  const appState = useSelectedApp();
+  const { slug, select, apps } = appState;
+  return (
+    <div className="flex flex-col gap-6">
       <PageHeader
         title="Upstreams"
         description="External services this app reaches. Mostly discovered from egress; hostnames are hashed, never stored in the clear."
@@ -96,18 +122,7 @@ function UpstreamsPage() {
       />
 
       <AppScope state={appState} resource="upstreams">
-        <ResourceTable
-          rows={rows}
-          columns={columns}
-          initialSort={{ key: 'kind', dir: 'asc' }}
-          searchKeys={['kind', 'scope']}
-          searchPlaceholder="Filter by kind…"
-          emptyMessage={`No upstreams observed for ${slug}.`}
-          minWidth="min-w-[820px]"
-          loading={isPending}
-          error={error}
-          onRetry={() => void refetch()}
-        />
+        <UpstreamsBody slug={slug} />
       </AppScope>
     </div>
   );

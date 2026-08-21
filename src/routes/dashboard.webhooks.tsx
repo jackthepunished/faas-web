@@ -29,9 +29,14 @@ interface WebhookRow {
   enabled: boolean;
 }
 
-function WebhooksPage() {
-  const appState = useSelectedApp();
-  const { slug, select, apps } = appState;
+/**
+ * The webhooks body, without the page chrome around it.
+ *
+ * Rendered both by this route and as a tab on the app detail page, so
+ * the two can never drift into two different implementations of the
+ * same resource.
+ */
+export function WebhooksBody({ slug }: { slug: string }) {
   const { data, isPending, error, refetch } = useWebhooks(slug);
 
   const rows = useMemo<WebhookRow[]>(
@@ -78,6 +83,27 @@ function WebhooksPage() {
 
   return (
     <div className="flex flex-col gap-6">
+      <ResourceTable
+        rows={rows}
+        columns={columns}
+        initialSort={{ key: 'target', dir: 'asc' }}
+        searchKeys={['target', 'events']}
+        searchPlaceholder="Filter by target URL…"
+        emptyMessage={`No webhooks for ${slug}.`}
+        minWidth="min-w-[900px]"
+        loading={isPending}
+        error={error}
+        onRetry={() => void refetch()}
+      />
+    </div>
+  );
+}
+
+function WebhooksPage() {
+  const appState = useSelectedApp();
+  const { slug, select, apps } = appState;
+  return (
+    <div className="flex flex-col gap-6">
       <PageHeader
         title="Webhooks"
         description="Signed outbound deliveries. Failed attempts back off and dead-letter after seven tries."
@@ -85,18 +111,7 @@ function WebhooksPage() {
       />
 
       <AppScope state={appState} resource="webhooks">
-        <ResourceTable
-          rows={rows}
-          columns={columns}
-          initialSort={{ key: 'target', dir: 'asc' }}
-          searchKeys={['target', 'events']}
-          searchPlaceholder="Filter by target URL…"
-          emptyMessage={`No webhooks for ${slug}.`}
-          minWidth="min-w-[900px]"
-          loading={isPending}
-          error={error}
-          onRetry={() => void refetch()}
-        />
+        <WebhooksBody slug={slug} />
       </AppScope>
     </div>
   );

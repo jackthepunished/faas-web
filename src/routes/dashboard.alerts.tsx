@@ -34,10 +34,15 @@ interface AlertRow {
 
 const COMPARISON: Record<string, string> = { gt: '>', gte: '≥', lt: '<', lte: '≤' };
 
-function AlertsPage() {
+/**
+ * The alerts body, without the page chrome around it.
+ *
+ * Rendered both by this route and as a tab on the app detail page, so
+ * the two can never drift into two different implementations of the
+ * same resource.
+ */
+export function AlertsBody({ slug }: { slug: string }) {
   const { toast } = useToast();
-  const appState = useSelectedApp();
-  const { slug, select, apps } = appState;
   const { data, isPending, error, refetch } = useAlerts(slug);
   const deleteAlert = useDeleteAlert(slug);
 
@@ -112,6 +117,27 @@ function AlertsPage() {
 
   return (
     <div className="flex flex-col gap-6">
+      <ResourceTable
+        rows={rows}
+        columns={columns}
+        initialSort={{ key: 'name', dir: 'asc' }}
+        searchKeys={['name', 'condition']}
+        searchPlaceholder="Filter by rule name…"
+        emptyMessage={`No alert rules for ${slug}.`}
+        minWidth="min-w-[880px]"
+        loading={isPending}
+        error={error}
+        onRetry={() => void refetch()}
+      />
+    </div>
+  );
+}
+
+function AlertsPage() {
+  const appState = useSelectedApp();
+  const { slug, select, apps } = appState;
+  return (
+    <div className="flex flex-col gap-6">
       <PageHeader
         title="Alerts"
         description="Threshold rules on your app metrics. A breach POSTs a signed payload to the rule's webhook."
@@ -119,18 +145,7 @@ function AlertsPage() {
       />
 
       <AppScope state={appState} resource="alert rules">
-        <ResourceTable
-          rows={rows}
-          columns={columns}
-          initialSort={{ key: 'name', dir: 'asc' }}
-          searchKeys={['name', 'condition']}
-          searchPlaceholder="Filter by rule name…"
-          emptyMessage={`No alert rules for ${slug}.`}
-          minWidth="min-w-[880px]"
-          loading={isPending}
-          error={error}
-          onRetry={() => void refetch()}
-        />
+        <AlertsBody slug={slug} />
       </AppScope>
     </div>
   );

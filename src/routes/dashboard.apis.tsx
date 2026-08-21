@@ -28,9 +28,14 @@ interface RouteRow {
   path: string;
 }
 
-function ApisPage() {
-  const appState = useSelectedApp();
-  const { slug, select, apps } = appState;
+/**
+ * The apis body, without the page chrome around it.
+ *
+ * Rendered both by this route and as a tab on the app detail page, so
+ * the two can never drift into two different implementations of the
+ * same resource.
+ */
+export function RoutesBody({ slug }: { slug: string }) {
   const { data, isPending, error, refetch } = useAppRoutes(slug);
 
   const rows = useMemo<RouteRow[]>(
@@ -50,6 +55,54 @@ function ApisPage() {
 
   return (
     <div className="flex flex-col gap-6">
+      {unavailable && (
+        <p
+          role="status"
+          className="flex items-start gap-2 rounded-lg border px-3 py-2 text-xs"
+          style={{ borderColor: 'color-mix(in oklab, var(--status-warning) 40%, transparent)' }}
+        >
+          <WarningTriangle
+            className="mt-px h-3.5 w-3.5 shrink-0"
+            style={{ color: 'var(--status-warning)' }}
+          />
+          Per-route metrics are not enabled for this app, so no routes can be listed. This is a paid
+          plan feature.
+        </p>
+      )}
+
+      {data?.cap_hit && (
+        <p className="text-xs text-muted-foreground">
+          The route list hit its cap — some low-traffic routes are not shown.
+        </p>
+      )}
+
+      <ResourceTable
+        rows={rows}
+        columns={columns}
+        initialSort={{ key: 'path', dir: 'asc' }}
+        searchKeys={['path']}
+        searchPlaceholder="Filter by path…"
+        emptyMessage={
+          unavailable
+            ? 'Route metrics are disabled for this app.'
+            : slug
+              ? `No routes observed for ${slug} yet.`
+              : 'Create an app first.'
+        }
+        minWidth="min-w-[600px]"
+        loading={isPending}
+        error={error}
+        onRetry={() => void refetch()}
+      />
+    </div>
+  );
+}
+
+function ApisPage() {
+  const appState = useSelectedApp();
+  const { slug, select, apps } = appState;
+  return (
+    <div className="flex flex-col gap-6">
       <PageHeader
         title="APIs"
         description="Routes observed at the gateway for this app. Discovered from traffic, not declared."
@@ -57,45 +110,7 @@ function ApisPage() {
       />
 
       <AppScope state={appState} resource="routes">
-        {unavailable && (
-          <p
-            role="status"
-            className="flex items-start gap-2 rounded-lg border px-3 py-2 text-xs"
-            style={{ borderColor: 'color-mix(in oklab, var(--status-warning) 40%, transparent)' }}
-          >
-            <WarningTriangle
-              className="mt-px h-3.5 w-3.5 shrink-0"
-              style={{ color: 'var(--status-warning)' }}
-            />
-            Per-route metrics are not enabled for this app, so no routes can be listed. This is a
-            paid plan feature.
-          </p>
-        )}
-
-        {data?.cap_hit && (
-          <p className="text-xs text-muted-foreground">
-            The route list hit its cap — some low-traffic routes are not shown.
-          </p>
-        )}
-
-        <ResourceTable
-          rows={rows}
-          columns={columns}
-          initialSort={{ key: 'path', dir: 'asc' }}
-          searchKeys={['path']}
-          searchPlaceholder="Filter by path…"
-          emptyMessage={
-            unavailable
-              ? 'Route metrics are disabled for this app.'
-              : slug
-                ? `No routes observed for ${slug} yet.`
-                : 'Create an app first.'
-          }
-          minWidth="min-w-[600px]"
-          loading={isPending}
-          error={error}
-          onRetry={() => void refetch()}
-        />
+        <RoutesBody slug={slug} />
       </AppScope>
     </div>
   );

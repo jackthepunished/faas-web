@@ -38,10 +38,15 @@ function formatWhen(value: string | undefined): string {
   return Number.isNaN(ms) ? '—' : new Date(ms).toLocaleString();
 }
 
-function SecretsPage() {
+/**
+ * The secrets body, without the page chrome around it.
+ *
+ * Rendered both by this route and as a tab on the app detail page, so
+ * the two can never drift into two different implementations of the
+ * same resource.
+ */
+export function SecretsBody({ slug }: { slug: string }) {
   const { toast } = useToast();
-  const appState = useSelectedApp();
-  const { slug, select, apps } = appState;
   const { data, isPending, error, refetch } = useAppSecrets(slug);
   const setSecret = useSetSecret(slug);
   const deleteSecret = useDeleteSecret(slug);
@@ -107,79 +112,85 @@ function SecretsPage() {
 
   return (
     <div className="flex flex-col gap-6">
+      <Panel lit title="Set a secret">
+        <form
+          className="flex flex-wrap items-end gap-3"
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (!key.trim() || !value || setSecret.isPending) return;
+            void setSecret
+              .mutateAsync({ key: key.trim(), value })
+              .then(() => {
+                setKey('');
+                setValue('');
+                toast({ kind: 'success', title: 'Secret saved' });
+              })
+              .catch((err: unknown) =>
+                toast({ kind: 'error', title: 'Could not save', description: errorMessage(err) })
+              );
+          }}
+        >
+          <label className="flex min-w-44 flex-1 flex-col gap-1.5">
+            <span className="label-mono text-muted-foreground">Name</span>
+            <input
+              value={key}
+              onChange={(e) => setKey(e.target.value)}
+              placeholder="DATABASE_URL"
+              className="h-10 rounded-lg border border-border bg-background px-3 font-mono text-sm outline-none focus:border-brand"
+            />
+          </label>
+          <label className="flex min-w-56 flex-[2] flex-col gap-1.5">
+            <span className="label-mono text-muted-foreground">Value</span>
+            <input
+              type="password"
+              value={value}
+              onChange={(e) => setValue(e.target.value)}
+              autoComplete="off"
+              placeholder="Never shown again once saved"
+              className="h-10 rounded-lg border border-border bg-background px-3 text-sm outline-none focus:border-brand"
+            />
+          </label>
+          <Button
+            type="submit"
+            size="sm"
+            className="gap-1.5"
+            disabled={setSecret.isPending || !slug}
+          >
+            <Plus className="h-3.5 w-3.5" />
+            {setSecret.isPending ? 'Saving…' : 'Save secret'}
+          </Button>
+        </form>
+      </Panel>
+
+      <ResourceTable
+        rows={rows}
+        columns={columns}
+        initialSort={{ key: 'key', dir: 'asc' }}
+        searchKeys={['key']}
+        searchPlaceholder="Filter by name…"
+        emptyMessage={`No secrets set for ${slug}.`}
+        minWidth="min-w-[720px]"
+        loading={isPending}
+        error={error}
+        onRetry={() => void refetch()}
+      />
+    </div>
+  );
+}
+
+function SecretsPage() {
+  const appState = useSelectedApp();
+  const { slug, select, apps } = appState;
+  return (
+    <div className="flex flex-col gap-6">
       <PageHeader
         title="Secrets"
-        description={
-          data
-            ? `Sealed per-app values injected at boot. ${data.count} of ${data.quota_max} used.`
-            : 'Sealed per-app values injected at boot. The server cannot read them back — set a new value to change one.'
-        }
+        description="Sealed per-app values injected at boot. The server cannot read them back — set a new value to change one."
         actions={<AppSelect slug={slug} onSelect={select} apps={apps} />}
       />
 
       <AppScope state={appState} resource="secrets">
-        <Panel lit title="Set a secret">
-          <form
-            className="flex flex-wrap items-end gap-3"
-            onSubmit={(e) => {
-              e.preventDefault();
-              if (!key.trim() || !value || setSecret.isPending) return;
-              void setSecret
-                .mutateAsync({ key: key.trim(), value })
-                .then(() => {
-                  setKey('');
-                  setValue('');
-                  toast({ kind: 'success', title: 'Secret saved' });
-                })
-                .catch((err: unknown) =>
-                  toast({ kind: 'error', title: 'Could not save', description: errorMessage(err) })
-                );
-            }}
-          >
-            <label className="flex min-w-44 flex-1 flex-col gap-1.5">
-              <span className="label-mono text-muted-foreground">Name</span>
-              <input
-                value={key}
-                onChange={(e) => setKey(e.target.value)}
-                placeholder="DATABASE_URL"
-                className="h-10 rounded-lg border border-border bg-background px-3 font-mono text-sm outline-none focus:border-brand"
-              />
-            </label>
-            <label className="flex min-w-56 flex-[2] flex-col gap-1.5">
-              <span className="label-mono text-muted-foreground">Value</span>
-              <input
-                type="password"
-                value={value}
-                onChange={(e) => setValue(e.target.value)}
-                autoComplete="off"
-                placeholder="Never shown again once saved"
-                className="h-10 rounded-lg border border-border bg-background px-3 text-sm outline-none focus:border-brand"
-              />
-            </label>
-            <Button
-              type="submit"
-              size="sm"
-              className="gap-1.5"
-              disabled={setSecret.isPending || !slug}
-            >
-              <Plus className="h-3.5 w-3.5" />
-              {setSecret.isPending ? 'Saving…' : 'Save secret'}
-            </Button>
-          </form>
-        </Panel>
-
-        <ResourceTable
-          rows={rows}
-          columns={columns}
-          initialSort={{ key: 'key', dir: 'asc' }}
-          searchKeys={['key']}
-          searchPlaceholder="Filter by name…"
-          emptyMessage={`No secrets set for ${slug}.`}
-          minWidth="min-w-[720px]"
-          loading={isPending}
-          error={error}
-          onRetry={() => void refetch()}
-        />
+        <SecretsBody slug={slug} />
       </AppScope>
     </div>
   );
