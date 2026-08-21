@@ -8,6 +8,7 @@ import { AppScope, AppSelect, useSelectedApp } from '@/components/dashboard/app-
 import { useToast } from '@/components/ui/toast';
 import { useAppSecrets, useDeleteSecret, useSetSecret } from '@/lib/api/queries';
 import { errorMessage } from '@/lib/api/errors';
+import { formatRelative } from '@/lib/mock-data';
 import { consoleHead } from '@/lib/seo';
 
 export const Route = createFileRoute('/dashboard/secrets')({
@@ -35,7 +36,7 @@ interface SecretRow {
 function formatWhen(value: string | undefined): string {
   if (!value) return '—';
   const ms = Date.parse(value);
-  return Number.isNaN(ms) ? '—' : new Date(ms).toLocaleString();
+  return Number.isNaN(ms) ? '—' : formatRelative(ms);
 }
 
 /**

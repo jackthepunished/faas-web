@@ -7,6 +7,7 @@ import { useToast } from '@/components/ui/toast';
 import { useApps, useCrons, useDeleteCron, useRunCron } from '@/lib/api/queries';
 import { slugIndex } from '@/lib/api/adapters';
 import { errorMessage } from '@/lib/api/errors';
+import { formatRelative } from '@/lib/mock-data';
 import { consoleHead } from '@/lib/seo';
 
 export const Route = createFileRoute('/dashboard/crons')({
@@ -33,7 +34,7 @@ interface CronRow {
 function formatWhen(value: string | null | undefined): string {
   if (!value) return 'Never';
   const ms = Date.parse(value);
-  return Number.isNaN(ms) ? 'Never' : new Date(ms).toLocaleString();
+  return Number.isNaN(ms) ? 'Never' : formatRelative(ms);
 }
 
 function CronsPage() {

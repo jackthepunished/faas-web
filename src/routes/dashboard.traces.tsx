@@ -7,6 +7,7 @@ import { useToast } from '@/components/ui/toast';
 import { useApps, useInvocations, useReplayInvocation } from '@/lib/api/queries';
 import { slugIndex } from '@/lib/api/adapters';
 import { errorMessage } from '@/lib/api/errors';
+import { formatRelative } from '@/lib/mock-data';
 import { consoleHead } from '@/lib/seo';
 
 export const Route = createFileRoute('/dashboard/traces')({
@@ -48,7 +49,7 @@ const STATE_COLOR: Record<string, string> = {
 function formatWhen(value: string | undefined): string {
   if (!value) return '—';
   const ms = Date.parse(value);
-  return Number.isNaN(ms) ? '—' : new Date(ms).toLocaleString();
+  return Number.isNaN(ms) ? '—' : formatRelative(ms);
 }
 
 function InvocationsPage() {

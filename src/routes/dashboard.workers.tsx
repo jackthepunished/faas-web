@@ -4,6 +4,7 @@ import { PageHeader } from '@/components/dashboard/primitives';
 import { Pill, ResourceTable, type Column } from '@/components/dashboard/resource-table';
 import { useApps, useInstances } from '@/lib/api/queries';
 import { slugIndex } from '@/lib/api/adapters';
+import { formatRelative } from '@/lib/mock-data';
 import { consoleHead } from '@/lib/seo';
 
 export const Route = createFileRoute('/dashboard/workers')({
@@ -39,7 +40,7 @@ const STATE_COLOR: Record<string, string> = {
 function formatWhen(value: string | null | undefined): string {
   if (!value) return '—';
   const ms = Date.parse(value);
-  return Number.isNaN(ms) ? '—' : new Date(ms).toLocaleString();
+  return Number.isNaN(ms) ? '—' : formatRelative(ms);
 }
 
 function WorkersPage() {
