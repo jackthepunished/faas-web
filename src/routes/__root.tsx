@@ -6,6 +6,7 @@ import { AuthProvider } from '@/lib/auth';
 import { DataProvider } from '@/lib/store';
 import { retryPolicy } from '@/lib/api/queries';
 import { ToastProvider } from '@/components/ui/toast';
+import { DevBypassButton } from '@/components/dev-bypass-button';
 import { pageHead } from '@/lib/seo';
 
 export const Route = createRootRoute({
@@ -69,6 +70,9 @@ function RootLayout() {
               {/* Applies each route's `head` to the document. */}
               <HeadContent />
               <Outlet />
+              {/* Statically false in production, so the button and its
+                  module are dropped from the bundle. */}
+              {import.meta.env.DEV && <DevBypassButton />}
             </ToastProvider>
           </GlimmProvider>
         </DataProvider>

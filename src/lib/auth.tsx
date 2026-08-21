@@ -121,6 +121,34 @@ export function clearWorkspace() {
   window.localStorage.removeItem(ONBOARDED_KEY);
 }
 
+/* --- Dev bypass ------------------------------------------------------------
+   Lets the console be opened without a backend, so its design can be worked
+   on while `apid` is down. Writes the same session hint and onboarding flag a
+   real sign-in would, plus a marker that tells the 401 handler below to leave
+   them alone. Every branch is behind `import.meta.env.DEV`, which Vite
+   replaces with `false` in production, so none of this survives a build.
+   ------------------------------------------------------------------------- */
+
+const DEV_BYPASS_KEY = 'gregale.dev-bypass';
+export const DEV_BYPASS_EMAIL = 'design@gregale.dev';
+
+export function isDevBypass(): boolean {
+  if (!import.meta.env.DEV || typeof window === 'undefined') return false;
+  return window.localStorage.getItem(DEV_BYPASS_KEY) === 'true';
+}
+
+export function enterDevBypass() {
+  if (!import.meta.env.DEV) return;
+  window.localStorage.setItem(DEV_BYPASS_KEY, 'true');
+  writeSession(userFor(DEV_BYPASS_EMAIL));
+  markOnboarded();
+}
+
+export function exitDevBypass() {
+  if (!import.meta.env.DEV) return;
+  window.localStorage.removeItem(DEV_BYPASS_KEY);
+}
+
 export function isValidEmail(value: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(value.trim());
 }
@@ -168,6 +196,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
    */
   useEffect(() => {
     setUnauthorizedHandler(() => {
+      // With no backend there is no cookie, so every call is a 401; under the
+      // dev bypass that must not bounce the designer back to sign-in.
+      if (isDevBypass()) return;
       writeSession(null);
       setUser(null);
       setAccount(null);
@@ -231,6 +262,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
    * because the network blipped is the worse failure.
    */
   const signOut = useCallback(async () => {
+    exitDevBypass();
     setSession(null);
     try {
       await unwrap(api.POST('/v1/auth/logout', {}));
