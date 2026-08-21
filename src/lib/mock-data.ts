@@ -418,8 +418,9 @@ export function formatMs(ms: number): string {
 }
 
 export function formatRelative(ts: number): string {
-  const diff = NOW - ts;
-  // Live data (Date.now()) can sit ahead of the pinned mock clock.
+  // Against the real clock: every caller now passes live API timestamps, and
+  // the pinned fixture clock above made anything newer than it read "just now".
+  const diff = Date.now() - ts;
   if (diff < 60_000) return 'just now';
   if (diff < HOUR) return `${Math.max(1, Math.round(diff / 60_000))}m ago`;
   if (diff < DAY) return `${Math.round(diff / HOUR)}h ago`;
