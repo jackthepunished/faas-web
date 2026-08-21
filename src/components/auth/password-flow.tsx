@@ -24,6 +24,28 @@ import { ApiError, errorMessage } from '@/lib/api/errors';
 
 const EASE: [number, number, number, number] = [0.16, 1, 0.3, 1];
 
+/**
+ * Inline message for a failed sign-in or sign-up.
+ *
+ * The only failure the server distinguishes is a 400 `validation_failed`, and
+ * it says *which* field in `errors[]`. A password that misses the floor is
+ * worth restating as a rule rather than a rejection; any other field failure
+ * is named so the user is not told to fix a password that was fine. Everything
+ * else — including the deliberately uniform 401 — reads straight from the
+ * Problem. Branch on `code`, never on the status: the status is shared by
+ * unrelated failures and the prose is allowed to change.
+ */
+export function credentialsErrorMessage(err: unknown): string {
+  if (err instanceof ApiError && err.code === 'validation_failed') {
+    const failed = err.fields[0];
+    if (!failed || failed.field === 'password') {
+      return `Password must be at least ${MIN_PASSWORD_LENGTH} characters.`;
+    }
+    return `Check the ${failed.field} field: expected ${failed.expected}.`;
+  }
+  return errorMessage(err);
+}
+
 type Step = 'credentials' | 'forgot' | 'forgot-sent';
 
 const COPY = {
@@ -123,13 +145,7 @@ export function PasswordFlow({ mode }: { mode: 'signin' | 'signup' }) {
       toast({ kind: 'success', title: `Welcome, ${user.name.split(' ')[0]}` });
       sweepNavigate(hasOnboarded() ? '/dashboard' : '/onboarding');
     } catch (err) {
-      // A weak password on signup is the one case the server does distinguish,
-      // and the only one worth restating as a rule rather than a rejection.
-      if (err instanceof ApiError && err.status === 400) {
-        setError(`Password must be at least ${MIN_PASSWORD_LENGTH} characters.`);
-      } else {
-        setError(errorMessage(err));
-      }
+      setError(credentialsErrorMessage(err));
       setPassword('');
     } finally {
       setPending(false);
