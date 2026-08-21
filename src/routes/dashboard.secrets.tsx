@@ -1,13 +1,14 @@
 import { useMemo, useState } from 'react';
 import { createFileRoute } from '@tanstack/react-router';
-import { Plus, Trash2 } from 'lucide-react';
+import { Plus, Trash } from 'iconoir-react';
 import { Button } from '@/components/ui/button';
 import { PageHeader, Panel } from '@/components/dashboard/primitives';
 import { ResourceTable, type Column } from '@/components/dashboard/resource-table';
-import { AppSelect, useSelectedApp } from '@/components/dashboard/app-select';
+import { AppScope, AppSelect, useSelectedApp } from '@/components/dashboard/app-select';
 import { useToast } from '@/components/ui/toast';
 import { useAppSecrets, useDeleteSecret, useSetSecret } from '@/lib/api/queries';
 import { errorMessage } from '@/lib/api/errors';
+import { formatRelative } from '@/lib/mock-data';
 import { consoleHead } from '@/lib/seo';
 
 export const Route = createFileRoute('/dashboard/secrets')({
@@ -35,12 +36,18 @@ interface SecretRow {
 function formatWhen(value: string | undefined): string {
   if (!value) return '—';
   const ms = Date.parse(value);
-  return Number.isNaN(ms) ? '—' : new Date(ms).toLocaleString();
+  return Number.isNaN(ms) ? '—' : formatRelative(ms);
 }
 
-function SecretsPage() {
+/**
+ * The secrets body, without the page chrome around it.
+ *
+ * Rendered both by this route and as a tab on the app detail page, so
+ * the two can never drift into two different implementations of the
+ * same resource.
+ */
+export function SecretsBody({ slug }: { slug: string }) {
   const { toast } = useToast();
-  const { slug, select, apps, loadingApps } = useSelectedApp();
   const { data, isPending, error, refetch } = useAppSecrets(slug);
   const setSecret = useSetSecret(slug);
   const deleteSecret = useDeleteSecret(slug);
@@ -98,7 +105,7 @@ function SecretsPage() {
           }}
           className="text-muted-foreground transition-colors hover:text-foreground"
         >
-          <Trash2 className="h-3.5 w-3.5" />
+          <Trash className="h-3.5 w-3.5" />
         </button>
       ),
     },
@@ -106,19 +113,9 @@ function SecretsPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <PageHeader
-        title="Secrets"
-        description={
-          data
-            ? `Sealed per-app values injected at boot. ${data.count} of ${data.quota_max} used.`
-            : 'Sealed per-app values injected at boot. The server cannot read them back — set a new value to change one.'
-        }
-        actions={<AppSelect slug={slug} onSelect={select} apps={apps} />}
-      />
-
-      <Panel title="Set a secret">
+      <Panel lit title="Set a secret">
         <form
-          className="flex flex-wrap items-end gap-3 p-5"
+          className="flex flex-wrap items-end gap-3"
           onSubmit={(e) => {
             e.preventDefault();
             if (!key.trim() || !value || setSecret.isPending) return;
@@ -172,12 +169,30 @@ function SecretsPage() {
         initialSort={{ key: 'key', dir: 'asc' }}
         searchKeys={['key']}
         searchPlaceholder="Filter by name…"
-        emptyMessage={slug ? `No secrets set for ${slug}.` : 'Create an app first.'}
+        emptyMessage={`No secrets set for ${slug}.`}
         minWidth="min-w-[720px]"
-        loading={loadingApps || isPending}
+        loading={isPending}
         error={error}
         onRetry={() => void refetch()}
       />
+    </div>
+  );
+}
+
+function SecretsPage() {
+  const appState = useSelectedApp();
+  const { slug, select, apps } = appState;
+  return (
+    <div className="flex flex-col gap-6">
+      <PageHeader
+        title="Secrets"
+        description="Sealed per-app values injected at boot. The server cannot read them back — set a new value to change one."
+        actions={<AppSelect slug={slug} onSelect={select} apps={apps} />}
+      />
+
+      <AppScope state={appState} resource="secrets">
+        <SecretsBody slug={slug} />
+      </AppScope>
     </div>
   );
 }

@@ -1,12 +1,13 @@
 import { useMemo } from 'react';
 import { createFileRoute } from '@tanstack/react-router';
-import { Play, Trash2 } from 'lucide-react';
+import { Play, Trash } from 'iconoir-react';
 import { PageHeader } from '@/components/dashboard/primitives';
 import { Pill, ResourceTable, type Column } from '@/components/dashboard/resource-table';
 import { useToast } from '@/components/ui/toast';
 import { useApps, useCrons, useDeleteCron, useRunCron } from '@/lib/api/queries';
 import { slugIndex } from '@/lib/api/adapters';
 import { errorMessage } from '@/lib/api/errors';
+import { formatRelative } from '@/lib/mock-data';
 import { consoleHead } from '@/lib/seo';
 
 export const Route = createFileRoute('/dashboard/crons')({
@@ -33,7 +34,7 @@ interface CronRow {
 function formatWhen(value: string | null | undefined): string {
   if (!value) return 'Never';
   const ms = Date.parse(value);
-  return Number.isNaN(ms) ? 'Never' : new Date(ms).toLocaleString();
+  return Number.isNaN(ms) ? 'Never' : formatRelative(ms);
 }
 
 function CronsPage() {
@@ -128,7 +129,7 @@ function CronsPage() {
             }}
             className="text-muted-foreground transition-colors hover:text-foreground"
           >
-            <Trash2 className="h-3.5 w-3.5" />
+            <Trash className="h-3.5 w-3.5" />
           </button>
         </span>
       ),

@@ -3,6 +3,7 @@ import { createFileRoute } from '@tanstack/react-router';
 import { PageHeader } from '@/components/dashboard/primitives';
 import { Pill, ResourceTable, type Column } from '@/components/dashboard/resource-table';
 import { useAuditLog } from '@/lib/api/queries';
+import { formatRelative } from '@/lib/mock-data';
 import { consoleHead } from '@/lib/seo';
 
 export const Route = createFileRoute('/dashboard/audit')({
@@ -27,7 +28,7 @@ interface AuditRow {
 
 function formatWhen(value: string): string {
   const ms = Date.parse(value);
-  return Number.isNaN(ms) ? '—' : new Date(ms).toLocaleString();
+  return Number.isNaN(ms) ? '—' : formatRelative(ms);
 }
 
 /**

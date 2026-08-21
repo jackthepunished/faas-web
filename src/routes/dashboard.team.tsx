@@ -52,6 +52,9 @@ function TeamPage() {
   const [slug, setSlug] = useState('');
 
   // Settle on the first org once the list lands; most accounts have exactly one.
+  // Both reads below are gated on an org, so a failed org list leaves them
+  // permanently pending — which is why the state passed to the tables has to
+  // count the org query itself, not just the ones hanging off it.
   const active = slug || orgs.data?.orgs?.[0]?.slug || '';
 
   const members = useOrgMembers(active);
@@ -137,9 +140,12 @@ function TeamPage() {
           searchPlaceholder="Filter by email…"
           emptyMessage={active ? 'No members yet.' : 'No organisations on this account.'}
           minWidth="min-w-[700px]"
-          loading={orgs.isPending || members.isPending}
-          error={members.error}
-          onRetry={() => void members.refetch()}
+          loading={orgs.isPending || (Boolean(active) && members.isPending)}
+          error={orgs.error ?? members.error}
+          onRetry={() => {
+            void orgs.refetch();
+            void members.refetch();
+          }}
         />
       </Panel>
 
@@ -149,9 +155,12 @@ function TeamPage() {
           columns={inviteColumns}
           emptyMessage="No pending invitations."
           minWidth="min-w-[560px]"
-          loading={orgs.isPending || invitations.isPending}
-          error={invitations.error}
-          onRetry={() => void invitations.refetch()}
+          loading={orgs.isPending || (Boolean(active) && invitations.isPending)}
+          error={orgs.error ?? invitations.error}
+          onRetry={() => {
+            void orgs.refetch();
+            void invitations.refetch();
+          }}
         />
       </Panel>
     </div>

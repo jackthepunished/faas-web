@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { createFileRoute } from '@tanstack/react-router';
-import { Check, ExternalLink } from 'lucide-react';
+import { Check, OpenNewWindow } from 'iconoir-react';
 import { Button } from '@/components/ui/button';
 import { PageHeader } from '@/components/dashboard/primitives';
 import { Modal } from '@/components/ui/modal';
@@ -109,7 +109,7 @@ function PlansPage() {
                 );
             }}
           >
-            <ExternalLink className="h-3.5 w-3.5" />
+            <OpenNewWindow className="h-3.5 w-3.5" />
             Pricing & payment
           </Button>
         }

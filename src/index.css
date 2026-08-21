@@ -395,28 +395,15 @@
   }
   @media (prefers-reduced-motion: reduce) {
     [class*='animate-'] {
+      /* Duration alone only makes an animation imperceptibly fast — an
+         infinite one (animate-spin, animate-ping) keeps looping forever at
+         0.01ms, which is still motion and still burns a compositor frame.
+         Capping the iteration count is what actually stops it, while one-shot
+         entrances still land on their final keyframe rather than freezing at
+         the initial one, which is why the duration stays. */
       animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
     }
-  }
-
-  /* Brand mark — the Wind glyph's disc. Was four copies of a white/10 border
-     over a white/10 gradient, which only exists on a dark ground. Now one
-     class, expressed in tokens, so it inverts with the surface. */
-  .brand-mark {
-    display: flex;
-    height: 1.75rem;
-    width: 1.75rem;
-    flex-shrink: 0;
-    align-items: center;
-    justify-content: center;
-    border-radius: 9999px;
-    border: 1px solid color-mix(in oklab, var(--brand) 22%, transparent);
-    background-image: linear-gradient(
-      to bottom,
-      color-mix(in oklab, var(--brand) 14%, transparent),
-      transparent
-    );
-    color: var(--brand);
   }
 
   /* Route-pending dots. Opacity only — no transform — so the three dots hold

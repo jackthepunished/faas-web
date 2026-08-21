@@ -69,7 +69,7 @@ function UsagePage() {
           </div>
 
           <Panel title={`Allowance — ${data?.month ?? 'this month'}`}>
-            <div className="flex flex-col gap-3 p-5">
+            <div className="flex flex-col gap-3">
               <div
                 className="h-2 w-full overflow-hidden rounded-full bg-muted"
                 role="meter"

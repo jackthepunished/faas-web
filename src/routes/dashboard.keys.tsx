@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { createFileRoute } from '@tanstack/react-router';
-import { AlertTriangle, Copy, Plus, RotateCw, Trash2 } from 'lucide-react';
+import { WarningTriangle, Copy, Plus, Refresh, Trash } from 'iconoir-react';
 import { Button } from '@/components/ui/button';
 import { PageHeader, Panel } from '@/components/dashboard/primitives';
 import { Pill, ResourceTable, type Column } from '@/components/dashboard/resource-table';
@@ -50,7 +50,7 @@ function PlaintextPanel({ value, onDismiss }: { value: string; onDismiss: () => 
       style={{ borderColor: 'color-mix(in oklab, var(--status-warning) 45%, transparent)' }}
     >
       <span className="flex items-center gap-2 text-sm font-medium">
-        <AlertTriangle className="h-4 w-4" style={{ color: 'var(--status-warning)' }} />
+        <WarningTriangle className="h-4 w-4" style={{ color: 'var(--status-warning)' }} />
         Copy this key now — it will not be shown again
       </span>
       <code className="select-all break-all rounded-lg border border-border bg-background px-3 py-2 font-mono text-xs">
@@ -159,7 +159,7 @@ function KeysPage() {
             }}
             className="text-muted-foreground transition-colors hover:text-foreground"
           >
-            <RotateCw className="h-3.5 w-3.5" />
+            <Refresh className="h-3.5 w-3.5" />
           </button>
           <button
             type="button"
@@ -178,7 +178,7 @@ function KeysPage() {
             }}
             className="text-muted-foreground transition-colors hover:text-foreground"
           >
-            <Trash2 className="h-3.5 w-3.5" />
+            <Trash className="h-3.5 w-3.5" />
           </button>
         </span>
       ),
@@ -194,9 +194,9 @@ function KeysPage() {
 
       {plaintext && <PlaintextPanel value={plaintext} onDismiss={() => setPlaintext(null)} />}
 
-      <Panel title="Create a key">
+      <Panel lit title="Create a key">
         <form
-          className="flex flex-wrap items-end gap-3 p-5"
+          className="flex flex-wrap items-end gap-3"
           onSubmit={(e) => {
             e.preventDefault();
             if (createKey.isPending) return;

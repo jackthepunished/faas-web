@@ -2,8 +2,9 @@ import { useMemo } from 'react';
 import { createFileRoute } from '@tanstack/react-router';
 import { PageHeader, Panel, StatTile } from '@/components/dashboard/primitives';
 import { ResourceTable, type Column } from '@/components/dashboard/resource-table';
-import { AppSelect, useSelectedApp } from '@/components/dashboard/app-select';
+import { AppScope, AppSelect, useSelectedApp } from '@/components/dashboard/app-select';
 import { useDeadLetter, useQueuePeek, useQueueState } from '@/lib/api/queries';
+import { formatRelative } from '@/lib/mock-data';
 import { consoleHead } from '@/lib/seo';
 
 export const Route = createFileRoute('/dashboard/queues')({
@@ -31,7 +32,7 @@ interface MessageRow {
 function formatWhen(value: string | undefined): string {
   if (!value) return '—';
   const ms = Date.parse(value);
-  return Number.isNaN(ms) ? '—' : new Date(ms).toLocaleString();
+  return Number.isNaN(ms) ? '—' : formatRelative(ms);
 }
 
 function formatAge(seconds: number | null | undefined): string {
@@ -41,8 +42,14 @@ function formatAge(seconds: number | null | undefined): string {
   return `${Math.round(seconds / 3600)}h`;
 }
 
-function QueuesPage() {
-  const { slug, select, apps, loadingApps } = useSelectedApp();
+/**
+ * The queues body, without the page chrome around it.
+ *
+ * Rendered both by this route and as a tab on the app detail page, so
+ * the two can never drift into two different implementations of the
+ * same resource.
+ */
+export function QueuesBody({ slug }: { slug: string }) {
   const state = useQueueState(slug);
   const peek = useQueuePeek(slug);
   const dlq = useDeadLetter(slug);
@@ -110,12 +117,6 @@ function QueuesPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <PageHeader
-        title="Queue Jobs"
-        description="One FIFO queue per app. Messages here are peeked, not received — browsing never claims work from your consumers."
-        actions={<AppSelect slug={slug} onSelect={select} apps={apps} />}
-      />
-
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatTile label="Depth" value={String(state.data?.depth ?? '—')} />
         <StatTile label="In flight" value={String(state.data?.in_flight ?? '—')} />
@@ -132,7 +133,7 @@ function QueuesPage() {
           columns={pendingColumns}
           emptyMessage={slug ? 'The queue is empty.' : 'Create an app first.'}
           minWidth="min-w-[600px]"
-          loading={loadingApps || peek.isPending}
+          loading={peek.isPending}
           error={peek.error}
           onRetry={() => void peek.refetch()}
         />
@@ -144,11 +145,29 @@ function QueuesPage() {
           columns={deadColumns}
           emptyMessage="Nothing has been dead-lettered."
           minWidth="min-w-[600px]"
-          loading={loadingApps || dlq.isPending}
+          loading={dlq.isPending}
           error={dlq.error}
           onRetry={() => void dlq.refetch()}
         />
       </Panel>
+    </div>
+  );
+}
+
+function QueuesPage() {
+  const appState = useSelectedApp();
+  const { slug, select, apps } = appState;
+  return (
+    <div className="flex flex-col gap-6">
+      <PageHeader
+        title="Queue Jobs"
+        description="One FIFO queue per app. Messages here are peeked, not received — browsing never claims work from your consumers."
+        actions={<AppSelect slug={slug} onSelect={select} apps={apps} />}
+      />
+
+      <AppScope state={appState} resource="queue jobs">
+        <QueuesBody slug={slug} />
+      </AppScope>
     </div>
   );
 }

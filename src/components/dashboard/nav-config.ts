@@ -1,32 +1,24 @@
+import type { ComponentType, SVGProps } from 'react';
 import {
   Activity,
-  AlarmClock,
-  Bell,
+  Timer,
   CreditCard,
-  Database,
-  FileText,
-  Gauge,
   Globe,
   HardDrive,
-  KeyRound,
-  Layers,
-  LayoutDashboard,
-  ListTree,
-  type LucideIcon,
-  Network,
+  Key,
+  Server,
+  ViewGrid,
   Package,
-  Receipt,
+  Coins,
   Rocket,
-  ScrollText,
+  Journal,
   Settings,
   ShieldCheck,
   Shuffle,
-  SlidersHorizontal,
-  Users,
-  Variable,
-  Webhook,
-  Workflow as WorkflowIcon,
-} from 'lucide-react';
+  GraphUp,
+  Group,
+  GitFork as WorkflowIcon,
+} from 'iconoir-react';
 
 /**
  * Grouped sidebar navigation.
@@ -35,10 +27,13 @@ import {
  * cannot point at a route that does not exist.
  */
 
+/** Any Iconoir glyph: they are plain SVG components. */
+export type NavIcon = ComponentType<SVGProps<SVGSVGElement>>;
+
 export interface NavItem {
   to: string;
   label: string;
-  icon: LucideIcon;
+  icon: NavIcon;
   exact?: boolean;
 }
 
@@ -50,16 +45,14 @@ export interface NavGroup {
 
 export const NAV_GROUPS: NavGroup[] = [
   {
-    items: [{ to: '/dashboard', label: 'Overview', icon: LayoutDashboard, exact: true }],
+    items: [{ to: '/dashboard', label: 'Overview', icon: ViewGrid, exact: true }],
   },
   {
     title: 'Build',
     items: [
-      { to: '/dashboard/workflows', label: 'Workflows', icon: WorkflowIcon },
-      { to: '/dashboard/apis', label: 'APIs', icon: Network },
-      { to: '/dashboard/crons', label: 'Cron Jobs', icon: AlarmClock },
-      { to: '/dashboard/queues', label: 'Queue Jobs', icon: ListTree },
-      { to: '/dashboard/workers', label: 'Instances', icon: Layers },
+      { to: '/dashboard/workflows', label: 'Apps', icon: WorkflowIcon },
+      { to: '/dashboard/crons', label: 'Cron Jobs', icon: Timer },
+      { to: '/dashboard/workers', label: 'Instances', icon: Server },
       { to: '/dashboard/deployments', label: 'Deployments', icon: Rocket },
       { to: '/dashboard/builds', label: 'Builds', icon: Package },
     ],
@@ -69,36 +62,29 @@ export const NAV_GROUPS: NavGroup[] = [
     items: [
       { to: '/dashboard/domains', label: 'Domains', icon: Globe },
       { to: '/dashboard/edge-rules', label: 'Edge Rules', icon: Shuffle },
-      { to: '/dashboard/secrets', label: 'Secrets', icon: KeyRound },
-      { to: '/dashboard/env', label: 'Env Vars', icon: Variable },
-      { to: '/dashboard/webhooks', label: 'Webhooks', icon: Webhook },
       { to: '/dashboard/storage', label: 'Storage', icon: HardDrive },
-      { to: '/dashboard/databases', label: 'Upstreams', icon: Database },
     ],
   },
   {
     title: 'Observability',
     items: [
-      { to: '/dashboard/logs', label: 'Logs', icon: FileText },
-      { to: '/dashboard/metrics', label: 'Metrics', icon: Gauge },
       { to: '/dashboard/traces', label: 'Invocations', icon: Activity },
-      { to: '/dashboard/alerts', label: 'Alerts', icon: Bell },
-      { to: '/dashboard/audit', label: 'Audit Log', icon: ScrollText },
+      { to: '/dashboard/audit', label: 'Audit Log', icon: Journal },
     ],
   },
   {
     title: 'Billing',
     items: [
-      { to: '/dashboard/usage', label: 'Usage', icon: SlidersHorizontal },
-      { to: '/dashboard/invoices', label: 'Invoices', icon: Receipt },
+      { to: '/dashboard/usage', label: 'Usage', icon: GraphUp },
+      { to: '/dashboard/invoices', label: 'Invoices', icon: Coins },
       { to: '/dashboard/plans', label: 'Plans', icon: CreditCard },
     ],
   },
   {
     title: 'Account',
     items: [
-      { to: '/dashboard/keys', label: 'API Keys', icon: KeyRound },
-      { to: '/dashboard/team', label: 'Team', icon: Users },
+      { to: '/dashboard/keys', label: 'API Keys', icon: Key },
+      { to: '/dashboard/team', label: 'Team', icon: Group },
       { to: '/dashboard/security', label: 'Security', icon: ShieldCheck },
       { to: '/dashboard/settings', label: 'Settings', icon: Settings },
     ],
@@ -109,6 +95,42 @@ export const NAV_GROUPS: NavGroup[] = [
 export const NAV_ITEMS: NavItem[] = NAV_GROUPS.flatMap((g) => g.items);
 
 /** Path segment -> label, for breadcrumb section titles. */
-export const SECTION_LABELS: Record<string, string> = Object.fromEntries(
-  NAV_ITEMS.filter((i) => i.to !== '/dashboard').map((i) => [i.to.split('/').pop()!, i.label])
-);
+/**
+ * The resources that belong to one app rather than the account.
+ *
+ * They were nine sidebar entries, each carrying its own app picker — the same
+ * "which app?" question answered nine times. They are tabs on the app detail
+ * page now, where the app is already in the URL. Their standalone routes still
+ * resolve, so an old bookmark lands somewhere sensible, and they keep their
+ * labels here for the breadcrumb and the page title.
+ */
+export const APP_TABS: { tab: string; segment: string }[] = [
+  { tab: 'Metrics', segment: 'metrics' },
+  { tab: 'Logs', segment: 'logs' },
+  { tab: 'Routes', segment: 'apis' },
+  { tab: 'Secrets', segment: 'secrets' },
+  { tab: 'Env', segment: 'env' },
+  { tab: 'Queues', segment: 'queues' },
+  { tab: 'Upstreams', segment: 'databases' },
+  { tab: 'Alerts', segment: 'alerts' },
+  { tab: 'Webhooks', segment: 'webhooks' },
+];
+
+const APP_TAB_LABELS: Record<string, string> = {
+  metrics: 'Metrics',
+  logs: 'Logs',
+  apis: 'APIs',
+  secrets: 'Secrets',
+  env: 'Env Vars',
+  queues: 'Queue Jobs',
+  databases: 'Upstreams',
+  alerts: 'Alerts',
+  webhooks: 'Webhooks',
+};
+
+export const SECTION_LABELS: Record<string, string> = {
+  ...APP_TAB_LABELS,
+  ...Object.fromEntries(
+    NAV_ITEMS.filter((i) => i.to !== '/dashboard').map((i) => [i.to.split('/').pop()!, i.label])
+  ),
+};

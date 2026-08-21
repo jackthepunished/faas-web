@@ -9,6 +9,7 @@ import {
   type ReactNode,
 } from 'react';
 import { api, setUnauthorizedHandler, unwrap } from './api/client';
+import { ApiError } from './api/errors';
 import type { components } from './api/schema';
 
 /**
@@ -121,6 +122,34 @@ export function clearWorkspace() {
   window.localStorage.removeItem(ONBOARDED_KEY);
 }
 
+/* --- Dev bypass ------------------------------------------------------------
+   Lets the console be opened without a backend, so its design can be worked
+   on while `apid` is down. Writes the same session hint and onboarding flag a
+   real sign-in would, plus a marker that tells the 401 handler below to leave
+   them alone. Every branch is behind `import.meta.env.DEV`, which Vite
+   replaces with `false` in production, so none of this survives a build.
+   ------------------------------------------------------------------------- */
+
+const DEV_BYPASS_KEY = 'gregale.dev-bypass';
+export const DEV_BYPASS_EMAIL = 'design@gregale.dev';
+
+export function isDevBypass(): boolean {
+  if (!import.meta.env.DEV || typeof window === 'undefined') return false;
+  return window.localStorage.getItem(DEV_BYPASS_KEY) === 'true';
+}
+
+export function enterDevBypass() {
+  if (!import.meta.env.DEV) return;
+  window.localStorage.setItem(DEV_BYPASS_KEY, 'true');
+  writeSession(userFor(DEV_BYPASS_EMAIL));
+  markOnboarded();
+}
+
+export function exitDevBypass() {
+  if (!import.meta.env.DEV) return;
+  window.localStorage.removeItem(DEV_BYPASS_KEY);
+}
+
 export function isValidEmail(value: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(value.trim());
 }
@@ -137,6 +166,12 @@ interface AuthValue {
   /** Always resolves — the server answers identically whether or not the address exists. */
   requestPasswordReset: (email: string) => Promise<void>;
   refreshAccount: () => Promise<void>;
+  /**
+   * False once `GET /v1/account` has failed with something other than a 401 —
+   * the box is down, or a proxy answered for it. The shell says so once,
+   * rather than leaving every panel to report the same outage separately.
+   */
+  apiReachable: boolean;
 }
 
 const AuthContext = createContext<AuthValue | null>(null);
@@ -144,6 +179,7 @@ const AuthContext = createContext<AuthValue | null>(null);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(() => readSession());
   const [account, setAccount] = useState<Account | null>(null);
+  const [apiReachable, setReachable] = useState(true);
   // Only the boot check blocks; later refreshes happen behind the current UI.
   const [loading, setLoading] = useState<boolean>(() => readSession() !== null);
 
@@ -155,6 +191,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const refreshAccount = useCallback(async () => {
     const next = await unwrap(api.GET('/v1/account', {}));
+    setReachable(true);
     setAccount(next);
     // The server is authoritative on the address; a hint written from a typo'd
     // or since-changed email gets corrected here.
@@ -168,6 +205,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
    */
   useEffect(() => {
     setUnauthorizedHandler(() => {
+      // With no backend there is no cookie, so every call is a 401; under the
+      // dev bypass that must not bounce the designer back to sign-in.
+      if (isDevBypass()) return;
       writeSession(null);
       setUser(null);
       setAccount(null);
@@ -186,10 +226,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return;
     }
     void refreshAccount()
-      .catch(() => {
+      .catch((err: unknown) => {
         // A 401 has already cleared the session via the handler above. Anything
         // else — the box is down, the network dropped — should not sign the
-        // user out; the next real request will surface it properly.
+        // user out, but the shell needs to know so it can say so once.
+        if (!(err instanceof ApiError && err.isAuth)) setReachable(false);
       })
       .finally(() => setLoading(false));
   }, [refreshAccount]);
@@ -231,6 +272,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
    * because the network blipped is the worse failure.
    */
   const signOut = useCallback(async () => {
+    exitDevBypass();
     setSession(null);
     try {
       await unwrap(api.POST('/v1/auth/logout', {}));
@@ -253,8 +295,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       signOut,
       requestPasswordReset,
       refreshAccount,
+      apiReachable,
     }),
-    [user, account, loading, signIn, signUp, signOut, requestPasswordReset, refreshAccount]
+    [
+      user,
+      account,
+      loading,
+      signIn,
+      signUp,
+      signOut,
+      requestPasswordReset,
+      refreshAccount,
+      apiReachable,
+    ]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

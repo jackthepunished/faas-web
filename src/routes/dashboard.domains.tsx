@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { createFileRoute } from '@tanstack/react-router';
-import { Plus, Trash2 } from 'lucide-react';
+import { Plus, Trash } from 'iconoir-react';
 import { Button } from '@/components/ui/button';
 import { PageHeader, Panel } from '@/components/dashboard/primitives';
 import { Pill, ResourceTable, type Column } from '@/components/dashboard/resource-table';
@@ -119,7 +119,7 @@ function DomainsPage() {
           }}
           className="text-muted-foreground transition-colors hover:text-foreground"
         >
-          <Trash2 className="h-3.5 w-3.5" />
+          <Trash className="h-3.5 w-3.5" />
         </button>
       ),
     },
@@ -158,9 +158,9 @@ function DomainsPage() {
         description="Custom hostnames and their DNS verification. TLS is issued and renewed automatically once a domain verifies."
       />
 
-      <Panel title="Add a domain">
+      <Panel lit title="Add a domain">
         <form
-          className="flex flex-wrap items-end gap-3 p-5"
+          className="flex flex-wrap items-end gap-3"
           onSubmit={(e) => {
             e.preventDefault();
             if (host.trim() && !addDomain.isPending) submit();

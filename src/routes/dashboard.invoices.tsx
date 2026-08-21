@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { createFileRoute } from '@tanstack/react-router';
-import { ExternalLink } from 'lucide-react';
+import { OpenNewWindow } from 'iconoir-react';
 import { Button } from '@/components/ui/button';
 import { PageHeader } from '@/components/dashboard/primitives';
 import { Pill, ResourceTable, type Column } from '@/components/dashboard/resource-table';
@@ -131,7 +131,7 @@ function InvoicesPage() {
                 );
             }}
           >
-            <ExternalLink className="h-3.5 w-3.5" />
+            <OpenNewWindow className="h-3.5 w-3.5" />
             Billing portal
           </Button>
         }

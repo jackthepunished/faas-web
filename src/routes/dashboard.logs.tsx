@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
 import { createFileRoute } from '@tanstack/react-router';
-import { Pause, Play, Search } from 'lucide-react';
+import { Pause, Play, Search } from 'iconoir-react';
 import { Button } from '@/components/ui/button';
 import { EmptyState, PageHeader } from '@/components/dashboard/primitives';
 import { Pill } from '@/components/dashboard/resource-table';
-import { AppSelect, useSelectedApp } from '@/components/dashboard/app-select';
+import { AppScope, AppSelect, useSelectedApp } from '@/components/dashboard/app-select';
 import { useLogStream } from '@/lib/api/logs';
 import { consoleHead } from '@/lib/seo';
 
@@ -32,8 +32,12 @@ const STATUS_LABEL: Record<string, { label: string; color?: string }> = {
   error: { label: 'disconnected', color: 'var(--status-critical)' },
 };
 
-function LogsPage() {
-  const { slug, select, apps } = useSelectedApp();
+/**
+ * The live log view, without the page chrome around it.
+ *
+ * Rendered both by this route and as a tab on the app detail page.
+ */
+export function LogsBody({ slug }: { slug: string }) {
   const [follow, setFollow] = useState(true);
   const [grepInput, setGrepInput] = useState('');
   const [grep, setGrep] = useState('');
@@ -51,12 +55,6 @@ function LogsPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <PageHeader
-        title="Logs"
-        description="Live output from this app's instances. The stream ends on its own when the app parks."
-        actions={<AppSelect slug={slug} onSelect={select} apps={apps} />}
-      />
-
       <div className="flex flex-wrap items-center gap-3">
         <form
           className="relative flex min-w-56 flex-1 items-center sm:max-w-xs"
@@ -121,6 +119,24 @@ function LogsPage() {
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+function LogsPage() {
+  const appState = useSelectedApp();
+  const { slug, select, apps } = appState;
+  return (
+    <div className="flex flex-col gap-6">
+      <PageHeader
+        title="Logs"
+        description="Live output from this app's instances. The stream ends on its own when the app parks."
+        actions={<AppSelect slug={slug} onSelect={select} apps={apps} />}
+      />
+
+      <AppScope state={appState} resource="logs">
+        <LogsBody slug={slug} />
+      </AppScope>
     </div>
   );
 }

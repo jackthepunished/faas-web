@@ -41,6 +41,26 @@ should not add to that count, and does not need to reduce it.
 - **Per-app resources need an app picker.** Secrets, env, alerts, webhooks,
   queues, upstreams, routes, and logs are all `/v1/apps/{slug}/…` with no
   account-wide read. Use `useSelectedApp` + `AppSelect`.
+- **`npm run dev:mock` runs the console without a backend.** `mock/` is a
+  Vite-only middleware (`MOCK_API=1`) that answers the operations the console
+  calls with seeded, schema-typed fixtures; it never ships and `src/` never
+  imports it. It is the sanctioned way to see populated console states while
+  `apid` is down — the "no fixture data" rule above is about `src/`, and still
+  holds. An unmocked path answers `404 not_mocked` and logs to the dev server.
+  `MOCK_EMPTY=1` boots the same account with nothing in it, and `MOCK_LATENCY`
+  slows responses — between them every read state can be seen on demand.
+- **`npm run tour` walks the console and fails on what a unit test cannot see** —
+  an error boundary, a spinner nothing resolves, a path the mock does not
+  answer, a page that threw. Point it at a running dev server
+  (`BASE_URL=http://localhost:3000`), optionally with `SHOTS=<dir>` for
+  screenshots. Playwright is deliberately not a dependency — the script prints
+  the one-line install when it is missing.
+- **Loading, empty, error, and unreachable are four different states.** Get the
+  precedence from `queryPhase()` in `dashboard/primitives.tsx` rather than
+  writing the ternary again, and never pass a _disabled_ query's `isPending` as
+  `loading` — TanStack reports a query that never ran as pending forever, which
+  is a spinner nothing resolves. Per-app pages gate on `<AppScope>` for exactly
+  this reason.
 - **Logs are SSE, not JSON.** They use `EventSource` in `lib/api/logs.ts`, not
   the `openapi-fetch` client and not TanStack Query.
 - **`content/docs/*.md` is vendored**, pulled by `npm run docs:pull` from

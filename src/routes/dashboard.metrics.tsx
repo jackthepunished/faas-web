@@ -1,14 +1,16 @@
 import { useState } from 'react';
 import { createFileRoute } from '@tanstack/react-router';
-import { AlertTriangle } from 'lucide-react';
+import { WarningTriangle } from 'iconoir-react';
 import {
   ErrorState,
   LoadingState,
   PageHeader,
   Panel,
   StatTile,
+  UnreachableState,
+  queryPhase,
 } from '@/components/dashboard/primitives';
-import { AppSelect, useSelectedApp } from '@/components/dashboard/app-select';
+import { AppScope, AppSelect, useSelectedApp } from '@/components/dashboard/app-select';
 import { useAppMetrics, type MetricsRange } from '@/lib/api/queries';
 import { consoleHead } from '@/lib/seo';
 
@@ -46,12 +48,17 @@ function formatCount(value: number | undefined): string {
 }
 
 function MetricsPage() {
-  const { slug, select, apps, loadingApps } = useSelectedApp();
+  const appState = useSelectedApp();
+  const { slug, select, apps } = appState;
   const [range, setRange] = useState<MetricsRange>('24h');
   const { data, isPending, error, refetch } = useAppMetrics(slug, range);
 
   // "prometheus" on success; anything else is the documented degraded string.
   const degraded = Boolean(data && data.source !== 'prometheus');
+  const phase = queryPhase({ error, loading: isPending });
+  // A degraded read returns zeros, which is not the same as no traffic — the
+  // tiles say "unknown" rather than printing a figure nobody measured.
+  const tile = degraded ? ('unavailable' as const) : ('ready' as const);
 
   return (
     <div className="flex flex-col gap-6">
@@ -80,48 +87,51 @@ function MetricsPage() {
         }
       />
 
-      {degraded && (
-        <p
-          role="status"
-          className="flex items-start gap-2 rounded-lg border px-3 py-2 text-xs"
-          style={{ borderColor: 'color-mix(in oklab, var(--status-warning) 40%, transparent)' }}
-        >
-          <AlertTriangle
-            className="mt-px h-3.5 w-3.5 shrink-0"
-            style={{ color: 'var(--status-warning)' }}
-          />
-          Metrics are degraded ({data?.source}). The figures below are zeroed rather than partial —
-          treat them as unavailable, not as zero traffic.
-        </p>
-      )}
-
-      {error ? (
-        <ErrorState error={error} onRetry={() => void refetch()} />
-      ) : loadingApps || isPending ? (
-        <LoadingState message="Querying metrics…" />
-      ) : (
-        <>
-          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-            <StatTile label="Requests" value={formatCount(data?.request_count)} />
-            <StatTile label="Error rate" value={formatPct(data?.error_rate_pct)} />
-            <StatTile label="Cold starts" value={formatPct(data?.cold_start_pct)} />
-            <StatTile label="Wake p95 (fleet)" value={formatMs(data?.wake_p95_ms)} />
-          </div>
-
-          <Panel title="Latency (2xx only)">
-            <div className="grid gap-4 p-5 sm:grid-cols-3">
-              <StatTile label="p50" value={formatMs(data?.latency_p50_ms)} />
-              <StatTile label="p95" value={formatMs(data?.latency_p95_ms)} />
-              <StatTile label="p99" value={formatMs(data?.latency_p99_ms)} />
-            </div>
-          </Panel>
-
-          <p className="text-xs text-muted-foreground">
-            Window {data?.range}. Latency percentiles cover 2xx traffic only; wake p95 is the fleet
-            figure, not this app alone.
+      <AppScope state={appState} resource="metrics">
+        {degraded && (
+          <p
+            role="status"
+            className="flex items-start gap-2 rounded-lg border px-3 py-2 text-xs"
+            style={{ borderColor: 'color-mix(in oklab, var(--status-warning) 40%, transparent)' }}
+          >
+            <WarningTriangle
+              className="mt-px h-3.5 w-3.5 shrink-0"
+              style={{ color: 'var(--status-warning)' }}
+            />
+            Metrics are degraded ({data?.source}), so no figures can be read for this window.
           </p>
-        </>
-      )}
+        )}
+
+        {phase === 'unreachable' ? (
+          <UnreachableState onRetry={() => void refetch()} />
+        ) : phase === 'error' ? (
+          <ErrorState error={error} onRetry={() => void refetch()} />
+        ) : phase === 'loading' ? (
+          <LoadingState message="Querying metrics…" />
+        ) : (
+          <>
+            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+              <StatTile label="Requests" value={formatCount(data?.request_count)} state={tile} />
+              <StatTile label="Error rate" value={formatPct(data?.error_rate_pct)} state={tile} />
+              <StatTile label="Cold starts" value={formatPct(data?.cold_start_pct)} state={tile} />
+              <StatTile label="Wake p95 (fleet)" value={formatMs(data?.wake_p95_ms)} state={tile} />
+            </div>
+
+            <Panel title="Latency (2xx only)">
+              <div className="grid gap-4 sm:grid-cols-3">
+                <StatTile label="p50" value={formatMs(data?.latency_p50_ms)} state={tile} />
+                <StatTile label="p95" value={formatMs(data?.latency_p95_ms)} state={tile} />
+                <StatTile label="p99" value={formatMs(data?.latency_p99_ms)} state={tile} />
+              </div>
+            </Panel>
+
+            <p className="text-xs text-muted-foreground">
+              Window {data?.range}. Latency percentiles cover 2xx traffic only; wake p95 is the
+              fleet figure, not this app alone.
+            </p>
+          </>
+        )}
+      </AppScope>
     </div>
   );
 }

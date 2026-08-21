@@ -1,15 +1,16 @@
 import type { ReactNode } from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
 import {
-  AlertTriangle,
-  CheckCircle2,
-  CircleDashed,
-  Loader2,
-  TrendingDown,
-  TrendingUp,
-} from 'lucide-react';
+  WarningTriangle,
+  CheckCircle,
+  Circle,
+  CloudXmark,
+  RefreshDouble,
+  GraphDown,
+  GraphUp,
+} from 'iconoir-react';
 import type { LogLevel, RunState } from '@/lib/mock-data';
-import { errorMessage } from '@/lib/api/errors';
+import { ApiError, errorMessage } from '@/lib/api/errors';
 import { Sparkline } from './charts';
 import {
   DitherButton,
@@ -23,13 +24,12 @@ import { cn } from '@/lib/utils';
  * never rests on hue alone.
  * ------------------------------------------------------------------ */
 
-const STATE_CONFIG: Record<RunState, { label: string; color: string; icon: typeof CheckCircle2 }> =
-  {
-    running: { label: 'Running', color: 'var(--status-good)', icon: CheckCircle2 },
-    idle: { label: 'Idle', color: 'var(--chart-muted)', icon: CircleDashed },
-    error: { label: 'Error', color: 'var(--status-critical)', icon: AlertTriangle },
-    deploying: { label: 'Deploying', color: 'var(--status-warning)', icon: Loader2 },
-  };
+const STATE_CONFIG: Record<RunState, { label: string; color: string; icon: typeof CheckCircle }> = {
+  running: { label: 'Running', color: 'var(--status-good)', icon: CheckCircle },
+  idle: { label: 'Idle', color: 'var(--chart-muted)', icon: Circle },
+  error: { label: 'Error', color: 'var(--status-critical)', icon: WarningTriangle },
+  deploying: { label: 'Deploying', color: 'var(--status-warning)', icon: RefreshDouble },
+};
 
 export function StateBadge({ state, className }: { state: RunState; className?: string }) {
   const cfg = STATE_CONFIG[state];
@@ -70,7 +70,7 @@ export function LevelTag({ level }: { level: LogLevel }) {
       className="label-mono inline-flex w-14 shrink-0 items-center gap-1"
       style={{ color: LEVEL_COLOR[level] }}
     >
-      {level === 'error' && <AlertTriangle className="h-3 w-3" />}
+      {level === 'error' && <WarningTriangle className="h-3 w-3" />}
       {level}
     </span>
   );
@@ -84,7 +84,9 @@ export function LevelTag({ level }: { level: LogLevel }) {
 export function StatTile({
   label,
   value,
+  state = 'ready',
   unit,
+  note,
   delta,
   deltaGood = true,
   series,
@@ -92,8 +94,19 @@ export function StatTile({
   tone,
 }: {
   label: string;
-  value: string;
+  value?: string;
+  /**
+   * Whether the figure is known.
+   *
+   * A tile fed straight from a query renders `0` for a failed read, which is a
+   * number the server never confirmed — the one thing a console must not do.
+   * `unavailable` says so instead, and `loading` holds the space.
+   */
+  state?: 'ready' | 'loading' | 'unavailable';
   unit?: string;
+  /** A second scalar for context — "of 2,000 included". Never a computed
+   *  trend: the API returns points, not series. */
+  note?: string;
   delta?: number;
   /** Whether a rising delta is a good thing (invocations) or bad (errors). */
   deltaGood?: boolean;
@@ -105,7 +118,7 @@ export function StatTile({
 }) {
   const positive = (delta ?? 0) >= 0;
   const good = positive === deltaGood;
-  const Arrow = positive ? TrendingUp : TrendingDown;
+  const Arrow = positive ? GraphUp : GraphDown;
 
   return (
     <div className="rounded-xl border border-border bg-card p-5">
@@ -113,12 +126,29 @@ export function StatTile({
 
       <div className="mt-3 flex items-end justify-between gap-4">
         <div>
-          <p className="text-3xl leading-none font-semibold tracking-tight">
-            {value}
-            {unit && <span className="ml-1 text-base text-muted-foreground">{unit}</span>}
-          </p>
+          {state === 'loading' ? (
+            <Skeleton className="h-[30px] w-20" />
+          ) : state === 'unavailable' ? (
+            <p
+              className="text-3xl leading-none font-semibold tracking-tight text-muted-foreground"
+              title="The API did not answer, so this figure is unknown."
+            >
+              —<span className="sr-only">unavailable</span>
+            </p>
+          ) : (
+            <p className="text-3xl leading-none font-semibold tracking-tight [font-variant-numeric:tabular-nums]">
+              {value}
+              {unit && <span className="ml-1 text-base text-muted-foreground">{unit}</span>}
+            </p>
+          )}
 
-          {delta !== undefined && (
+          {state === 'ready' && note && (
+            <p className="mt-2 text-xs text-muted-foreground [font-variant-numeric:tabular-nums]">
+              {note}
+            </p>
+          )}
+
+          {state === 'ready' && delta !== undefined && (
             <p
               className="mt-2 flex items-center gap-1 text-xs [font-variant-numeric:tabular-nums]"
               style={{ color: good ? 'var(--status-good)' : 'var(--status-critical)' }}
@@ -130,7 +160,8 @@ export function StatTile({
           )}
         </div>
 
-        {series &&
+        {state === 'ready' &&
+          series &&
           series.length > 1 &&
           (tone ? (
             <DitherSparkline
@@ -178,30 +209,48 @@ export function Panel({
   actions,
   children,
   className,
+  lit = false,
+  padded = true,
 }: {
   title?: string;
   description?: string;
   actions?: ReactNode;
   children: ReactNode;
   className?: string;
+  /** Mint hairline along the top edge, marking the page's primary panel. */
+  lit?: boolean;
+  /** Off for content that runs to the panel's edges — a list or a table whose
+   *  own rows carry the padding and whose dividers should span the full width. */
+  padded?: boolean;
 }) {
   return (
     <section
-      className={cn(
-        'rounded-xl border border-border bg-card transition-colors hover:border-border-secondary',
-        className
-      )}
+      className={cn('relative overflow-hidden rounded-xl border border-border bg-card', className)}
     >
+      {/* The landing's lit edge, brightest at centre. One panel per page at
+          most — it marks the thing the page is for. */}
+      {lit && (
+        <span
+          aria-hidden
+          className="pointer-events-none absolute inset-x-10 top-0 h-px"
+          style={{
+            background: 'linear-gradient(to right, transparent, var(--brand-fill), transparent)',
+          }}
+        />
+      )}
       {(title || actions) && (
-        <header className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-5 py-4">
+        <header className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-5 py-3.5">
           <div>
-            {title && <h2 className="text-sm font-semibold tracking-tight">{title}</h2>}
-            {description && <p className="mt-0.5 text-xs text-muted-foreground">{description}</p>}
+            {/* Uppercase mono, the same voice the table headers and stat
+                labels use — a panel title is a section label, not a heading
+                competing with the page's own. */}
+            {title && <h2 className="label-mono text-foreground">{title}</h2>}
+            {description && <p className="mt-1.5 text-xs text-muted-foreground">{description}</p>}
           </div>
           {actions}
         </header>
       )}
-      <div className="p-5">{children}</div>
+      <div className={cn(padded && 'p-5')}>{children}</div>
     </section>
   );
 }
@@ -271,11 +320,89 @@ export function RangeSelector<T extends string>({
   );
 }
 
-export function EmptyState({ message }: { message: string }) {
+/* ------------------------------------------------------------------ *
+ * Read states
+ * ------------------------------------------------------------------ */
+
+/**
+ * The four ways a networked panel can be, in the order they must be checked.
+ *
+ * Precedence lives here and nowhere else: a failed read is not an empty list,
+ * and neither is a read still in flight. Collapsing them is how a broken
+ * console ends up looking like a working one with no data.
+ *
+ * **Never pass `loading` for a disabled query.** TanStack reports `isPending`
+ * for a query that is gated off and has therefore never run, so a page that
+ * forwards it renders a spinner nothing will ever resolve — which is exactly
+ * what the per-app pages did before `AppScope` gated them on having an app.
+ */
+export type QueryPhase = 'unreachable' | 'error' | 'loading' | 'empty' | 'ready';
+
+export function queryPhase({
+  error,
+  loading,
+  isEmpty,
+}: {
+  error?: unknown;
+  loading?: boolean;
+  isEmpty?: boolean;
+}): QueryPhase {
+  if (error) return error instanceof ApiError && error.isUnreachable ? 'unreachable' : 'error';
+  if (loading) return 'loading';
+  return isEmpty ? 'empty' : 'ready';
+}
+
+/** A grey bar standing in for text that has not arrived. */
+export function Skeleton({ className }: { className?: string }) {
   return (
-    <div className="flex flex-col items-center justify-center gap-2 rounded-lg border border-dashed border-border px-6 py-14 text-center">
-      <CircleDashed className="h-5 w-5 text-muted-foreground" />
+    <span
+      aria-hidden
+      className={cn('block rounded bg-muted-foreground/15 motion-safe:animate-pulse', className)}
+    />
+  );
+}
+
+export function EmptyState({
+  message,
+  action,
+}: {
+  message: string;
+  /** A way out of the empty state — usually "create the first one". */
+  action?: ReactNode;
+}) {
+  return (
+    <div className="flex flex-col items-center justify-center gap-3 rounded-lg border border-dashed border-border px-6 py-14 text-center">
+      <Circle className="h-5 w-5 text-muted-foreground" />
       <p className="text-sm text-muted-foreground">{message}</p>
+      {action}
+    </div>
+  );
+}
+
+/**
+ * Nothing answered. Deliberately quieter than `ErrorState` — an unreachable
+ * API is an outage to wait out, not a fault the reader can act on, and
+ * painting it red on every panel of every page reads as catastrophe.
+ */
+export function UnreachableState({ onRetry }: { onRetry?: () => void }) {
+  return (
+    <div
+      role="status"
+      className="flex flex-col items-center justify-center gap-3 rounded-lg border border-dashed border-border px-6 py-14 text-center"
+    >
+      <CloudXmark className="h-5 w-5 text-muted-foreground" />
+      <p className="max-w-sm text-sm text-muted-foreground">
+        Could not reach the API. Nothing is shown rather than something stale.
+      </p>
+      {onRetry && (
+        <button
+          type="button"
+          onClick={onRetry}
+          className="text-xs text-brand transition-colors hover:text-brand-hover"
+        >
+          Try again
+        </button>
+      )}
     </div>
   );
 }
@@ -292,7 +419,7 @@ export function LoadingState({ message = 'Loading…' }: { message?: string }) {
       role="status"
       className="flex flex-col items-center justify-center gap-2 rounded-lg border border-dashed border-border px-6 py-14 text-center"
     >
-      <Loader2 className="h-5 w-5 animate-spin text-muted-foreground motion-reduce:animate-none" />
+      <RefreshDouble className="h-5 w-5 animate-spin text-muted-foreground motion-reduce:animate-none" />
       <p className="text-sm text-muted-foreground">{message}</p>
     </div>
   );
@@ -309,7 +436,7 @@ export function ErrorState({ error, onRetry }: { error: unknown; onRetry?: () =>
       className="flex flex-col items-center justify-center gap-3 rounded-lg border border-dashed px-6 py-14 text-center"
       style={{ borderColor: 'color-mix(in oklab, var(--status-critical) 35%, transparent)' }}
     >
-      <AlertTriangle className="h-5 w-5" style={{ color: 'var(--status-critical)' }} />
+      <WarningTriangle className="h-5 w-5" style={{ color: 'var(--status-critical)' }} />
       <p className="max-w-sm text-sm text-muted-foreground">{errorMessage(error)}</p>
       {onRetry && (
         <button

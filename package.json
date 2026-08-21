@@ -5,6 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "vite --port 3000",
+    "dev:mock": "MOCK_API=1 vite --port 3000",
+    "tour": "node scripts/tour.mjs",
     "build": "tsc && vite build && npm run prerender",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
@@ -31,7 +33,6 @@
     "framer-motion": "^13.1.0",
     "glimm": "^0.3.0",
     "iconoir-react": "^7.12.1",
-    "lucide-react": "^0.539.0",
     "motion": "^13.1.0",
     "openapi-fetch": "^0.17.0",
     "radix-ui": "^1.6.7",

@@ -4,7 +4,7 @@ import {
   type PointerEvent,
   type ReactNode,
 } from 'react';
-import { ArrowRight } from 'lucide-react';
+import { ArrowRight } from 'iconoir-react';
 import { Link } from '@tanstack/react-router';
 import { cn } from '@/lib/utils';
 

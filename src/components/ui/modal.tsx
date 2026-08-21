@@ -1,6 +1,6 @@
 import { useEffect, useRef, type ReactNode } from 'react';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
-import { X } from 'lucide-react';
+import { Xmark } from 'iconoir-react';
 import { Button } from './button';
 import { useFocusTrap } from '@/lib/use-focus-trap';
 import { EASE } from '@/components/dashboard/motion';
@@ -97,7 +97,7 @@ export function Modal({
                 aria-label="Close"
                 className="-mr-1 -mt-1 rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
               >
-                <X className="h-3.5 w-3.5" />
+                <Xmark className="h-3.5 w-3.5" />
               </button>
             </header>
 

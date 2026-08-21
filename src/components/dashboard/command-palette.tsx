@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
 import { useNavigate } from '@tanstack/react-router';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
-import { CornerDownLeft, GitBranch, Plus, Search } from 'lucide-react';
-import { NAV_ITEMS } from './nav-config';
+import { UTurnArrowLeft, GitBranch, Plus, Search } from 'iconoir-react';
+import { APP_TABS, NAV_ITEMS, SECTION_LABELS, type NavIcon } from './nav-config';
 import { EASE } from './motion';
 import { useData } from '@/lib/store';
 import { formatCompact } from '@/lib/mock-data';
@@ -20,7 +20,7 @@ interface Command {
   label: string;
   group: string;
   hint?: string;
-  icon: typeof Search;
+  icon: NavIcon;
   run: () => void;
 }
 
@@ -67,9 +67,19 @@ export function CommandPalette({
         icon: item.icon,
         run: go(item.to),
       })),
+      // The per-app resources left the sidebar for the app's own tabs, but
+      // they are still whole pages with a picker, and ⌘K is how you reach a
+      // page you know the name of.
+      ...APP_TABS.map((t) => ({
+        id: `nav-app-${t.segment}`,
+        label: SECTION_LABELS[t.segment] ?? t.tab,
+        group: 'Go to',
+        icon: Search,
+        run: go(`/dashboard/${t.segment}`),
+      })),
       {
         id: 'act-new',
-        label: 'Deploy a new workflow',
+        label: 'New app',
         group: 'Actions',
         icon: Plus,
         run: go('/dashboard/workflows/new'),
@@ -322,7 +332,7 @@ export function CommandPalette({
                       {cmd.hint && (
                         <span className="shrink-0 text-xs text-muted-foreground">{cmd.hint}</span>
                       )}
-                      {i === active && <CornerDownLeft className="h-3 w-3 shrink-0" />}
+                      {i === active && <UTurnArrowLeft className="h-3 w-3 shrink-0" />}
                     </li>,
                   ];
                 })}

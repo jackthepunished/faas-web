@@ -1,9 +1,9 @@
 import { useMemo } from 'react';
 import { createFileRoute } from '@tanstack/react-router';
-import { Trash2 } from 'lucide-react';
+import { Trash } from 'iconoir-react';
 import { PageHeader } from '@/components/dashboard/primitives';
 import { Pill, ResourceTable, type Column } from '@/components/dashboard/resource-table';
-import { AppSelect, useSelectedApp } from '@/components/dashboard/app-select';
+import { AppScope, AppSelect, useSelectedApp } from '@/components/dashboard/app-select';
 import { useToast } from '@/components/ui/toast';
 import { useAlerts, useDeleteAlert } from '@/lib/api/queries';
 import { errorMessage } from '@/lib/api/errors';
@@ -34,9 +34,15 @@ interface AlertRow {
 
 const COMPARISON: Record<string, string> = { gt: '>', gte: '≥', lt: '<', lte: '≤' };
 
-function AlertsPage() {
+/**
+ * The alerts body, without the page chrome around it.
+ *
+ * Rendered both by this route and as a tab on the app detail page, so
+ * the two can never drift into two different implementations of the
+ * same resource.
+ */
+export function AlertsBody({ slug }: { slug: string }) {
   const { toast } = useToast();
-  const { slug, select, apps, loadingApps } = useSelectedApp();
   const { data, isPending, error, refetch } = useAlerts(slug);
   const deleteAlert = useDeleteAlert(slug);
 
@@ -103,7 +109,7 @@ function AlertsPage() {
           }}
           className="text-muted-foreground transition-colors hover:text-foreground"
         >
-          <Trash2 className="h-3.5 w-3.5" />
+          <Trash className="h-3.5 w-3.5" />
         </button>
       ),
     },
@@ -111,23 +117,36 @@ function AlertsPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <PageHeader
-        title="Alerts"
-        description="Threshold rules on your app metrics. A breach POSTs a signed payload to the rule's webhook."
-        actions={<AppSelect slug={slug} onSelect={select} apps={apps} />}
-      />
       <ResourceTable
         rows={rows}
         columns={columns}
         initialSort={{ key: 'name', dir: 'asc' }}
         searchKeys={['name', 'condition']}
         searchPlaceholder="Filter by rule name…"
-        emptyMessage={slug ? `No alert rules for ${slug}.` : 'Create an app first.'}
+        emptyMessage={`No alert rules for ${slug}.`}
         minWidth="min-w-[880px]"
-        loading={loadingApps || isPending}
+        loading={isPending}
         error={error}
         onRetry={() => void refetch()}
       />
+    </div>
+  );
+}
+
+function AlertsPage() {
+  const appState = useSelectedApp();
+  const { slug, select, apps } = appState;
+  return (
+    <div className="flex flex-col gap-6">
+      <PageHeader
+        title="Alerts"
+        description="Threshold rules on your app metrics. A breach POSTs a signed payload to the rule's webhook."
+        actions={<AppSelect slug={slug} onSelect={select} apps={apps} />}
+      />
+
+      <AppScope state={appState} resource="alert rules">
+        <AlertsBody slug={slug} />
+      </AppScope>
     </div>
   );
 }

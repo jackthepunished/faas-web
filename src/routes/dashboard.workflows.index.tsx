@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router';
-import { ArrowDown, ArrowUp, Plus, Search } from 'lucide-react';
+import { ArrowDown, ArrowUp, Plus, Search } from 'iconoir-react';
 import { Button } from '@/components/ui/button';
 import {
   EmptyState,
@@ -96,13 +96,13 @@ function FunctionsPage() {
   return (
     <div className="flex flex-col gap-6">
       <PageHeader
-        title="Functions"
-        description="Every deployed function across this workspace."
+        title="Apps"
+        description="Every app deployed in this workspace."
         actions={
           <Button asChild size="sm" className="gap-1.5">
             <Link to="/dashboard/workflows/new">
               <Plus className="h-3.5 w-3.5" />
-              New function
+              New app
             </Link>
           </Button>
         }

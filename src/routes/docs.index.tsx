@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from '@tanstack/react-router';
-import { ArrowRight, ArrowUpRight } from 'lucide-react';
+import { ArrowRight, ArrowUpRight } from 'iconoir-react';
 import { DOC_SECTIONS } from '@/lib/docs-manifest';
 import { pageHead } from '@/lib/seo';
 

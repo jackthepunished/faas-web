@@ -1,5 +1,5 @@
 import { Link, useRouter, type ErrorComponentProps } from '@tanstack/react-router';
-import { AlertTriangle, RotateCcw } from 'lucide-react';
+import { WarningTriangle, Undo } from 'iconoir-react';
 
 /**
  * Router-wide error and pending states.
@@ -29,7 +29,7 @@ export function RouteError({ error, reset }: ErrorComponentProps) {
         className="flex h-10 w-10 items-center justify-center rounded-full"
         style={{ background: 'color-mix(in oklab, var(--status-critical) 15%, transparent)' }}
       >
-        <AlertTriangle className="h-5 w-5" style={{ color: 'var(--status-critical)' }} />
+        <WarningTriangle className="h-5 w-5" style={{ color: 'var(--status-critical)' }} />
       </span>
 
       <div>
@@ -64,7 +64,7 @@ export function RouteError({ error, reset }: ErrorComponentProps) {
           }}
           className="flex items-center gap-1.5 rounded-full bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-opacity hover:opacity-90"
         >
-          <RotateCcw className="h-3.5 w-3.5" />
+          <Undo className="h-3.5 w-3.5" />
           Try again
         </button>
         <Link

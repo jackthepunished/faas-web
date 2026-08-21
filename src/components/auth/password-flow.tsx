@@ -2,7 +2,15 @@ import { useState } from 'react';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import { Link } from '@tanstack/react-router';
 import { useSweepNavigate } from '@/components/sweep-link';
-import { AlertCircle, ArrowLeft, ArrowRight, Eye, EyeOff, Loader2, MailCheck } from 'lucide-react';
+import {
+  WarningCircle,
+  ArrowLeft,
+  ArrowRight,
+  Eye,
+  EyeClosed,
+  RefreshDouble,
+  MailOpen,
+} from 'iconoir-react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/toast';
 import { hasOnboarded, isValidEmail, MIN_PASSWORD_LENGTH, useAuth } from '@/lib/auth';
@@ -85,7 +93,7 @@ function FormError({ message }: { message: string }) {
         borderColor: 'color-mix(in oklab, var(--status-critical) 35%, transparent)',
       }}
     >
-      <AlertCircle className="mt-px h-3.5 w-3.5 shrink-0" />
+      <WarningCircle className="mt-px h-3.5 w-3.5 shrink-0" />
       {message}
     </p>
   );
@@ -218,7 +226,7 @@ export function PasswordFlow({ mode }: { mode: 'signin' | 'signup' }) {
               >
                 {pending ? (
                   <>
-                    <Loader2 className="h-4 w-4 animate-spin" />
+                    <RefreshDouble className="h-4 w-4 animate-spin" />
                     Sending…
                   </>
                 ) : (
@@ -245,7 +253,7 @@ export function PasswordFlow({ mode }: { mode: 'signin' | 'signup' }) {
         ) : (
           <motion.div key="forgot-sent" {...enter(12)}>
             <span className="flex h-10 w-10 items-center justify-center rounded-full border border-border bg-card">
-              <MailCheck className="h-4 w-4 text-brand" />
+              <MailOpen className="h-4 w-4 text-brand" />
             </span>
             <h1 className="mt-5 text-2xl font-semibold tracking-tight">Check your email</h1>
             {/* The server answers identically for an unregistered address, so
@@ -339,7 +347,7 @@ export function PasswordFlow({ mode }: { mode: 'signin' | 'signup' }) {
             aria-label={reveal ? 'Hide password' : 'Show password'}
             className="absolute inset-y-0 right-0 flex w-11 items-center justify-center text-muted-foreground transition-colors hover:text-foreground"
           >
-            {reveal ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+            {reveal ? <EyeClosed className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
           </button>
         </div>
 
@@ -365,7 +373,7 @@ export function PasswordFlow({ mode }: { mode: 'signin' | 'signup' }) {
         >
           {pending ? (
             <>
-              <Loader2 className="h-4 w-4 animate-spin" />
+              <RefreshDouble className="h-4 w-4 animate-spin" />
               {copy.pendingLabel}
             </>
           ) : (
