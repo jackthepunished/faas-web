@@ -118,9 +118,9 @@ function SecretsPage() {
       />
 
       <AppScope state={appState} resource="secrets">
-        <Panel title="Set a secret">
+        <Panel lit title="Set a secret">
           <form
-            className="flex flex-wrap items-end gap-3 p-5"
+            className="flex flex-wrap items-end gap-3"
             onSubmit={(e) => {
               e.preventDefault();
               if (!key.trim() || !value || setSecret.isPending) return;

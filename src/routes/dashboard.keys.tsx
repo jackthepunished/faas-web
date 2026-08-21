@@ -194,9 +194,9 @@ function KeysPage() {
 
       {plaintext && <PlaintextPanel value={plaintext} onDismiss={() => setPlaintext(null)} />}
 
-      <Panel title="Create a key">
+      <Panel lit title="Create a key">
         <form
-          className="flex flex-wrap items-end gap-3 p-5"
+          className="flex flex-wrap items-end gap-3"
           onSubmit={(e) => {
             e.preventDefault();
             if (createKey.isPending) return;

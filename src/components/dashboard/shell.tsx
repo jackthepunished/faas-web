@@ -10,7 +10,6 @@ import {
   Menu,
   SidebarCollapse,
   SidebarExpand,
-  Plus,
   Search,
   Settings,
   Xmark,
@@ -78,7 +77,7 @@ function SidebarBody({
                   onClick={onNavigate}
                   title={collapsed ? label : undefined}
                   className={cn(
-                    'relative isolate flex items-center gap-2.5 rounded-md py-2 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand',
+                    'relative isolate flex items-center gap-2.5 rounded-md py-1.5 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand',
                     collapsed ? 'justify-center px-0' : 'px-2.5'
                   )}
                   activeProps={{
@@ -508,14 +507,6 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
                 </kbd>
               </button>
 
-              <Link
-                to="/dashboard/workflows/new"
-                className="flex h-8 items-center gap-1.5 rounded-lg bg-primary px-3 text-sm font-medium text-primary-foreground transition-opacity hover:opacity-90"
-              >
-                <Plus className="h-3.5 w-3.5" />
-                <span className="hidden sm:inline">New function</span>
-              </Link>
-
               <span className="mx-1 hidden h-5 w-px bg-border sm:block" />
 
               <AccountMenu onSignOut={handleSignOut} />
@@ -523,7 +514,10 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
           </header>
 
           <main id="main" tabIndex={-1} className="px-4 py-8 outline-none sm:px-6 lg:px-8">
-            <div className="mx-auto flex max-w-7xl flex-col gap-6">
+            {/* A measure, not the full viewport: past ~1100px a form row or a
+                label/value pair stops scanning as a pair. Tables set their own
+                min-width and scroll inside it. */}
+            <div className="mx-auto flex max-w-[1100px] flex-col gap-6">
               <UnreachableBanner />
               {children}
             </div>

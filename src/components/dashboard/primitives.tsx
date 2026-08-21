@@ -86,6 +86,7 @@ export function StatTile({
   value,
   state = 'ready',
   unit,
+  note,
   delta,
   deltaGood = true,
   series,
@@ -103,6 +104,9 @@ export function StatTile({
    */
   state?: 'ready' | 'loading' | 'unavailable';
   unit?: string;
+  /** A second scalar for context — "of 2,000 included". Never a computed
+   *  trend: the API returns points, not series. */
+  note?: string;
   delta?: number;
   /** Whether a rising delta is a good thing (invocations) or bad (errors). */
   deltaGood?: boolean;
@@ -132,9 +136,15 @@ export function StatTile({
               —<span className="sr-only">unavailable</span>
             </p>
           ) : (
-            <p className="text-3xl leading-none font-semibold tracking-tight">
+            <p className="text-3xl leading-none font-semibold tracking-tight [font-variant-numeric:tabular-nums]">
               {value}
               {unit && <span className="ml-1 text-base text-muted-foreground">{unit}</span>}
+            </p>
+          )}
+
+          {state === 'ready' && note && (
+            <p className="mt-2 text-xs text-muted-foreground [font-variant-numeric:tabular-nums]">
+              {note}
             </p>
           )}
 
@@ -199,30 +209,48 @@ export function Panel({
   actions,
   children,
   className,
+  lit = false,
+  padded = true,
 }: {
   title?: string;
   description?: string;
   actions?: ReactNode;
   children: ReactNode;
   className?: string;
+  /** Mint hairline along the top edge, marking the page's primary panel. */
+  lit?: boolean;
+  /** Off for content that runs to the panel's edges — a list or a table whose
+   *  own rows carry the padding and whose dividers should span the full width. */
+  padded?: boolean;
 }) {
   return (
     <section
-      className={cn(
-        'rounded-xl border border-border bg-card transition-colors hover:border-border-secondary',
-        className
-      )}
+      className={cn('relative overflow-hidden rounded-xl border border-border bg-card', className)}
     >
+      {/* The landing's lit edge, brightest at centre. One panel per page at
+          most — it marks the thing the page is for. */}
+      {lit && (
+        <span
+          aria-hidden
+          className="pointer-events-none absolute inset-x-10 top-0 h-px"
+          style={{
+            background: 'linear-gradient(to right, transparent, var(--brand-fill), transparent)',
+          }}
+        />
+      )}
       {(title || actions) && (
-        <header className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-5 py-4">
+        <header className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-5 py-3.5">
           <div>
-            {title && <h2 className="text-sm font-semibold tracking-tight">{title}</h2>}
-            {description && <p className="mt-0.5 text-xs text-muted-foreground">{description}</p>}
+            {/* Uppercase mono, the same voice the table headers and stat
+                labels use — a panel title is a section label, not a heading
+                competing with the page's own. */}
+            {title && <h2 className="label-mono text-foreground">{title}</h2>}
+            {description && <p className="mt-1.5 text-xs text-muted-foreground">{description}</p>}
           </div>
           {actions}
         </header>
       )}
-      <div className="p-5">{children}</div>
+      <div className={cn(padded && 'p-5')}>{children}</div>
     </section>
   );
 }

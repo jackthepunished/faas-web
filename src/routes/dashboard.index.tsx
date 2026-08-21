@@ -130,6 +130,7 @@ function OverviewPage() {
 
       <div className="grid gap-6 xl:grid-cols-2">
         <Panel
+          padded={false}
           title="Apps"
           actions={
             <Link
@@ -171,6 +172,7 @@ function OverviewPage() {
         </Panel>
 
         <Panel
+          padded={false}
           title="Recent deployments"
           actions={
             <Link

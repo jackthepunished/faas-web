@@ -118,9 +118,9 @@ function EnvPage() {
       />
 
       <AppScope state={appState} resource="environment variables">
-        <Panel title="Set a variable">
+        <Panel lit title="Set a variable">
           <form
-            className="flex flex-wrap items-end gap-3 p-5"
+            className="flex flex-wrap items-end gap-3"
             onSubmit={(e) => {
               e.preventDefault();
               if (!key.trim() || setEnv.isPending) return;

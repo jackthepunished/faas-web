@@ -69,7 +69,7 @@ export function CommandPalette({
       })),
       {
         id: 'act-new',
-        label: 'Deploy a new workflow',
+        label: 'New app',
         group: 'Actions',
         icon: Plus,
         run: go('/dashboard/workflows/new'),

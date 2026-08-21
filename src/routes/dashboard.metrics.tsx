@@ -118,7 +118,7 @@ function MetricsPage() {
             </div>
 
             <Panel title="Latency (2xx only)">
-              <div className="grid gap-4 p-5 sm:grid-cols-3">
+              <div className="grid gap-4 sm:grid-cols-3">
                 <StatTile label="p50" value={formatMs(data?.latency_p50_ms)} state={tile} />
                 <StatTile label="p95" value={formatMs(data?.latency_p95_ms)} state={tile} />
                 <StatTile label="p99" value={formatMs(data?.latency_p99_ms)} state={tile} />
