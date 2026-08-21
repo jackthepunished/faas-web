@@ -395,7 +395,14 @@
   }
   @media (prefers-reduced-motion: reduce) {
     [class*='animate-'] {
+      /* Duration alone only makes an animation imperceptibly fast — an
+         infinite one (animate-spin, animate-ping) keeps looping forever at
+         0.01ms, which is still motion and still burns a compositor frame.
+         Capping the iteration count is what actually stops it, while one-shot
+         entrances still land on their final keyframe rather than freezing at
+         the initial one, which is why the duration stays. */
       animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
     }
   }
 
