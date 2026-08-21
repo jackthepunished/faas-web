@@ -1,14 +1,14 @@
 import {
   Activity,
-  AlarmClock,
+  Timer,
   Database,
   GitBranch,
   GitPullRequest,
   Globe,
-  KeyRound,
+  Key,
   ShieldCheck,
-  Zap,
-} from 'lucide-react';
+  Flash,
+} from 'iconoir-react';
 import { motion } from 'framer-motion';
 import { BentoCard, BentoGrid } from '@/components/ui/bento-grid';
 import { EASE, Reveal } from './reveal';
@@ -37,7 +37,7 @@ import {
  */
 const CARDS = [
   {
-    Icon: Zap,
+    Icon: Flash,
     name: 'Functions',
     description:
       'Node, Python, or Go in a hardware-isolated microVM. Invoke sync or async; every wake restores the same snapshot.',
@@ -47,7 +47,7 @@ const CARDS = [
     background: <FilesMarquee />,
   },
   {
-    Icon: AlarmClock,
+    Icon: Timer,
     name: 'Cron & queues',
     description:
       'Schedules, queues with dead-letter, and delayed tasks — without a second service.',
@@ -93,7 +93,7 @@ const CARDS = [
     background: <DomainsCard />,
   },
   {
-    Icon: KeyRound,
+    Icon: Key,
     name: 'Secrets & env',
     description:
       'Sealed at rest, injected as plain env vars at wake. Scoped per app, rotatable from the CLI or console.',

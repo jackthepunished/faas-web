@@ -1,5 +1,5 @@
 import { Link } from '@tanstack/react-router';
-import { ArrowRight, ArrowUpRight, Check, Wind } from 'lucide-react';
+import { ArrowRight, ArrowUpRight, Check, Wind } from 'iconoir-react';
 import { Button } from '@/components/ui/button';
 import { SweepLink } from '@/components/sweep-link';
 import { InstallCommand } from './install-command';

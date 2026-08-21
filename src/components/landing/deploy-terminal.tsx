@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { RotateCcw } from 'lucide-react';
+import { Restart } from 'iconoir-react';
 
 /**
  * A deploy session, typed out.
@@ -148,7 +148,7 @@ export function DeployTerminal() {
             cursor.done ? 'opacity-100' : 'pointer-events-none opacity-0'
           }`}
         >
-          <RotateCcw className="h-3.5 w-3.5" />
+          <Restart className="h-3.5 w-3.5" />
         </button>
       </div>
 

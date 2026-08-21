@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Check, Copy } from 'lucide-react';
+import { Check, Copy } from 'iconoir-react';
 
 export const INSTALL_COMMAND = 'brew install gregale';
 

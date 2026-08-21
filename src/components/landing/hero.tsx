@@ -1,5 +1,5 @@
 import { motion, useReducedMotion } from 'framer-motion';
-import { ArrowRight } from 'lucide-react';
+import { ArrowRight } from 'iconoir-react';
 import { DotCutCanvas } from '@/components/dotcut/dot-cut-canvas';
 import type { Scene } from '@/components/dotcut/scenes';
 import { SweepLink } from '@/components/sweep-link';

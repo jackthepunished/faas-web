@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import { Check, GitBranch, GitPullRequest, Lock, Package, Rocket } from 'lucide-react';
+import { Check, GitBranch, GitPullRequest, Lock, Package, Rocket } from 'iconoir-react';
 import { forwardRef, useRef, type ReactNode } from 'react';
 import { AnimatedBeam } from '@/components/ui/animated-beam';
 import { DotCutCanvas } from '@/components/dotcut/dot-cut-canvas';
