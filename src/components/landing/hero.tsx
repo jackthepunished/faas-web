@@ -44,16 +44,8 @@ export function Hero() {
     >
       <div className="relative mx-auto flex w-full max-w-6xl flex-col items-center px-4 pt-32 sm:px-6 sm:pt-40">
         <div className="flex w-full max-w-3xl flex-col items-center gap-6 text-center">
-          <motion.p
-            {...reveal(0)}
-            className="label-mono inline-flex h-8 items-center gap-2.5 rounded-full border border-mint-4 bg-mint-2 px-4 text-brand"
-          >
-            <span aria-hidden className="h-1.5 w-1.5 rounded-full bg-brand-fill" />
-            Open source · Firecracker microVMs
-          </motion.p>
-
           <motion.h1
-            {...reveal(0.08)}
+            {...reveal(0)}
             className="text-balance text-[42px] font-semibold leading-[1.04] tracking-[-0.03em] text-foreground sm:text-[58px] lg:text-[68px]"
           >
             Serverless on real microVMs. Scale to zero. Wake in{' '}
@@ -61,7 +53,7 @@ export function Hero() {
           </motion.h1>
 
           <motion.p
-            {...reveal(0.16)}
+            {...reveal(0.08)}
             className="max-w-[34rem] text-pretty text-base leading-[1.5] text-muted-foreground sm:text-lg"
           >
             Deploy functions to Firecracker microVMs on bare metal. They snapshot when idle and
@@ -69,7 +61,7 @@ export function Hero() {
           </motion.p>
 
           <motion.div
-            {...reveal(0.24)}
+            {...reveal(0.16)}
             className="flex w-full flex-col items-stretch gap-3 pt-2 sm:w-auto sm:flex-row sm:items-center"
           >
             <Button
