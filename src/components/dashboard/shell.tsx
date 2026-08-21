@@ -4,6 +4,7 @@ import { AnimatePresence, LayoutGroup, motion, useReducedMotion } from 'framer-m
 import {
   ChevronDown,
   ChevronRight,
+  CloudOff,
   LogOut,
   Menu,
   PanelLeftClose,
@@ -259,6 +260,50 @@ function AccountMenu({ onSignOut }: { onSignOut: () => void }) {
   );
 }
 
+/**
+ * One outage, said once.
+ *
+ * Without this every panel on the page reports the same unreachable API
+ * separately, which reads as many independent failures instead of one.
+ */
+function UnreachableBanner() {
+  const { apiReachable, refreshAccount } = useAuth();
+  const [retrying, setRetrying] = useState(false);
+  if (apiReachable) return null;
+
+  return (
+    <div
+      role="status"
+      className="flex flex-wrap items-center gap-3 rounded-lg border px-4 py-3 text-sm"
+      style={{
+        borderColor: 'color-mix(in oklab, var(--status-warning) 40%, transparent)',
+        background: 'color-mix(in oklab, var(--status-warning) 8%, transparent)',
+      }}
+    >
+      <CloudOff className="h-4 w-4 shrink-0" style={{ color: 'var(--status-warning)' }} />
+      <p className="text-foreground">
+        Cannot reach the API.{' '}
+        <span className="text-muted-foreground">
+          Pages show what they know and nothing more — no figure here is stale.
+        </span>
+      </p>
+      <button
+        type="button"
+        disabled={retrying}
+        onClick={() => {
+          setRetrying(true);
+          void refreshAccount()
+            .catch(() => {})
+            .finally(() => setRetrying(false));
+        }}
+        className="ml-auto rounded-full border border-border px-3 py-1 text-xs transition-colors hover:border-border-secondary disabled:opacity-50"
+      >
+        {retrying ? 'Checking…' : 'Check again'}
+      </button>
+    </div>
+  );
+}
+
 export function DashboardShell({ children }: { children: React.ReactNode }) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [paletteOpen, setPaletteOpen] = useState(false);
@@ -473,7 +518,10 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
         </header>
 
         <main id="main" tabIndex={-1} className="px-4 py-8 outline-none sm:px-6 lg:px-8">
-          <div className="mx-auto max-w-7xl">{children}</div>
+          <div className="mx-auto flex max-w-7xl flex-col gap-6">
+            <UnreachableBanner />
+            {children}
+          </div>
         </main>
       </div>
 

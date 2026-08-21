@@ -9,6 +9,7 @@ import {
   type ReactNode,
 } from 'react';
 import { api, setUnauthorizedHandler, unwrap } from './api/client';
+import { ApiError } from './api/errors';
 import type { components } from './api/schema';
 
 /**
@@ -165,6 +166,12 @@ interface AuthValue {
   /** Always resolves — the server answers identically whether or not the address exists. */
   requestPasswordReset: (email: string) => Promise<void>;
   refreshAccount: () => Promise<void>;
+  /**
+   * False once `GET /v1/account` has failed with something other than a 401 —
+   * the box is down, or a proxy answered for it. The shell says so once,
+   * rather than leaving every panel to report the same outage separately.
+   */
+  apiReachable: boolean;
 }
 
 const AuthContext = createContext<AuthValue | null>(null);
@@ -172,6 +179,7 @@ const AuthContext = createContext<AuthValue | null>(null);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(() => readSession());
   const [account, setAccount] = useState<Account | null>(null);
+  const [apiReachable, setReachable] = useState(true);
   // Only the boot check blocks; later refreshes happen behind the current UI.
   const [loading, setLoading] = useState<boolean>(() => readSession() !== null);
 
@@ -183,6 +191,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const refreshAccount = useCallback(async () => {
     const next = await unwrap(api.GET('/v1/account', {}));
+    setReachable(true);
     setAccount(next);
     // The server is authoritative on the address; a hint written from a typo'd
     // or since-changed email gets corrected here.
@@ -217,10 +226,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return;
     }
     void refreshAccount()
-      .catch(() => {
+      .catch((err: unknown) => {
         // A 401 has already cleared the session via the handler above. Anything
         // else — the box is down, the network dropped — should not sign the
-        // user out; the next real request will surface it properly.
+        // user out, but the shell needs to know so it can say so once.
+        if (!(err instanceof ApiError && err.isAuth)) setReachable(false);
       })
       .finally(() => setLoading(false));
   }, [refreshAccount]);
@@ -285,8 +295,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       signOut,
       requestPasswordReset,
       refreshAccount,
+      apiReachable,
     }),
-    [user, account, loading, signIn, signUp, signOut, requestPasswordReset, refreshAccount]
+    [
+      user,
+      account,
+      loading,
+      signIn,
+      signUp,
+      signOut,
+      requestPasswordReset,
+      refreshAccount,
+      apiReachable,
+    ]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
