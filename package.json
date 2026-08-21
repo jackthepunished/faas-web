@@ -30,6 +30,7 @@
     "d3-shape": "^3.2.0",
     "framer-motion": "^13.1.0",
     "glimm": "^0.3.0",
+    "iconoir-react": "^7.12.1",
     "lucide-react": "^0.539.0",
     "motion": "^13.1.0",
     "openapi-fetch": "^0.17.0",
