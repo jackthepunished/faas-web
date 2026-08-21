@@ -7,7 +7,14 @@ import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/toast';
 import { BuildLog } from '@/components/dashboard/build-log';
 import { PixelBeams } from '@/components/landing/shaders/pixel-beams';
-import { DEFAULT_WORKSPACE, markOnboarded, readSession, saveWorkspace, useAuth } from '@/lib/auth';
+import {
+  DEFAULT_WORKSPACE,
+  markOnboarded,
+  readSession,
+  saveWorkspace,
+  useAuth,
+  useRedirectWhenSignedOut,
+} from '@/lib/auth';
 import { cn } from '@/lib/utils';
 import { pageHead } from '@/lib/seo';
 
@@ -95,6 +102,7 @@ function OnboardingPage() {
   const sweepNavigate = useSweepNavigate();
   const { toast } = useToast();
   const { user } = useAuth();
+  useRedirectWhenSignedOut();
 
   const [step, setStep] = useState(0);
   const [workspace, setWorkspace] = useState(DEFAULT_WORKSPACE);

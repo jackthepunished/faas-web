@@ -8,6 +8,7 @@ import {
   useState,
   type ReactNode,
 } from 'react';
+import { useNavigate } from '@tanstack/react-router';
 import { api, csrfToken, setUnauthorizedHandler, unwrap } from './api/client';
 import type { components } from './api/schema';
 
@@ -272,4 +273,20 @@ export function useAuth(): AuthValue {
   const ctx = useContext(AuthContext);
   if (!ctx) throw new Error('useAuth must be used inside <AuthProvider>');
   return ctx;
+}
+
+/**
+ * The runtime half of the guard. `beforeLoad` only runs on navigation, so a
+ * session that dies *while* a console page is open — the cookie expired, or
+ * was revoked from another tab — leaves the shell mounted with every panel
+ * failing. The 401 handler above drops the hint; this sends the user on.
+ *
+ * `replace` so Back does not land on a page that will bounce again.
+ */
+export function useRedirectWhenSignedOut() {
+  const { user } = useAuth();
+  const navigate = useNavigate();
+  useEffect(() => {
+    if (!user) void navigate({ to: '/login', replace: true });
+  }, [user, navigate]);
 }

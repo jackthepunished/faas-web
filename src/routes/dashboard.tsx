@@ -1,6 +1,6 @@
 import { createFileRoute, Outlet, redirect } from '@tanstack/react-router';
 import { DashboardShell } from '@/components/dashboard/shell';
-import { hasOnboarded, readSession } from '@/lib/auth';
+import { hasOnboarded, readSession, useRedirectWhenSignedOut } from '@/lib/auth';
 
 export const Route = createFileRoute('/dashboard')({
   // Guards run before the route loads, so a signed-out visitor never sees a
@@ -13,6 +13,8 @@ export const Route = createFileRoute('/dashboard')({
 });
 
 function DashboardLayout() {
+  // The guard above covers navigation; this covers a session lost mid-page.
+  useRedirectWhenSignedOut();
   return (
     <DashboardShell>
       <Outlet />
