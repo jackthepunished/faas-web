@@ -41,6 +41,12 @@ should not add to that count, and does not need to reduce it.
 - **Per-app resources need an app picker.** Secrets, env, alerts, webhooks,
   queues, upstreams, routes, and logs are all `/v1/apps/{slug}/…` with no
   account-wide read. Use `useSelectedApp` + `AppSelect`.
+- **`npm run dev:mock` runs the console without a backend.** `mock/` is a
+  Vite-only middleware (`MOCK_API=1`) that answers the operations the console
+  calls with seeded, schema-typed fixtures; it never ships and `src/` never
+  imports it. It is the sanctioned way to see populated console states while
+  `apid` is down — the "no fixture data" rule above is about `src/`, and still
+  holds. An unmocked path answers `404 not_mocked` and logs to the dev server.
 - **Logs are SSE, not JSON.** They use `EventSource` in `lib/api/logs.ts`, not
   the `openapi-fetch` client and not TanStack Query.
 - **`content/docs/*.md` is vendored**, pulled by `npm run docs:pull` from

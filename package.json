@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite --port 3000",
+    "dev:mock": "MOCK_API=1 vite --port 3000",
     "build": "tsc && vite build && npm run prerender",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
