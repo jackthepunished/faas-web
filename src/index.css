@@ -459,23 +459,4 @@
     font-family: var(--font-mono);
     letter-spacing: 0;
   }
-
-  /* API-first cross-highlight. Each fact on the left names a line of the
-     worked exchange on the right; hovering the fact lights that line.
-     :has() because fact and evidence sit in different grid columns, so the
-     nearest shared ancestor is the section itself. Hover-only reinforcement:
-     the pairing is already stated in the copy, so a keyboard or touch reader
-     loses emphasis, not information. */
-  #api [data-hl] {
-    transition:
-      background-color 150ms ease,
-      color 150ms ease;
-  }
-  #api:has([data-hl-src='doc']:hover) [data-hl='doc'],
-  #api:has([data-hl-src='scopes']:hover) [data-hl='scopes'],
-  #api:has([data-hl-src='retry']:hover) [data-hl='retry'],
-  #api:has([data-hl-src='errors']:hover) [data-hl='errors'] {
-    background-color: var(--brand-muted);
-    color: var(--brand);
-  }
 }
