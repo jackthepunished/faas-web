@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
-import { Check, Loader2 } from 'lucide-react';
+import { Check, RefreshDouble } from 'iconoir-react';
 import { cn } from '@/lib/utils';
 
 export interface BuildStage {
@@ -150,7 +150,9 @@ export function BuildLog({
                 {state === 'done' && (
                   <Check className="h-3.5 w-3.5" style={{ color: 'var(--status-good)' }} />
                 )}
-                {state === 'active' && <Loader2 className="h-3.5 w-3.5 animate-spin text-brand" />}
+                {state === 'active' && (
+                  <RefreshDouble className="h-3.5 w-3.5 animate-spin text-brand" />
+                )}
                 {state === 'pending' && (
                   <span className="h-1.5 w-1.5 rounded-full bg-current opacity-40" />
                 )}

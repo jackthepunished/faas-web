@@ -1,5 +1,5 @@
 import { createFileRoute, Link, notFound } from '@tanstack/react-router';
-import { ArrowLeft, ArrowRight, ArrowUpRight } from 'lucide-react';
+import { ArrowLeft, ArrowRight, ArrowUpRight } from 'iconoir-react';
 import { Markdown } from '@/components/docs/markdown';
 import { docNeighbours, findDoc } from '@/lib/docs-manifest';
 import { docSource, extractHeadings, stripTitle } from '@/lib/docs-content';

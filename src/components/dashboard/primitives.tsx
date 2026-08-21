@@ -1,14 +1,14 @@
 import type { ReactNode } from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
 import {
-  AlertTriangle,
-  CheckCircle2,
-  CircleDashed,
-  CloudOff,
-  Loader2,
-  TrendingDown,
-  TrendingUp,
-} from 'lucide-react';
+  WarningTriangle,
+  CheckCircle,
+  Circle,
+  CloudXmark,
+  RefreshDouble,
+  GraphDown,
+  GraphUp,
+} from 'iconoir-react';
 import type { LogLevel, RunState } from '@/lib/mock-data';
 import { ApiError, errorMessage } from '@/lib/api/errors';
 import { Sparkline } from './charts';
@@ -24,13 +24,12 @@ import { cn } from '@/lib/utils';
  * never rests on hue alone.
  * ------------------------------------------------------------------ */
 
-const STATE_CONFIG: Record<RunState, { label: string; color: string; icon: typeof CheckCircle2 }> =
-  {
-    running: { label: 'Running', color: 'var(--status-good)', icon: CheckCircle2 },
-    idle: { label: 'Idle', color: 'var(--chart-muted)', icon: CircleDashed },
-    error: { label: 'Error', color: 'var(--status-critical)', icon: AlertTriangle },
-    deploying: { label: 'Deploying', color: 'var(--status-warning)', icon: Loader2 },
-  };
+const STATE_CONFIG: Record<RunState, { label: string; color: string; icon: typeof CheckCircle }> = {
+  running: { label: 'Running', color: 'var(--status-good)', icon: CheckCircle },
+  idle: { label: 'Idle', color: 'var(--chart-muted)', icon: Circle },
+  error: { label: 'Error', color: 'var(--status-critical)', icon: WarningTriangle },
+  deploying: { label: 'Deploying', color: 'var(--status-warning)', icon: RefreshDouble },
+};
 
 export function StateBadge({ state, className }: { state: RunState; className?: string }) {
   const cfg = STATE_CONFIG[state];
@@ -71,7 +70,7 @@ export function LevelTag({ level }: { level: LogLevel }) {
       className="label-mono inline-flex w-14 shrink-0 items-center gap-1"
       style={{ color: LEVEL_COLOR[level] }}
     >
-      {level === 'error' && <AlertTriangle className="h-3 w-3" />}
+      {level === 'error' && <WarningTriangle className="h-3 w-3" />}
       {level}
     </span>
   );
@@ -115,7 +114,7 @@ export function StatTile({
 }) {
   const positive = (delta ?? 0) >= 0;
   const good = positive === deltaGood;
-  const Arrow = positive ? TrendingUp : TrendingDown;
+  const Arrow = positive ? GraphUp : GraphDown;
 
   return (
     <div className="rounded-xl border border-border bg-card p-5">
@@ -345,7 +344,7 @@ export function EmptyState({
 }) {
   return (
     <div className="flex flex-col items-center justify-center gap-3 rounded-lg border border-dashed border-border px-6 py-14 text-center">
-      <CircleDashed className="h-5 w-5 text-muted-foreground" />
+      <Circle className="h-5 w-5 text-muted-foreground" />
       <p className="text-sm text-muted-foreground">{message}</p>
       {action}
     </div>
@@ -363,7 +362,7 @@ export function UnreachableState({ onRetry }: { onRetry?: () => void }) {
       role="status"
       className="flex flex-col items-center justify-center gap-3 rounded-lg border border-dashed border-border px-6 py-14 text-center"
     >
-      <CloudOff className="h-5 w-5 text-muted-foreground" />
+      <CloudXmark className="h-5 w-5 text-muted-foreground" />
       <p className="max-w-sm text-sm text-muted-foreground">
         Could not reach the API. Nothing is shown rather than something stale.
       </p>
@@ -392,7 +391,7 @@ export function LoadingState({ message = 'Loading…' }: { message?: string }) {
       role="status"
       className="flex flex-col items-center justify-center gap-2 rounded-lg border border-dashed border-border px-6 py-14 text-center"
     >
-      <Loader2 className="h-5 w-5 animate-spin text-muted-foreground motion-reduce:animate-none" />
+      <RefreshDouble className="h-5 w-5 animate-spin text-muted-foreground motion-reduce:animate-none" />
       <p className="text-sm text-muted-foreground">{message}</p>
     </div>
   );
@@ -409,7 +408,7 @@ export function ErrorState({ error, onRetry }: { error: unknown; onRetry?: () =>
       className="flex flex-col items-center justify-center gap-3 rounded-lg border border-dashed px-6 py-14 text-center"
       style={{ borderColor: 'color-mix(in oklab, var(--status-critical) 35%, transparent)' }}
     >
-      <AlertTriangle className="h-5 w-5" style={{ color: 'var(--status-critical)' }} />
+      <WarningTriangle className="h-5 w-5" style={{ color: 'var(--status-critical)' }} />
       <p className="max-w-sm text-sm text-muted-foreground">{errorMessage(error)}</p>
       {onRetry && (
         <button

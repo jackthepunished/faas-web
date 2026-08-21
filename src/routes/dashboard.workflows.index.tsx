@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router';
-import { ArrowDown, ArrowUp, Plus, Search } from 'lucide-react';
+import { ArrowDown, ArrowUp, Plus, Search } from 'iconoir-react';
 import { Button } from '@/components/ui/button';
 import {
   EmptyState,

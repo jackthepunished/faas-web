@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
 import { useNavigate } from '@tanstack/react-router';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
-import { CornerDownLeft, GitBranch, Plus, Search } from 'lucide-react';
-import { NAV_ITEMS } from './nav-config';
+import { UTurnArrowLeft, GitBranch, Plus, Search } from 'iconoir-react';
+import { NAV_ITEMS, type NavIcon } from './nav-config';
 import { EASE } from './motion';
 import { useData } from '@/lib/store';
 import { formatCompact } from '@/lib/mock-data';
@@ -20,7 +20,7 @@ interface Command {
   label: string;
   group: string;
   hint?: string;
-  icon: typeof Search;
+  icon: NavIcon;
   run: () => void;
 }
 
@@ -322,7 +322,7 @@ export function CommandPalette({
                       {cmd.hint && (
                         <span className="shrink-0 text-xs text-muted-foreground">{cmd.hint}</span>
                       )}
-                      {i === active && <CornerDownLeft className="h-3 w-3 shrink-0" />}
+                      {i === active && <UTurnArrowLeft className="h-3 w-3 shrink-0" />}
                     </li>,
                   ];
                 })}

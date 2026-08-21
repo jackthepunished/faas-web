@@ -2,18 +2,19 @@ import { useEffect, useRef, useState } from 'react';
 import { Link, useRouterState } from '@tanstack/react-router';
 import { AnimatePresence, LayoutGroup, motion, useReducedMotion } from 'framer-motion';
 import {
-  ChevronDown,
-  ChevronRight,
-  CloudOff,
+  IconoirProvider,
+  NavArrowDown,
+  NavArrowRight,
+  CloudXmark,
   LogOut,
   Menu,
-  PanelLeftClose,
-  PanelLeftOpen,
+  SidebarCollapse,
+  SidebarExpand,
   Plus,
   Search,
   Settings,
-  X,
-} from 'lucide-react';
+  Xmark,
+} from 'iconoir-react';
 import { useData } from '@/lib/store';
 import { readWorkspace, useAuth } from '@/lib/auth';
 import { useSweepNavigate } from '@/components/sweep-link';
@@ -173,7 +174,7 @@ function Breadcrumbs() {
         const last = i === trail.length - 1;
         return (
           <span key={crumb.label} className="flex min-w-0 items-center gap-1.5">
-            <ChevronRight className="h-3.5 w-3.5 shrink-0 text-muted-foreground/50" />
+            <NavArrowRight className="h-3.5 w-3.5 shrink-0 text-muted-foreground/50" />
             <span
               aria-current={last ? 'page' : undefined}
               className={cn('truncate px-1 py-0.5', last ? 'font-medium' : 'text-muted-foreground')}
@@ -219,7 +220,7 @@ function AccountMenu({ onSignOut }: { onSignOut: () => void }) {
         <span className="flex h-7 w-7 items-center justify-center rounded-full bg-muted text-[11px] font-medium">
           {user?.initials ?? 'GG'}
         </span>
-        <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
+        <NavArrowDown className="h-3.5 w-3.5 text-muted-foreground" />
       </button>
 
       {open && (
@@ -280,7 +281,7 @@ function UnreachableBanner() {
         background: 'color-mix(in oklab, var(--status-warning) 8%, transparent)',
       }}
     >
-      <CloudOff className="h-4 w-4 shrink-0" style={{ color: 'var(--status-warning)' }} />
+      <CloudXmark className="h-4 w-4 shrink-0" style={{ color: 'var(--status-warning)' }} />
       <p className="text-foreground">
         Cannot reach the API.{' '}
         <span className="text-muted-foreground">
@@ -378,154 +379,159 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
   // beneath it. The shell and its 21 routes are written entirely in tokens, so
   // nothing below this line knows the marketing site is now light.
   return (
-    <div className="console min-h-screen bg-background text-foreground">
-      <a
-        href="#main"
-        className="sr-only focus:not-sr-only focus:absolute focus:left-2 focus:top-2 focus:z-50 focus:rounded-md focus:bg-background focus:px-3 focus:py-2 focus:text-sm focus:ring-2 focus:ring-ring"
-      >
-        Skip to content
-      </a>
-      {/* Desktop sidebar */}
-      <aside
-        className={cn(
-          'fixed inset-y-0 left-0 z-30 hidden flex-col border-r border-border bg-card py-5 transition-[width] duration-200 lg:flex',
-          collapsed ? 'w-[4.5rem] px-2' : 'w-60 px-3'
-        )}
-      >
-        <SidebarBody id="desktop" collapsed={collapsed} />
-
-        {/* Identity and sign-out live in the top bar's account menu, so the
-            sidebar footer carries context instead of duplicating them. */}
-        <div className="mt-auto pt-4">
-          {!collapsed && (
-            <div className="mb-2 rounded-lg border border-border bg-background p-3">
-              <div className="flex items-center gap-2">
-                <span className="relative flex h-1.5 w-1.5">
-                  <span
-                    className="absolute inline-flex h-full w-full animate-ping rounded-full opacity-75"
-                    style={{ background: 'var(--status-good)' }}
-                  />
-                  <span
-                    className="relative inline-flex h-1.5 w-1.5 rounded-full"
-                    style={{ background: 'var(--status-good)' }}
-                  />
-                </span>
-                <p className="font-mono text-xs">fra-metal-1</p>
-              </div>
-              <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
-                Private beta on single-node metal. Multi-node scaling is on the roadmap.
-              </p>
-            </div>
+    // Iconoir draws at 1.5px, which goes faint at the 14–16px the console
+    // works at, on a near-black ground. Set once here rather than per icon;
+    // the landing keeps the lighter default, where the sizes are larger.
+    <IconoirProvider iconProps={{ strokeWidth: 1.8 }}>
+      <div className="console min-h-screen bg-background text-foreground">
+        <a
+          href="#main"
+          className="sr-only focus:not-sr-only focus:absolute focus:left-2 focus:top-2 focus:z-50 focus:rounded-md focus:bg-background focus:px-3 focus:py-2 focus:text-sm focus:ring-2 focus:ring-ring"
+        >
+          Skip to content
+        </a>
+        {/* Desktop sidebar */}
+        <aside
+          className={cn(
+            'fixed inset-y-0 left-0 z-30 hidden flex-col border-r border-border bg-card py-5 transition-[width] duration-200 lg:flex',
+            collapsed ? 'w-[4.5rem] px-2' : 'w-60 px-3'
           )}
+        >
+          <SidebarBody id="desktop" collapsed={collapsed} />
 
-          <button
-            type="button"
-            onClick={toggleCollapsed}
-            aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-            aria-keyshortcuts="Meta+B Control+B"
-            title={`${collapsed ? 'Expand' : 'Collapse'} sidebar (⌘B)`}
-            className={cn(
-              'flex w-full items-center gap-2.5 rounded-md py-2 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground',
-              collapsed ? 'justify-center px-0' : 'px-2.5'
+          {/* Identity and sign-out live in the top bar's account menu, so the
+            sidebar footer carries context instead of duplicating them. */}
+          <div className="mt-auto pt-4">
+            {!collapsed && (
+              <div className="mb-2 rounded-lg border border-border bg-background p-3">
+                <div className="flex items-center gap-2">
+                  <span className="relative flex h-1.5 w-1.5">
+                    <span
+                      className="absolute inline-flex h-full w-full animate-ping rounded-full opacity-75"
+                      style={{ background: 'var(--status-good)' }}
+                    />
+                    <span
+                      className="relative inline-flex h-1.5 w-1.5 rounded-full"
+                      style={{ background: 'var(--status-good)' }}
+                    />
+                  </span>
+                  <p className="font-mono text-xs">fra-metal-1</p>
+                </div>
+                <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
+                  Private beta on single-node metal. Multi-node scaling is on the roadmap.
+                </p>
+              </div>
             )}
-          >
-            {collapsed ? (
-              <PanelLeftOpen className="h-4 w-4 shrink-0" />
-            ) : (
-              <>
-                <PanelLeftClose className="h-4 w-4 shrink-0" />
-                Collapse
-              </>
-            )}
-          </button>
-        </div>
-      </aside>
 
-      {/* Mobile drawer */}
-      {mobileOpen && (
-        <div className="fixed inset-0 z-50 lg:hidden">
-          <button
-            aria-hidden="true"
-            tabIndex={-1}
-            className="absolute inset-0 bg-mint-12/50 backdrop-blur-sm"
-            onClick={() => setMobileOpen(false)}
-          />
-          <aside
-            ref={drawerRef}
-            role="dialog"
-            aria-modal="true"
-            aria-label="Navigation"
-            className="absolute inset-y-0 left-0 flex w-64 flex-col border-r border-border bg-card px-3 py-5"
-          >
-            <button
-              aria-label="Close navigation"
-              className="absolute right-3 top-4 rounded-md p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground"
-              onClick={() => setMobileOpen(false)}
-            >
-              <X className="h-4 w-4" />
-            </button>
-            <SidebarBody id="mobile" onNavigate={() => setMobileOpen(false)} />
-          </aside>
-        </div>
-      )}
-
-      <div
-        className={cn(
-          'transition-[padding] duration-200',
-          collapsed ? 'lg:pl-[4.5rem]' : 'lg:pl-60'
-        )}
-      >
-        {/* Top bar */}
-        <header className="sticky top-0 z-20 flex h-14 items-center gap-3 border-b border-border bg-background/85 px-4 backdrop-blur-md sm:px-6">
-          <button
-            aria-label="Open navigation"
-            className="rounded-md p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground lg:hidden"
-            onClick={() => setMobileOpen(true)}
-          >
-            <Menu className="h-4 w-4" />
-          </button>
-
-          <Breadcrumbs />
-
-          <div className="ml-auto flex items-center gap-1.5">
-            {/* Compact, so identity owns the left rather than a stretched
-                field that only ever opens the palette anyway. */}
             <button
               type="button"
-              onClick={() => setPaletteOpen(true)}
-              aria-label="Search or jump to"
-              className="flex h-8 items-center gap-2 rounded-lg border border-border bg-card px-2.5 text-sm text-muted-foreground transition-colors hover:border-border-secondary hover:text-foreground"
+              onClick={toggleCollapsed}
+              aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+              aria-keyshortcuts="Meta+B Control+B"
+              title={`${collapsed ? 'Expand' : 'Collapse'} sidebar (⌘B)`}
+              className={cn(
+                'flex w-full items-center gap-2.5 rounded-md py-2 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground',
+                collapsed ? 'justify-center px-0' : 'px-2.5'
+              )}
             >
-              <Search className="h-3.5 w-3.5 shrink-0" />
-              <span className="hidden lg:inline">Search</span>
-              <kbd className="label-mono hidden rounded border border-border px-1 py-0.5 lg:block">
-                ⌘K
-              </kbd>
+              {collapsed ? (
+                <SidebarExpand className="h-4 w-4 shrink-0" />
+              ) : (
+                <>
+                  <SidebarCollapse className="h-4 w-4 shrink-0" />
+                  Collapse
+                </>
+              )}
+            </button>
+          </div>
+        </aside>
+
+        {/* Mobile drawer */}
+        {mobileOpen && (
+          <div className="fixed inset-0 z-50 lg:hidden">
+            <button
+              aria-hidden="true"
+              tabIndex={-1}
+              className="absolute inset-0 bg-mint-12/50 backdrop-blur-sm"
+              onClick={() => setMobileOpen(false)}
+            />
+            <aside
+              ref={drawerRef}
+              role="dialog"
+              aria-modal="true"
+              aria-label="Navigation"
+              className="absolute inset-y-0 left-0 flex w-64 flex-col border-r border-border bg-card px-3 py-5"
+            >
+              <button
+                aria-label="Close navigation"
+                className="absolute right-3 top-4 rounded-md p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground"
+                onClick={() => setMobileOpen(false)}
+              >
+                <Xmark className="h-4 w-4" />
+              </button>
+              <SidebarBody id="mobile" onNavigate={() => setMobileOpen(false)} />
+            </aside>
+          </div>
+        )}
+
+        <div
+          className={cn(
+            'transition-[padding] duration-200',
+            collapsed ? 'lg:pl-[4.5rem]' : 'lg:pl-60'
+          )}
+        >
+          {/* Top bar */}
+          <header className="sticky top-0 z-20 flex h-14 items-center gap-3 border-b border-border bg-background/85 px-4 backdrop-blur-md sm:px-6">
+            <button
+              aria-label="Open navigation"
+              className="rounded-md p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground lg:hidden"
+              onClick={() => setMobileOpen(true)}
+            >
+              <Menu className="h-4 w-4" />
             </button>
 
-            <Link
-              to="/dashboard/workflows/new"
-              className="flex h-8 items-center gap-1.5 rounded-lg bg-primary px-3 text-sm font-medium text-primary-foreground transition-opacity hover:opacity-90"
-            >
-              <Plus className="h-3.5 w-3.5" />
-              <span className="hidden sm:inline">New function</span>
-            </Link>
+            <Breadcrumbs />
 
-            <span className="mx-1 hidden h-5 w-px bg-border sm:block" />
+            <div className="ml-auto flex items-center gap-1.5">
+              {/* Compact, so identity owns the left rather than a stretched
+                field that only ever opens the palette anyway. */}
+              <button
+                type="button"
+                onClick={() => setPaletteOpen(true)}
+                aria-label="Search or jump to"
+                className="flex h-8 items-center gap-2 rounded-lg border border-border bg-card px-2.5 text-sm text-muted-foreground transition-colors hover:border-border-secondary hover:text-foreground"
+              >
+                <Search className="h-3.5 w-3.5 shrink-0" />
+                <span className="hidden lg:inline">Search</span>
+                <kbd className="label-mono hidden rounded border border-border px-1 py-0.5 lg:block">
+                  ⌘K
+                </kbd>
+              </button>
 
-            <AccountMenu onSignOut={handleSignOut} />
-          </div>
-        </header>
+              <Link
+                to="/dashboard/workflows/new"
+                className="flex h-8 items-center gap-1.5 rounded-lg bg-primary px-3 text-sm font-medium text-primary-foreground transition-opacity hover:opacity-90"
+              >
+                <Plus className="h-3.5 w-3.5" />
+                <span className="hidden sm:inline">New function</span>
+              </Link>
 
-        <main id="main" tabIndex={-1} className="px-4 py-8 outline-none sm:px-6 lg:px-8">
-          <div className="mx-auto flex max-w-7xl flex-col gap-6">
-            <UnreachableBanner />
-            {children}
-          </div>
-        </main>
+              <span className="mx-1 hidden h-5 w-px bg-border sm:block" />
+
+              <AccountMenu onSignOut={handleSignOut} />
+            </div>
+          </header>
+
+          <main id="main" tabIndex={-1} className="px-4 py-8 outline-none sm:px-6 lg:px-8">
+            <div className="mx-auto flex max-w-7xl flex-col gap-6">
+              <UnreachableBanner />
+              {children}
+            </div>
+          </main>
+        </div>
+
+        <CommandPalette open={paletteOpen} onOpenChange={setPaletteOpen} />
       </div>
-
-      <CommandPalette open={paletteOpen} onOpenChange={setPaletteOpen} />
-    </div>
+    </IconoirProvider>
   );
 }

@@ -9,7 +9,7 @@ import {
   type ReactNode,
 } from 'react';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
-import { AlertTriangle, CheckCircle2, Info, X } from 'lucide-react';
+import { WarningTriangle, CheckCircle, InfoCircle, Xmark } from 'iconoir-react';
 
 type ToastKind = 'success' | 'error' | 'info';
 
@@ -28,9 +28,9 @@ const DISMISS_MS: Record<ToastKind, number> = {
 };
 
 const KIND = {
-  success: { icon: CheckCircle2, color: 'var(--status-good)' },
-  error: { icon: AlertTriangle, color: 'var(--status-critical)' },
-  info: { icon: Info, color: 'var(--brand)' },
+  success: { icon: CheckCircle, color: 'var(--status-good)' },
+  error: { icon: WarningTriangle, color: 'var(--status-critical)' },
+  info: { icon: InfoCircle, color: 'var(--brand)' },
 } as const;
 
 const ToastContext = createContext<{
@@ -115,7 +115,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
                   onClick={() => dismiss(t.id)}
                   className="shrink-0 rounded p-0.5 text-muted-foreground transition-colors hover:text-foreground"
                 >
-                  <X className="h-3.5 w-3.5" />
+                  <Xmark className="h-3.5 w-3.5" />
                 </button>
               </motion.div>
             );

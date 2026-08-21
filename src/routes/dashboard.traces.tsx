@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { createFileRoute } from '@tanstack/react-router';
-import { RotateCw } from 'lucide-react';
+import { Refresh } from 'iconoir-react';
 import { PageHeader } from '@/components/dashboard/primitives';
 import { Pill, ResourceTable, type Column } from '@/components/dashboard/resource-table';
 import { useToast } from '@/components/ui/toast';
@@ -133,7 +133,7 @@ function InvocationsPage() {
           }}
           className="text-muted-foreground transition-colors hover:text-foreground"
         >
-          <RotateCw className="h-3.5 w-3.5" />
+          <Refresh className="h-3.5 w-3.5" />
         </button>
       ),
     },

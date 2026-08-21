@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react';
 import { Link, createFileRoute, useNavigate } from '@tanstack/react-router';
-import { AlertTriangle, ArrowRight, Loader2 } from 'lucide-react';
+import { WarningTriangle, ArrowRight, RefreshDouble } from 'iconoir-react';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/components/ui/toast';
@@ -72,7 +72,7 @@ function DeleteWorkspaceDialog({
           className="flex h-9 w-9 items-center justify-center rounded-full"
           style={{ background: 'color-mix(in oklab, var(--status-critical) 18%, transparent)' }}
         >
-          <AlertTriangle className="h-4 w-4" style={{ color: 'var(--status-critical)' }} />
+          <WarningTriangle className="h-4 w-4" style={{ color: 'var(--status-critical)' }} />
         </span>
 
         <h2 id="delete-title" className="mt-4 text-lg font-semibold tracking-tight">
@@ -173,7 +173,7 @@ function SettingsPage() {
         </div>
         <div className="mt-5 flex justify-end">
           <Button size="sm" disabled={saving} onClick={handleSave} className="gap-1.5">
-            {saving && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+            {saving && <RefreshDouble className="h-3.5 w-3.5 animate-spin" />}
             {saving ? 'Saving…' : 'Save changes'}
           </Button>
         </div>

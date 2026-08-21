@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { createFileRoute } from '@tanstack/react-router';
-import { Plus, Trash2 } from 'lucide-react';
+import { Plus, Trash } from 'iconoir-react';
 import { Button } from '@/components/ui/button';
 import { PageHeader, Panel } from '@/components/dashboard/primitives';
 import { ResourceTable, type Column } from '@/components/dashboard/resource-table';
@@ -99,7 +99,7 @@ function SecretsPage() {
           }}
           className="text-muted-foreground transition-colors hover:text-foreground"
         >
-          <Trash2 className="h-3.5 w-3.5" />
+          <Trash className="h-3.5 w-3.5" />
         </button>
       ),
     },

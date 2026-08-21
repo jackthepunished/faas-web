@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { createFileRoute, redirect } from '@tanstack/react-router';
 import { useSweepNavigate } from '@/components/sweep-link';
-import { ArrowLeft, ArrowRight, Check, PartyPopper, Wind } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Check, Sparks, Wind } from 'iconoir-react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/toast';
 import { BuildLog } from '@/components/dashboard/build-log';
@@ -355,7 +355,7 @@ function OnboardingPage() {
                   className="mx-auto flex h-12 w-12 items-center justify-center rounded-full"
                   style={{ background: 'color-mix(in oklab, var(--status-good) 18%, transparent)' }}
                 >
-                  <PartyPopper className="h-5 w-5" style={{ color: 'var(--status-good)' }} />
+                  <Sparks className="h-5 w-5" style={{ color: 'var(--status-good)' }} />
                 </span>
                 {/* This step used to announce "You are live" and show a URL for
                     a function that was never created — onboarding writes a

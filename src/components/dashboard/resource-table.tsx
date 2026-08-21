@@ -1,6 +1,6 @@
 import { useMemo, useState, type ReactNode } from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
-import { ArrowDown, ArrowUp, Search, X } from 'lucide-react';
+import { ArrowDown, ArrowUp, Search, Xmark } from 'iconoir-react';
 import { EmptyState, ErrorState, Skeleton, UnreachableState, queryPhase } from './primitives';
 import { EASE } from './motion';
 import { cn } from '@/lib/utils';
@@ -139,7 +139,7 @@ export function ResourceTable<T extends { id: string }>({
                   onClick={() => setQuery('')}
                   className="absolute right-2 rounded p-1 text-muted-foreground transition-colors hover:text-foreground"
                 >
-                  <X className="h-3.5 w-3.5" />
+                  <Xmark className="h-3.5 w-3.5" />
                 </button>
               )}
             </label>

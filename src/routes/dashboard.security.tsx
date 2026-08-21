@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { createFileRoute } from '@tanstack/react-router';
-import { LogOut } from 'lucide-react';
+import { LogOut } from 'iconoir-react';
 import { Button } from '@/components/ui/button';
 import { PageHeader, Panel } from '@/components/dashboard/primitives';
 import { Pill, ResourceTable, type Column } from '@/components/dashboard/resource-table';

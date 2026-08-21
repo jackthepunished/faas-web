@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { createFileRoute } from '@tanstack/react-router';
-import { AlertTriangle } from 'lucide-react';
+import { WarningTriangle } from 'iconoir-react';
 import { PageHeader } from '@/components/dashboard/primitives';
 import { ResourceTable, type Column } from '@/components/dashboard/resource-table';
 import { AppScope, AppSelect, useSelectedApp } from '@/components/dashboard/app-select';
@@ -63,7 +63,7 @@ function ApisPage() {
             className="flex items-start gap-2 rounded-lg border px-3 py-2 text-xs"
             style={{ borderColor: 'color-mix(in oklab, var(--status-warning) 40%, transparent)' }}
           >
-            <AlertTriangle
+            <WarningTriangle
               className="mt-px h-3.5 w-3.5 shrink-0"
               style={{ color: 'var(--status-warning)' }}
             />

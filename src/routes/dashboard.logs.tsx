@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { createFileRoute } from '@tanstack/react-router';
-import { Pause, Play, Search } from 'lucide-react';
+import { Pause, Play, Search } from 'iconoir-react';
 import { Button } from '@/components/ui/button';
 import { EmptyState, PageHeader } from '@/components/dashboard/primitives';
 import { Pill } from '@/components/dashboard/resource-table';

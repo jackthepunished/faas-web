@@ -1,6 +1,6 @@
 import { useId, useRef, useState } from 'react';
 import { createFileRoute, Link, useParams } from '@tanstack/react-router';
-import { ArrowLeft, ArrowRight, ExternalLink, RotateCw } from 'lucide-react';
+import { ArrowLeft, ArrowRight, OpenNewWindow, Refresh } from 'iconoir-react';
 import { Button } from '@/components/ui/button';
 import {
   EmptyState,
@@ -143,7 +143,7 @@ function FunctionDetailPage() {
                   );
               }}
             >
-              <RotateCw className={cn('h-3.5 w-3.5', isDeploying && 'animate-spin')} />
+              <Refresh className={cn('h-3.5 w-3.5', isDeploying && 'animate-spin')} />
               {isDeploying ? 'Deploying…' : 'Roll back'}
             </Button>
           </>
@@ -155,7 +155,7 @@ function FunctionDetailPage() {
         className="inline-flex w-fit items-center gap-2 rounded-md border border-border bg-card px-3 py-1.5 font-mono text-xs text-muted-foreground transition-colors hover:border-brand/40 hover:text-foreground"
       >
         {fn.url}
-        <ExternalLink className="h-3 w-3" />
+        <OpenNewWindow className="h-3 w-3" />
       </a>
 
       {/* Tabs */}

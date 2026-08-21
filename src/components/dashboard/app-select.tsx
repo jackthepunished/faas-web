@@ -1,6 +1,6 @@
 import { useState, type ReactNode } from 'react';
 import { Link } from '@tanstack/react-router';
-import { Plus } from 'lucide-react';
+import { Plus } from 'iconoir-react';
 import { useApps } from '@/lib/api/queries';
 import { Button } from '@/components/ui/button';
 import { EmptyState, ErrorState, LoadingState, UnreachableState, queryPhase } from './primitives';

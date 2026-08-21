@@ -1,32 +1,32 @@
+import type { ComponentType, SVGProps } from 'react';
 import {
   Activity,
-  AlarmClock,
+  Timer,
   Bell,
   CreditCard,
   Database,
-  FileText,
-  Gauge,
+  Page,
+  DashboardSpeed,
   Globe,
   HardDrive,
-  KeyRound,
-  Layers,
-  LayoutDashboard,
-  ListTree,
-  type LucideIcon,
+  Key,
+  Server,
+  ViewGrid,
+  List,
   Network,
   Package,
-  Receipt,
+  Coins,
   Rocket,
-  ScrollText,
+  Journal,
   Settings,
   ShieldCheck,
   Shuffle,
-  SlidersHorizontal,
-  Users,
-  Variable,
-  Webhook,
-  Workflow as WorkflowIcon,
-} from 'lucide-react';
+  GraphUp,
+  Group,
+  Code,
+  ShareAndroid,
+  GitFork as WorkflowIcon,
+} from 'iconoir-react';
 
 /**
  * Grouped sidebar navigation.
@@ -35,10 +35,13 @@ import {
  * cannot point at a route that does not exist.
  */
 
+/** Any Iconoir glyph: they are plain SVG components. */
+export type NavIcon = ComponentType<SVGProps<SVGSVGElement>>;
+
 export interface NavItem {
   to: string;
   label: string;
-  icon: LucideIcon;
+  icon: NavIcon;
   exact?: boolean;
 }
 
@@ -50,16 +53,16 @@ export interface NavGroup {
 
 export const NAV_GROUPS: NavGroup[] = [
   {
-    items: [{ to: '/dashboard', label: 'Overview', icon: LayoutDashboard, exact: true }],
+    items: [{ to: '/dashboard', label: 'Overview', icon: ViewGrid, exact: true }],
   },
   {
     title: 'Build',
     items: [
       { to: '/dashboard/workflows', label: 'Workflows', icon: WorkflowIcon },
       { to: '/dashboard/apis', label: 'APIs', icon: Network },
-      { to: '/dashboard/crons', label: 'Cron Jobs', icon: AlarmClock },
-      { to: '/dashboard/queues', label: 'Queue Jobs', icon: ListTree },
-      { to: '/dashboard/workers', label: 'Instances', icon: Layers },
+      { to: '/dashboard/crons', label: 'Cron Jobs', icon: Timer },
+      { to: '/dashboard/queues', label: 'Queue Jobs', icon: List },
+      { to: '/dashboard/workers', label: 'Instances', icon: Server },
       { to: '/dashboard/deployments', label: 'Deployments', icon: Rocket },
       { to: '/dashboard/builds', label: 'Builds', icon: Package },
     ],
@@ -69,9 +72,9 @@ export const NAV_GROUPS: NavGroup[] = [
     items: [
       { to: '/dashboard/domains', label: 'Domains', icon: Globe },
       { to: '/dashboard/edge-rules', label: 'Edge Rules', icon: Shuffle },
-      { to: '/dashboard/secrets', label: 'Secrets', icon: KeyRound },
-      { to: '/dashboard/env', label: 'Env Vars', icon: Variable },
-      { to: '/dashboard/webhooks', label: 'Webhooks', icon: Webhook },
+      { to: '/dashboard/secrets', label: 'Secrets', icon: Key },
+      { to: '/dashboard/env', label: 'Env Vars', icon: Code },
+      { to: '/dashboard/webhooks', label: 'Webhooks', icon: ShareAndroid },
       { to: '/dashboard/storage', label: 'Storage', icon: HardDrive },
       { to: '/dashboard/databases', label: 'Upstreams', icon: Database },
     ],
@@ -79,26 +82,26 @@ export const NAV_GROUPS: NavGroup[] = [
   {
     title: 'Observability',
     items: [
-      { to: '/dashboard/logs', label: 'Logs', icon: FileText },
-      { to: '/dashboard/metrics', label: 'Metrics', icon: Gauge },
+      { to: '/dashboard/logs', label: 'Logs', icon: Page },
+      { to: '/dashboard/metrics', label: 'Metrics', icon: DashboardSpeed },
       { to: '/dashboard/traces', label: 'Invocations', icon: Activity },
       { to: '/dashboard/alerts', label: 'Alerts', icon: Bell },
-      { to: '/dashboard/audit', label: 'Audit Log', icon: ScrollText },
+      { to: '/dashboard/audit', label: 'Audit Log', icon: Journal },
     ],
   },
   {
     title: 'Billing',
     items: [
-      { to: '/dashboard/usage', label: 'Usage', icon: SlidersHorizontal },
-      { to: '/dashboard/invoices', label: 'Invoices', icon: Receipt },
+      { to: '/dashboard/usage', label: 'Usage', icon: GraphUp },
+      { to: '/dashboard/invoices', label: 'Invoices', icon: Coins },
       { to: '/dashboard/plans', label: 'Plans', icon: CreditCard },
     ],
   },
   {
     title: 'Account',
     items: [
-      { to: '/dashboard/keys', label: 'API Keys', icon: KeyRound },
-      { to: '/dashboard/team', label: 'Team', icon: Users },
+      { to: '/dashboard/keys', label: 'API Keys', icon: Key },
+      { to: '/dashboard/team', label: 'Team', icon: Group },
       { to: '/dashboard/security', label: 'Security', icon: ShieldCheck },
       { to: '/dashboard/settings', label: 'Settings', icon: Settings },
     ],

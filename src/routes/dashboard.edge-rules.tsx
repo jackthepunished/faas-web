@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { createFileRoute } from '@tanstack/react-router';
-import { Trash2 } from 'lucide-react';
+import { Trash } from 'iconoir-react';
 import { PageHeader } from '@/components/dashboard/primitives';
 import { Pill, ResourceTable, type Column } from '@/components/dashboard/resource-table';
 import { useToast } from '@/components/ui/toast';
@@ -117,7 +117,7 @@ function EdgeRulesPage() {
           }}
           className="text-muted-foreground transition-colors hover:text-foreground"
         >
-          <Trash2 className="h-3.5 w-3.5" />
+          <Trash className="h-3.5 w-3.5" />
         </button>
       ),
     },
