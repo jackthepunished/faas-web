@@ -11,7 +11,6 @@ import {
   Plus,
   Search,
   Settings,
-  Wind,
   X,
 } from 'lucide-react';
 import { useData } from '@/lib/store';
@@ -49,10 +48,13 @@ function SidebarBody({
         className={cn('flex items-center gap-2.5 py-1', collapsed ? 'justify-center' : 'px-2.5')}
         aria-label="Gregale home"
       >
-        <span className="brand-mark">
-          <Wind className="h-3.5 w-3.5" />
-        </span>
-        {!collapsed && <span className="text-sm font-semibold tracking-tight">Gregale</span>}
+        {/* Mint recolours of the wordmark: the brand green vanishes on the
+            console's near-black, so the dark surface gets its own step. */}
+        {collapsed ? (
+          <img src="/mark-on-dark.png" alt="Gregale" className="h-7 w-7" />
+        ) : (
+          <img src="/logo-on-dark.png" alt="Gregale" className="h-7 w-auto" />
+        )}
       </Link>
 
       <div className="mt-6 flex flex-col gap-5 overflow-y-auto">
