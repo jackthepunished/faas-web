@@ -1,5 +1,5 @@
 import { Link } from '@tanstack/react-router';
-import { ArrowRight, ArrowUpRight, Check, Wind } from 'iconoir-react';
+import { ArrowRight, ArrowUpRight, Check } from 'iconoir-react';
 import { Button } from '@/components/ui/button';
 import { SweepLink } from '@/components/sweep-link';
 import { InstallCommand } from './install-command';
@@ -238,11 +238,8 @@ export function Footer() {
         <div className="grid gap-10 border-t border-border py-14 md:grid-cols-[1.4fr_repeat(4,1fr)] md:gap-6">
           {/* Brand column */}
           <div className="md:pr-8">
-            <Link to="/" className="inline-flex items-center gap-2.5">
-              <span className="brand-mark">
-                <Wind className="h-3.5 w-3.5" />
-              </span>
-              <span className="font-medium tracking-tight">Gregale</span>
+            <Link to="/" className="inline-flex items-center">
+              <img src="/logo.png" alt="Gregale" className="h-7 w-auto" />
             </Link>
             <p className="mt-4 max-w-[26ch] text-sm leading-relaxed text-muted-foreground">
               Scale-to-zero serverless on real microVMs. Snapshot cold starts under 350ms.
