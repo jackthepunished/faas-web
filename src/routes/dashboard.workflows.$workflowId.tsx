@@ -1,6 +1,6 @@
 import { useId, useRef, useState } from 'react';
 import { createFileRoute, Link, useParams } from '@tanstack/react-router';
-import { ArrowLeft, ArrowRight, OpenNewWindow, Refresh } from 'iconoir-react';
+import { ArrowLeft, OpenNewWindow, Refresh } from 'iconoir-react';
 import { Button } from '@/components/ui/button';
 import {
   EmptyState,
@@ -18,11 +18,40 @@ import { useData } from '@/lib/store';
 import { useToast } from '@/components/ui/toast';
 import { errorMessage } from '@/lib/api/errors';
 import { cn } from '@/lib/utils';
+import { LogsBody } from './dashboard.logs';
+import { RoutesBody } from './dashboard.apis';
+import { SecretsBody } from './dashboard.secrets';
+import { EnvBody } from './dashboard.env';
+import { QueuesBody } from './dashboard.queues';
+import { UpstreamsBody } from './dashboard.databases';
+import { AlertsBody } from './dashboard.alerts';
+import { WebhooksBody } from './dashboard.webhooks';
 import { pageHead, useDocumentTitle } from '@/lib/seo';
 
 const METRIC_RANGES: MetricsRange[] = ['5m', '15m', '1h', '6h', '24h', '7d', '15d'];
 
-const TABS = ['Metrics', 'Deployments', 'Logs', 'Configuration'] as const;
+/**
+ * Every resource that hangs off one app, in the order an operator reaches for
+ * them: what it is doing, what shipped, what it said, then how it is wired.
+ *
+ * These were nine separate sidebar entries, each with its own app picker —
+ * the same "which app?" question answered nine times. The app is in the URL
+ * here, so the question is asked once and a shared link lands on the right
+ * app and the right tab.
+ */
+const TABS = [
+  'Metrics',
+  'Deployments',
+  'Logs',
+  'Routes',
+  'Secrets',
+  'Env',
+  'Queues',
+  'Upstreams',
+  'Alerts',
+  'Webhooks',
+  'Configuration',
+] as const;
 type Tab = (typeof TABS)[number];
 
 export const Route = createFileRoute('/dashboard/workflows/$workflowId')({
@@ -109,7 +138,7 @@ function FunctionDetailPage() {
         className="inline-flex w-fit items-center gap-1.5 text-xs text-muted-foreground transition-colors hover:text-foreground"
       >
         <ArrowLeft className="h-3 w-3" />
-        All workflows
+        All apps
       </Link>
 
       <PageHeader
@@ -161,8 +190,8 @@ function FunctionDetailPage() {
       {/* Tabs */}
       <div
         role="tablist"
-        aria-label="Function detail"
-        className="flex gap-1 border-b border-border"
+        aria-label="App detail"
+        className="flex gap-1 overflow-x-auto border-b border-border"
       >
         {TABS.map((t, i) => (
           <button
@@ -179,7 +208,7 @@ function FunctionDetailPage() {
             onClick={() => setTab(t)}
             onKeyDown={(e) => onTabKeyDown(e, i)}
             className={cn(
-              '-mb-px border-b-2 px-3 py-2 text-sm transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand',
+              '-mb-px whitespace-nowrap border-b-2 px-3 py-2 text-sm transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand',
               tab === t
                 ? 'border-brand text-foreground'
                 : 'border-transparent text-muted-foreground hover:text-foreground'
@@ -282,23 +311,14 @@ function FunctionDetailPage() {
           </Panel>
         )}
 
-        {tab === 'Logs' && (
-          <Panel title="Logs">
-            {/* Logs are an SSE stream, not a list this page can hold. The Logs
-                page owns the connection, the tail, and the grep. */}
-            <div className="flex flex-col items-start gap-3 p-5">
-              <p className="text-sm text-muted-foreground">
-                Logs stream live from this app&rsquo;s instances.
-              </p>
-              <Button asChild size="sm" variant="outline" className="gap-1.5">
-                <Link to="/dashboard/logs">
-                  Open the log stream
-                  <ArrowRight className="h-3.5 w-3.5" />
-                </Link>
-              </Button>
-            </div>
-          </Panel>
-        )}
+        {tab === 'Logs' && <LogsBody slug={fn.id} />}
+        {tab === 'Routes' && <RoutesBody slug={fn.id} />}
+        {tab === 'Secrets' && <SecretsBody slug={fn.id} />}
+        {tab === 'Env' && <EnvBody slug={fn.id} />}
+        {tab === 'Queues' && <QueuesBody slug={fn.id} />}
+        {tab === 'Upstreams' && <UpstreamsBody slug={fn.id} />}
+        {tab === 'Alerts' && <AlertsBody slug={fn.id} />}
+        {tab === 'Webhooks' && <WebhooksBody slug={fn.id} />}
 
         {tab === 'Configuration' && (
           <Panel title="Configuration">
