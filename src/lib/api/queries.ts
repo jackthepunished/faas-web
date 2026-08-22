@@ -544,10 +544,11 @@ export function useRetryDelivery(slug: string, id: string) {
  * Edge rules and queues
  * ------------------------------------------------------------------ */
 
-export function useEdgeRules() {
+export function useEdgeRules(enabled = true) {
   return useQuery({
     queryKey: ['edge-rules'],
     queryFn: () => unwrap(api.GET('/v1/edge-rules', {})),
+    enabled,
   });
 }
 
@@ -959,5 +960,74 @@ export function useFetchBuildSbom() {
   return useMutation({
     mutationFn: (id: string) =>
       unwrap(api.GET('/v1/builds/{id}/sbom', { params: { path: { id } } })),
+  });
+}
+
+/* ------------------------------------------------------------------ *
+ * Edge rules. List is account-wide or per app; create is per app; update
+ * and delete are by id. Kind is immutable on update — the spec says delete
+ * and recreate — and `action` replaces whole.
+ * ------------------------------------------------------------------ */
+
+export type EdgeRule = components['schemas']['EdgeRuleResponse'];
+export type EdgeRuleKind = EdgeRule['kind'];
+export type EdgeRuleAction = EdgeRule['action'];
+
+export function useAppEdgeRules(slug: string) {
+  return useQuery({
+    queryKey: ['apps', slug, 'edge-rules'],
+    queryFn: () => unwrap(api.GET('/v1/apps/{slug}/edge-rules', { params: { path: { slug } } })),
+    enabled: Boolean(slug),
+  });
+}
+
+export function useCreateEdgeRule() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      slug,
+      ...body
+    }: { slug: string } & components['schemas']['CreateEdgeRuleRequest']) =>
+      unwrap(api.POST('/v1/apps/{slug}/edge-rules', { params: { path: { slug } }, body })),
+    onSuccess: (_rule, { slug }) => {
+      void qc.invalidateQueries({ queryKey: ['edge-rules'] });
+      void qc.invalidateQueries({ queryKey: ['apps', slug, 'edge-rules'] });
+    },
+  });
+}
+
+export function useUpdateEdgeRule() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      id,
+      ...body
+    }: { id: string } & components['schemas']['UpdateEdgeRuleRequest']) =>
+      unwrap(api.PATCH('/v1/edge-rules/{id}', { params: { path: { id } }, body })),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ['edge-rules'] });
+      void qc.invalidateQueries({
+        queryKey: ['apps'],
+        predicate: (q) => q.queryKey.includes('edge-rules'),
+      });
+    },
+  });
+}
+
+/**
+ * The throttle recommender: observed and suggested rps per route, clamped to
+ * the plan ceiling so whatever it suggests is settable. Advice only — it is
+ * the person who confirms, by creating the rule.
+ */
+export function useThrottleSuggestions(slug: string, range: MetricsRange, enabled: boolean) {
+  return useQuery({
+    queryKey: ['apps', slug, 'throttle-suggestions', range],
+    queryFn: () =>
+      unwrap(
+        api.GET('/v1/apps/{slug}/throttle-suggestions', {
+          params: { path: { slug }, query: { range } },
+        })
+      ),
+    enabled: enabled && Boolean(slug),
   });
 }

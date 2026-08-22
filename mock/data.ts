@@ -480,43 +480,89 @@ export const keys: S['APIKeyResponse'][] = [
   },
 ];
 
-export const edgeRules: S['EdgeRuleResponse'][] = [
-  {
-    kind: 'route',
-    host: 'api.acme.dev',
-    path: '/v1/*',
-    app: 0,
-    action: { target_app_slug: 'api-gateway' },
-  },
-  {
-    kind: 'rewrite',
-    host: 'api.acme.dev',
-    path: '/legacy/*',
-    app: 0,
-    action: { target_app_slug: 'api-gateway' },
-  },
-  {
-    kind: 'limit',
-    host: 'hooks.acme.dev',
-    path: '/*',
-    app: 2,
-    action: { target_app_slug: 'webhook-router' },
-  },
-  {
-    kind: 'cors',
-    host: 'img.acme.dev',
-    path: '/*',
-    app: 1,
-    action: { target_app_slug: 'image-resize' },
-  },
-  {
-    kind: 'maintenance',
-    host: 'api.acme.dev',
-    path: '/admin/*',
-    app: 0,
-    action: { target_app_slug: 'api-gateway' },
-  },
-].map((r, i) => ({
+/**
+ * One rule per kind that the console can meaningfully show, with the action
+ * shape its kind actually takes — the earlier fixture gave every rule a
+ * `route` action, so a cors rule claimed to target an app.
+ */
+export const edgeRules: S['EdgeRuleResponse'][] = (
+  [
+    {
+      kind: 'route',
+      host: 'api.acme.dev',
+      path: '/v1/*',
+      app: 0,
+      action: { target_app_slug: 'api-gateway' },
+    },
+    {
+      kind: 'rewrite',
+      host: 'api.acme.dev',
+      path: '/legacy/*',
+      app: 0,
+      action: { from: '/legacy', to: '/v1' },
+    },
+    {
+      kind: 'throttle',
+      host: 'hooks.acme.dev',
+      path: '/*',
+      app: 2,
+      action: { requests_per_second: 50, burst: 100 },
+    },
+    {
+      kind: 'cors',
+      host: 'img.acme.dev',
+      path: '/*',
+      app: 1,
+      action: {
+        allow_origins: ['https://app.acme.dev', 'https://acme.dev'],
+        allow_methods: ['GET', 'OPTIONS'],
+        allow_headers: ['Authorization'],
+        allow_credentials: true,
+        max_age_seconds: 86400,
+      },
+    },
+    {
+      kind: 'maintenance',
+      host: 'api.acme.dev',
+      path: '/admin/*',
+      app: 0,
+      action: { retry_after_seconds: 600, message: 'Admin is down for migration.' },
+    },
+    {
+      kind: 'headers',
+      host: 'api.acme.dev',
+      path: '/*',
+      app: 0,
+      action: {
+        request_headers: [{ name: 'X-Forwarded-Tenant', value: 'acme', action: 'set' }],
+        response_headers: [
+          { name: 'X-Powered-By', action: 'remove' },
+          { name: 'Strict-Transport-Security', value: 'max-age=63072000', action: 'set' },
+        ],
+      },
+    },
+    {
+      kind: 'limit',
+      host: 'img.acme.dev',
+      path: '/upload',
+      app: 1,
+      action: { max_body_bytes: 10485760 },
+    },
+    {
+      kind: 'geo',
+      host: 'api.acme.dev',
+      path: '/*',
+      app: 0,
+      action: { deny: ['KP'], allow: [] },
+    },
+  ] as {
+    kind: S['EdgeRuleResponse']['kind'];
+    host: string;
+    path: string;
+    app: number;
+    action: S['EdgeRuleResponse']['action'];
+  }[]
+).map((r, i) => ({
   id: id(),
   account_id: ACCOUNT_ID,
   app_id: apps[r.app].id,
@@ -525,7 +571,7 @@ export const edgeRules: S['EdgeRuleResponse'][] = [
   match_methods: r.kind === 'cors' ? ['GET', 'OPTIONS'] : [],
   priority: (i + 1) * 10,
   enabled: r.kind !== 'maintenance',
-  kind: r.kind as S['EdgeRuleResponse']['kind'],
+  kind: r.kind,
   action: r.action,
   ...stamp(),
 }));
