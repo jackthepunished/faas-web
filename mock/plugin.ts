@@ -684,6 +684,136 @@ route('POST', '/v1/keys/{id}/rotate', ({ params }) => {
 });
 
 route('GET', '/v1/edge-rules', () => db.edgeRules);
+route('GET', '/v1/apps/{slug}/edge-rules', ({ params }) => {
+  const a = app(params.slug);
+  return db.edgeRules.filter((r) => r.app_id === a.id);
+});
+
+/** jwt and ip are paid; geo is allowed on free with a tighter quota. */
+const PAID_KINDS = new Set(['jwt', 'ip']);
+const QUOTA_PER_APP = 12;
+const FREE_GEO_QUOTA = 2;
+
+route('POST', '/v1/apps/{slug}/edge-rules', ({ params, body }) => {
+  const a = app(params.slug);
+  const kind = String(body.kind ?? '');
+  if (!kind) throw new Problem(400, 'rule_invalid', 'A kind is required.');
+
+  if (PAID_KINDS.has(kind) && db.account.plan === 'free')
+    throw new Problem(402, 'plan_edge_rule_kind_not_allowed', `${kind} rules need a paid plan.`);
+
+  const onApp = db.edgeRules.filter((r) => r.app_id === a.id);
+  if (onApp.length >= QUOTA_PER_APP)
+    throw new Problem(
+      402,
+      'plan_limit_edge_rules',
+      `This app is at its limit of ${QUOTA_PER_APP} edge rules.`
+    );
+  if (
+    kind === 'geo' &&
+    db.account.plan === 'free' &&
+    onApp.filter((r) => r.kind === 'geo').length >= FREE_GEO_QUOTA
+  )
+    throw new Problem(
+      402,
+      'plan_limit_edge_rules',
+      `Free plans allow ${FREE_GEO_QUOTA} geo rules per app.`
+    );
+
+  // Priority is the evaluation order, so two rules cannot claim the same slot
+  // for the same host and path.
+  if (
+    onApp.some(
+      (r) =>
+        r.priority === Number(body.priority) &&
+        r.match_host === String(body.match_host ?? '') &&
+        r.match_path === String(body.match_path ?? '')
+    )
+  )
+    throw new Problem(
+      409,
+      'edge_rule_conflict',
+      'Another rule already has that priority for this host and path.'
+    );
+
+  const rule = {
+    id: db.id(),
+    account_id: db.ACCOUNT_ID,
+    app_id: a.id,
+    match_host: String(body.match_host ?? ''),
+    match_path: String(body.match_path ?? '/*'),
+    match_methods: Array.isArray(body.match_methods) ? (body.match_methods as string[]) : [],
+    priority: Number(body.priority ?? 100),
+    enabled: body.enabled !== false,
+    kind: kind as (typeof db.edgeRules)[number]['kind'],
+    action: body.action as (typeof db.edgeRules)[number]['action'],
+    created_at: db.iso(0),
+    updated_at: db.iso(0),
+  };
+  db.edgeRules.push(rule);
+  return status(201, rule);
+});
+
+route('PATCH', '/v1/edge-rules/{id}', ({ params, body }) => {
+  const rule = db.edgeRules.find((r) => r.id === params.id);
+  if (!rule) throw new Problem(404, 'edge_rule_not_found');
+  // Rotating kind would break the action union; the spec says recreate.
+  if ('kind' in body && body.kind && body.kind !== rule.kind)
+    throw new Problem(
+      422,
+      'rule_invalid',
+      'Kind cannot be changed. Delete the rule and create a new one.'
+    );
+  for (const k of ['match_host', 'match_path', 'match_methods', 'priority', 'enabled'] as const)
+    if (k in body && body[k] != null) (rule as Record<string, unknown>)[k] = body[k];
+  // `action` replaces whole — there is no partial shape for it.
+  if (body.action) rule.action = body.action as typeof rule.action;
+  rule.updated_at = db.iso(0);
+  return rule;
+});
+
+route('GET', '/v1/apps/{slug}/throttle-suggestions', ({ params, query }) => {
+  const a = app(params.slug);
+  const range = String(query.get('range') ?? '5m');
+  if (!a.route_metrics_enabled)
+    return {
+      app_id: a.id,
+      range,
+      source: 'prometheus',
+      as_of: db.iso(0),
+      route_metrics_disabled: true,
+      routes_collapsed: 0,
+      plan_ceiling_rps: 500,
+      plan_ceiling_burst: 1000,
+      multiplier: 1.5,
+      suggestions: [],
+    };
+  const routes = db
+    .routesFor(a)
+    .routes.filter((r) => !r.includes('*'))
+    .slice(0, 5);
+  return {
+    app_id: a.id,
+    range,
+    source: 'prometheus',
+    as_of: db.iso(0),
+    route_metrics_disabled: false,
+    routes_collapsed: 0,
+    plan_ceiling_rps: 500,
+    plan_ceiling_burst: 1000,
+    multiplier: 1.5,
+    suggestions: routes.map((route, i) => {
+      const observed = Number((12 / (i + 1)).toFixed(1));
+      const suggested = Math.min(500, Math.max(1, Math.ceil(observed * 1.5)));
+      return {
+        route,
+        observed_rps: observed,
+        suggested_rps: suggested,
+        suggested_burst: Math.min(1000, suggested * 2),
+      };
+    }),
+  };
+});
 route('DELETE', '/v1/edge-rules/{id}', ({ params }) => {
   const i = db.edgeRules.findIndex((r) => r.id === params.id);
   if (i < 0) throw new Problem(404, 'edge_rule_not_found');
