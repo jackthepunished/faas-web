@@ -137,6 +137,17 @@ export const apps: App[] = APP_SEEDS.map((a, i) => ({
 }));
 
 export const appBySlug = (slug: string) => apps.find((a) => a.slug === slug);
+
+/** The per-app maps are keyed by slug, so a rename has to move them too. */
+export function renameApp(app: App, next: string) {
+  for (const map of [secrets, env, upstreams, alerts, webhooks] as Map<string, unknown>[]) {
+    const held = map.get(app.slug);
+    map.delete(app.slug);
+    if (held !== undefined) map.set(next, held);
+  }
+  app.slug = next;
+  app.url = `https://${next}.gregale.app`;
+}
 export const slugById = (appId: string) => apps.find((a) => a.id === appId)?.slug ?? appId;
 
 // --- Deployments & builds ----------------------------------------------------

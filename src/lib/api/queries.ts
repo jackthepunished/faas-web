@@ -181,6 +181,62 @@ export function useParkApp() {
   });
 }
 
+/** Partial update of an app's runtime settings — `PATCH /v1/apps/{slug}`. */
+export function useUpdateApp(slug: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: components['schemas']['UpdateAppRequest']) =>
+      unwrap(api.PATCH('/v1/apps/{slug}', { params: { path: { slug } }, body })),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: keys.apps });
+      void qc.invalidateQueries({ queryKey: keys.app(slug) });
+    },
+  });
+}
+
+/** Changes the slug, which is also the subdomain — `POST /v1/apps/{slug}/rename`. */
+export function useRenameApp(slug: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (newSlug: string) =>
+      unwrap(
+        api.POST('/v1/apps/{slug}/rename', {
+          params: { path: { slug } },
+          body: { new_slug: newSlug },
+        })
+      ),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: keys.apps });
+      void qc.invalidateQueries({ queryKey: keys.deployments });
+    },
+  });
+}
+
+/**
+ * A new deployment from a Git ref — `POST /v1/apps/{slug}/deployments/source-ref`.
+ *
+ * The only deploy the console can start on its own: the other constructor
+ * wants an image reference, which means a registry the browser has no
+ * business holding credentials for.
+ */
+export function useDeployFromRef(slug: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: components['schemas']['SourceRefDeployRequest']) =>
+      unwrap(
+        api.POST('/v1/apps/{slug}/deployments/source-ref', {
+          params: { path: { slug } },
+          body,
+        })
+      ),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: keys.apps });
+      void qc.invalidateQueries({ queryKey: keys.app(slug) });
+      void qc.invalidateQueries({ queryKey: keys.deployments });
+    },
+  });
+}
+
 export function useRollback() {
   const qc = useQueryClient();
   return useMutation({

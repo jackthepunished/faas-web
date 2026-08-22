@@ -32,6 +32,12 @@ export interface ConfirmOptions {
   description?: string;
   confirmLabel?: string;
   destructive?: boolean;
+  /**
+   * A phrase the person has to type before the button enables — the app's
+   * slug, say. For the handful of actions where a misclick costs a deploy,
+   * not a minute.
+   */
+  typeToConfirm?: string;
 }
 
 type Ask = (options: ConfirmOptions) => Promise<boolean>;
@@ -40,13 +46,17 @@ const ConfirmContext = createContext<Ask | null>(null);
 
 export function ConfirmProvider({ children }: { children: ReactNode }) {
   const [pending, setPending] = useState<ConfirmOptions | null>(null);
+  const [typed, setTyped] = useState('');
   const resolver = useRef<((ok: boolean) => void) | null>(null);
 
   const settle = useCallback((ok: boolean) => {
     resolver.current?.(ok);
     resolver.current = null;
     setPending(null);
+    setTyped('');
   }, []);
+
+  const armed = !pending?.typeToConfirm || typed === pending.typeToConfirm;
 
   const ask = useCallback<Ask>(
     (options) =>
@@ -78,14 +88,33 @@ export function ConfirmProvider({ children }: { children: ReactNode }) {
             <Button
               variant={pending?.destructive ? 'destructive' : 'default'}
               size="sm"
-              autoFocus
-              onClick={() => settle(true)}
+              autoFocus={!pending?.typeToConfirm}
+              disabled={!armed}
+              onClick={() => armed && settle(true)}
             >
               {pending?.confirmLabel ?? 'Confirm'}
             </Button>
           </>
         }
-      />
+      >
+        {pending?.typeToConfirm && (
+          <label className="block">
+            <span className="text-xs text-muted-foreground">
+              Type <span className="font-mono text-foreground">{pending.typeToConfirm}</span> to
+              confirm
+            </span>
+            <input
+              autoFocus
+              value={typed}
+              onChange={(e) => setTyped(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && armed && settle(true)}
+              spellCheck={false}
+              autoComplete="off"
+              className="mt-2 h-10 w-full rounded-lg border border-border bg-background px-3 font-mono text-sm outline-none focus:border-[color:var(--status-critical)]"
+            />
+          </label>
+        )}
+      </Modal>
     </ConfirmContext.Provider>
   );
 }

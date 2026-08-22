@@ -1,6 +1,6 @@
 import { useId, useRef, useState } from 'react';
 import { createFileRoute, Link, useParams } from '@tanstack/react-router';
-import { ArrowLeft, OpenNewWindow, Refresh } from 'iconoir-react';
+import { ArrowLeft, OpenNewWindow, Pause, Play, Refresh, Rocket } from 'iconoir-react';
 import { Button } from '@/components/ui/button';
 import {
   EmptyState,
@@ -13,7 +13,13 @@ import {
   StateBadge,
 } from '@/components/dashboard/primitives';
 import { formatCompact, formatMs, formatRelative } from '@/lib/mock-data';
-import { useAppMetrics, type MetricsRange } from '@/lib/api/queries';
+import {
+  useAppMetrics,
+  useDeployFromRef,
+  useParkApp,
+  useWakeApp,
+  type MetricsRange,
+} from '@/lib/api/queries';
 import { useData } from '@/lib/store';
 import { useToast } from '@/components/ui/toast';
 import { useConfirm } from '@/components/ui/confirm';
@@ -27,6 +33,8 @@ import { QueuesBody } from './dashboard.queues';
 import { UpstreamsBody } from './dashboard.databases';
 import { AlertsBody } from './dashboard.alerts';
 import { WebhooksBody } from './dashboard.webhooks';
+import { AppConfiguration } from '@/components/dashboard/app-configuration';
+import { Modal } from '@/components/ui/modal';
 import { pageHead, useDocumentTitle } from '@/lib/seo';
 
 const METRIC_RANGES: MetricsRange[] = ['5m', '15m', '1h', '6h', '24h', '7d', '15d'];
@@ -89,6 +97,12 @@ function FunctionDetailPage() {
   const [range, setRange] = useState<MetricsRange>('24h');
   const { getWorkflow, deploymentsFor, redeploy, loading, error, refresh } = useData();
   const { toast } = useToast();
+  const park = useParkApp();
+  const wake = useWakeApp();
+  const deployFromRef = useDeployFromRef(workflowId);
+  const [deployOpen, setDeployOpen] = useState(false);
+  const [deployRepo, setDeployRepo] = useState('');
+  const [deployRef, setDeployRef] = useState('main');
   const confirm = useConfirm();
 
   const fn = getWorkflow(workflowId);
@@ -149,6 +163,71 @@ function FunctionDetailPage() {
         actions={
           <>
             <StateBadge state={fn.state} />
+            {/* Park and wake were two of the unused hooks: the API has had
+                both for as long as the console has existed. */}
+            {fn.state === 'running' ? (
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-1.5"
+                disabled={park.isPending}
+                onClick={async () => {
+                  if (
+                    !(await confirm({
+                      title: `Park ${fn.name}?`,
+                      description:
+                        'Running instances snapshot and release now. The next request wakes it cold — under 350 ms, but not zero.',
+                      confirmLabel: 'Park',
+                    }))
+                  )
+                    return;
+                  void park
+                    .mutateAsync(fn.id)
+                    .then(() => toast({ kind: 'success', title: `Parked ${fn.name}` }))
+                    .catch((err: unknown) =>
+                      toast({
+                        kind: 'error',
+                        title: 'Could not park',
+                        description: errorMessage(err),
+                      })
+                    );
+                }}
+              >
+                <Pause className="h-3.5 w-3.5" />
+                Park
+              </Button>
+            ) : fn.state === 'idle' ? (
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-1.5"
+                disabled={wake.isPending}
+                onClick={() =>
+                  void wake
+                    .mutateAsync(fn.id)
+                    .then(() => toast({ kind: 'success', title: `Waking ${fn.name}` }))
+                    .catch((err: unknown) =>
+                      toast({
+                        kind: 'error',
+                        title: 'Could not wake',
+                        description: errorMessage(err),
+                      })
+                    )
+                }
+              >
+                <Play className="h-3.5 w-3.5" />
+                Wake
+              </Button>
+            ) : null}
+            <Button
+              size="sm"
+              className="gap-1.5"
+              disabled={isDeploying}
+              onClick={() => setDeployOpen(true)}
+            >
+              <Rocket className="h-3.5 w-3.5" />
+              Deploy
+            </Button>
             <Button
               variant="outline"
               size="sm"
@@ -331,27 +410,79 @@ function FunctionDetailPage() {
         {tab === 'Alerts' && <AlertsBody slug={fn.id} />}
         {tab === 'Webhooks' && <WebhooksBody slug={fn.id} />}
 
-        {tab === 'Configuration' && (
-          <Panel title="Configuration">
-            <dl className="grid gap-x-8 gap-y-4 sm:grid-cols-2">
-              {[
-                ['Runtime', fn.runtime],
-                ['Memory', `${fn.memoryMb} MB`],
-                // The image digest of the live deployment — the API has no
-                // version string, and the digest is what actually identifies it.
-                ['Current image', fn.version || '—'],
-                ['Endpoint', fn.url],
-                ['Last deployed', formatRelative(fn.lastDeployedAt)],
-              ].map(([label, value]) => (
-                <div key={label} className="flex flex-col gap-1 border-b border-border pb-3">
-                  <dt className="label-mono text-muted-foreground">{label}</dt>
-                  <dd className="font-mono text-sm">{value}</dd>
-                </div>
-              ))}
-            </dl>
-          </Panel>
-        )}
+        {tab === 'Configuration' && <AppConfiguration slug={fn.id} />}
       </div>
+
+      {/* The one deploy the console can start itself: a Git ref, built
+          server-side. The image constructor wants a registry the browser has
+          no business holding credentials for. */}
+      <Modal
+        open={deployOpen}
+        onClose={() => setDeployOpen(false)}
+        title={`Deploy ${fn.name}`}
+        description="Builds the ref from the repository the app is connected to and ships it when the build succeeds."
+        footer={
+          <>
+            <Button variant="ghost" size="sm" onClick={() => setDeployOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              size="sm"
+              disabled={!deployRepo.includes('/') || !deployRef.trim() || deployFromRef.isPending}
+              onClick={() => {
+                void deployFromRef
+                  .mutateAsync({
+                    repo: deployRepo.trim(),
+                    ref: deployRef.trim(),
+                    format: 'tarball',
+                  })
+                  .then(() => {
+                    setDeployOpen(false);
+                    setTab('Deployments');
+                    toast({
+                      kind: 'success',
+                      title: 'Build started',
+                      description: `${deployRepo.trim()}@${deployRef.trim()} is building. It goes live when the build succeeds.`,
+                    });
+                  })
+                  .catch((err: unknown) =>
+                    toast({
+                      kind: 'error',
+                      title: 'Could not start the deploy',
+                      description: errorMessage(err),
+                    })
+                  );
+              }}
+            >
+              {deployFromRef.isPending ? 'Starting…' : 'Deploy'}
+            </Button>
+          </>
+        }
+      >
+        <div className="grid gap-4">
+          <label className="flex flex-col gap-1.5">
+            <span className="label-mono text-muted-foreground">Repository</span>
+            <input
+              autoFocus
+              value={deployRepo}
+              onChange={(e) => setDeployRepo(e.target.value)}
+              placeholder="owner/repo"
+              spellCheck={false}
+              className="h-9 rounded-md border border-border bg-background px-3 font-mono text-sm outline-none focus:border-brand/50"
+            />
+          </label>
+          <label className="flex flex-col gap-1.5">
+            <span className="label-mono text-muted-foreground">Ref</span>
+            <input
+              value={deployRef}
+              onChange={(e) => setDeployRef(e.target.value)}
+              placeholder="main, a tag, or a commit"
+              spellCheck={false}
+              className="h-9 rounded-md border border-border bg-background px-3 font-mono text-sm outline-none focus:border-brand/50"
+            />
+          </label>
+        </div>
+      </Modal>
     </div>
   );
 }

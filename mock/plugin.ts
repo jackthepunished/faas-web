@@ -161,6 +161,55 @@ route('POST', '/v1/apps/{slug}/park', ({ params }) => {
   app(params.slug).status = 'parked';
   return NO_CONTENT;
 });
+const PATCHABLE = [
+  'ram_mb',
+  'idle_timeout_s',
+  'max_concurrency',
+  'min_instances',
+  'egress_allowlist',
+  'autoscale_target_rps',
+  'autoscale_target_cpu_pct',
+  'streaming_enabled',
+  'websocket_enabled',
+  'route_metrics_enabled',
+  'maintenance_mode',
+  'warm_snapshot_enabled',
+  'eviction_priority',
+] as const;
+route('PATCH', '/v1/apps/{slug}', ({ params, body }) => {
+  const a = app(params.slug);
+  for (const k of PATCHABLE)
+    if (k in body && body[k] !== null) (a as Record<string, unknown>)[k] = body[k];
+  return a;
+});
+route('POST', '/v1/apps/{slug}/rename', ({ params, body }) => {
+  const a = app(params.slug);
+  const next = String(body.new_slug ?? '').trim();
+  if (!/^[a-z0-9][a-z0-9-]{1,38}[a-z0-9]$/.test(next))
+    throw new Problem(400, 'invalid_slug', 'Slugs are lowercase letters, digits, and dashes.');
+  if (db.appBySlug(next)) throw new Problem(409, 'app_exists', `"${next}" already exists.`);
+  db.renameApp(a, next);
+  return a;
+});
+route('POST', '/v1/apps/{slug}/deployments/source-ref', ({ params, body }) => {
+  const a = app(params.slug);
+  if (!body.repo || !body.ref)
+    throw new Problem(400, 'missing_field', 'repo and ref are required.');
+  const dep: db.Deployment = {
+    id: db.id(),
+    app_id: a.id,
+    build_id: db.id(),
+    image_digest: `sha256:${db.id()}${db.id()}`,
+    kind: 'github',
+    status: 'building',
+    created_at: db.iso(0),
+    traffic_percent: 0,
+    scan: null,
+  };
+  db.deployments.unshift(dep);
+  a.status = 'deploying';
+  return status(202, dep);
+});
 route('POST', '/v1/apps/{slug}/rollback', ({ params }) => {
   const a = app(params.slug);
   const previous = db.deployments.filter((d) => d.app_id === a.id && d.status === 'succeeded')[0];
