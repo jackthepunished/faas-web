@@ -33,6 +33,7 @@ import { QueuesBody } from './dashboard.queues';
 import { UpstreamsBody } from './dashboard.databases';
 import { AlertsBody } from './dashboard.alerts';
 import { WebhooksBody } from './dashboard.webhooks';
+import { EdgeRulesBody } from './dashboard.edge-rules';
 import { AppConfiguration } from '@/components/dashboard/app-configuration';
 import { Modal } from '@/components/ui/modal';
 import { pageHead, useDocumentTitle } from '@/lib/seo';
@@ -59,6 +60,7 @@ const TABS = [
   'Upstreams',
   'Alerts',
   'Webhooks',
+  'Edge rules',
   'Configuration',
 ] as const;
 type Tab = (typeof TABS)[number];
@@ -409,6 +411,7 @@ function FunctionDetailPage() {
         {tab === 'Upstreams' && <UpstreamsBody slug={fn.id} />}
         {tab === 'Alerts' && <AlertsBody slug={fn.id} />}
         {tab === 'Webhooks' && <WebhooksBody slug={fn.id} />}
+        {tab === 'Edge rules' && <EdgeRulesBody slug={fn.id} />}
 
         {tab === 'Configuration' && <AppConfiguration slug={fn.id} />}
       </div>

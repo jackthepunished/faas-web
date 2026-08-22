@@ -114,6 +114,7 @@ export const APP_TABS: { tab: string; segment: string }[] = [
   { tab: 'Upstreams', segment: 'databases' },
   { tab: 'Alerts', segment: 'alerts' },
   { tab: 'Webhooks', segment: 'webhooks' },
+  { tab: 'Edge rules', segment: 'edge-rules' },
 ];
 
 const APP_TAB_LABELS: Record<string, string> = {
