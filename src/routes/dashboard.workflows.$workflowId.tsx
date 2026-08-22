@@ -1,7 +1,8 @@
-import { useId, useRef, useState } from 'react';
+import { useId, useMemo, useRef, useState } from 'react';
 import { createFileRoute, Link, useParams } from '@tanstack/react-router';
 import { ArrowLeft, OpenNewWindow, Pause, Play, Refresh, Rocket } from 'iconoir-react';
 import { Button } from '@/components/ui/button';
+import { Pill } from '@/components/dashboard/resource-table';
 import {
   EmptyState,
   ErrorState,
@@ -15,14 +16,17 @@ import {
 import { formatCompact, formatMs, formatRelative } from '@/lib/mock-data';
 import {
   useAppMetrics,
+  useBuilds,
   useDeployFromRef,
   useParkApp,
+  useSetDeploymentTraffic,
   useWakeApp,
   type MetricsRange,
 } from '@/lib/api/queries';
 import { useData } from '@/lib/store';
 import { useToast } from '@/components/ui/toast';
 import { useConfirm } from '@/components/ui/confirm';
+import { useAuth } from '@/lib/auth';
 import { errorMessage } from '@/lib/api/errors';
 import { cn } from '@/lib/utils';
 import { LogsBody } from './dashboard.logs';
@@ -104,6 +108,18 @@ function FunctionDetailPage() {
   const deployFromRef = useDeployFromRef(workflowId);
   const [deployOpen, setDeployOpen] = useState(false);
   const [deployRepo, setDeployRepo] = useState('');
+  const setTraffic = useSetDeploymentTraffic();
+  const { account } = useAuth();
+  const canMoveTraffic = account?.plan === 'pro' || account?.plan === 'scale';
+  const builds = useBuilds();
+  // Build duration lives on the build record, not the deployment — the same
+  // join the Deployments page makes.
+  const buildSeconds = useMemo(() => {
+    const by = new Map<string, number>();
+    for (const b of builds.data?.items ?? [])
+      if (b.duration_seconds != null) by.set(b.deployment_id, b.duration_seconds);
+    return by;
+  }, [builds.data]);
   const [deployRef, setDeployRef] = useState('main');
   const confirm = useConfirm();
 
@@ -391,12 +407,50 @@ function FunctionDetailPage() {
                   <span className="min-w-0 flex-1 truncate text-sm">{dep.message}</span>
                   <span className="font-mono text-xs text-muted-foreground">{dep.commit}</span>
                   <span className="text-xs text-muted-foreground">{dep.author}</span>
+                  {dep.trafficPercent > 0 && (
+                    <Pill
+                      label={`${dep.trafficPercent}%`}
+                      color={
+                        dep.trafficPercent === 100 ? 'var(--status-good)' : 'var(--status-warning)'
+                      }
+                    />
+                  )}
                   <span className="w-20 text-right text-xs text-muted-foreground [font-variant-numeric:tabular-nums]">
-                    {(dep.durationMs / 1000).toFixed(1)}s
+                    {buildSeconds.get(dep.id) != null ? `${buildSeconds.get(dep.id)}s` : '—'}
                   </span>
                   <span className="w-16 text-right text-xs text-muted-foreground [font-variant-numeric:tabular-nums]">
                     {formatRelative(dep.createdAt)}
                   </span>
+                  {canMoveTraffic && dep.trafficPercent < 100 && dep.state !== 'failed' && (
+                    <button
+                      type="button"
+                      aria-label={`Send all traffic to ${dep.version}`}
+                      disabled={setTraffic.isPending}
+                      onClick={async () => {
+                        if (
+                          !(await confirm({
+                            title: `Send all traffic to ${dep.version}?`,
+                            description: `${fn.name} starts serving this deployment immediately, and every other deployment drops to zero.`,
+                            confirmLabel: 'Send all traffic',
+                          }))
+                        )
+                          return;
+                        void setTraffic
+                          .mutateAsync({ id: dep.id, traffic_percent: 100 })
+                          .then(() => toast({ kind: 'success', title: `Serving ${dep.version}` }))
+                          .catch((err: unknown) =>
+                            toast({
+                              kind: 'error',
+                              title: 'Could not move traffic',
+                              description: errorMessage(err),
+                            })
+                          );
+                      }}
+                      className="text-xs text-brand transition-colors hover:text-brand-hover disabled:opacity-50"
+                    >
+                      Promote
+                    </button>
+                  )}
                 </li>
               ))}
             </ul>

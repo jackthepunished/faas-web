@@ -1031,3 +1031,28 @@ export function useThrottleSuggestions(slug: string, range: MetricsRange, enable
     enabled: enabled && Boolean(slug),
   });
 }
+
+/**
+ * Move live traffic onto one deployment — `PATCH /v1/deployments/{id}/traffic`.
+ *
+ * The API's own description calls this the "zero-siblings rebalance form":
+ * setting one row's percent zeroes every other live row for the app. That is
+ * promotion, not a weighted split, and the UI says so. Pro and Scale only;
+ * Free and Hobby are refused with `plan_traffic_split_not_allowed`.
+ */
+export function useSetDeploymentTraffic() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, traffic_percent }: { id: string; traffic_percent: number }) =>
+      unwrap(
+        api.PATCH('/v1/deployments/{id}/traffic', {
+          params: { path: { id } },
+          body: { traffic_percent },
+        })
+      ),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: keys.deployments });
+      void qc.invalidateQueries({ queryKey: keys.apps });
+    },
+  });
+}

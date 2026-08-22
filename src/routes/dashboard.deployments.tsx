@@ -4,7 +4,16 @@ import { PageHeader } from '@/components/dashboard/primitives';
 import { Pill, ResourceTable, type Column } from '@/components/dashboard/resource-table';
 import { formatRelative, type Deployment } from '@/lib/mock-data';
 import { useData } from '@/lib/store';
-import { useBuilds, useDeployment, useDeploymentScan } from '@/lib/api/queries';
+import { Link } from '@tanstack/react-router';
+import {
+  useBuilds,
+  useDeployment,
+  useDeploymentScan,
+  useSetDeploymentTraffic,
+} from '@/lib/api/queries';
+import { useConfirm } from '@/components/ui/confirm';
+import { useToast } from '@/components/ui/toast';
+import { useAuth } from '@/lib/auth';
 import { Modal } from '@/components/ui/modal';
 import { Button } from '@/components/ui/button';
 import { errorMessage } from '@/lib/api/errors';
@@ -20,6 +29,75 @@ const STATE_COLOR: Record<Deployment['state'], string> = {
   failed: 'var(--status-critical)',
   building: 'var(--status-warning)',
 };
+
+/**
+ * Move all live traffic to one deployment.
+ *
+ * The API calls this a traffic split, and its own description says setting one
+ * row's percent zeroes every other live row — which is promotion. The button
+ * says what happens rather than implying a weighted rollout the endpoint does
+ * not do.
+ */
+function PromoteButton({
+  deployment,
+  appName,
+  serving,
+}: {
+  deployment: Deployment | null;
+  appName: string;
+  serving: number;
+}) {
+  const { toast } = useToast();
+  const confirm = useConfirm();
+  const { account } = useAuth();
+  const setTraffic = useSetDeploymentTraffic();
+  const allowed = account?.plan === 'pro' || account?.plan === 'scale';
+
+  if (!deployment || deployment.state === 'failed') return null;
+  if (serving === 100)
+    return <span className="mr-auto text-xs text-muted-foreground">Serving all traffic.</span>;
+
+  if (!allowed)
+    return (
+      <span className="mr-auto text-xs text-muted-foreground">
+        Moving traffic needs Pro or Scale.{' '}
+        <Link to="/dashboard/plans" className="text-brand hover:underline">
+          Compare plans
+        </Link>
+      </span>
+    );
+
+  return (
+    <Button
+      size="sm"
+      disabled={setTraffic.isPending}
+      onClick={async () => {
+        if (
+          !(await confirm({
+            title: `Send all traffic to ${deployment.version}?`,
+            description: `${appName} starts serving this deployment immediately, and every other deployment drops to zero. Roll back if it misbehaves.`,
+            confirmLabel: 'Send all traffic',
+          }))
+        )
+          return;
+        void setTraffic
+          .mutateAsync({ id: deployment.id, traffic_percent: 100 })
+          .then(() =>
+            toast({ kind: 'success', title: `${appName} is serving ${deployment.version}` })
+          )
+          .catch((err: unknown) =>
+            toast({
+              kind: 'error',
+              title: 'Could not move traffic',
+              description: errorMessage(err),
+            })
+          );
+      }}
+    >
+      {setTraffic.isPending ? 'Moving…' : 'Send all traffic here'}
+    </Button>
+  );
+}
 
 const SEVERITY_COLOR: Record<string, string> = {
   CRITICAL: 'var(--status-critical)',
@@ -55,9 +133,16 @@ function DeploymentDrawer({
       description={deployment?.message}
       width="max-w-2xl"
       footer={
-        <Button size="sm" variant="outline" onClick={onOpenApp}>
-          Open {appName}
-        </Button>
+        <>
+          <Button size="sm" variant="outline" onClick={onOpenApp}>
+            Open {appName}
+          </Button>
+          <PromoteButton
+            deployment={deployment}
+            appName={appName}
+            serving={d?.traffic_percent ?? 0}
+          />
+        </>
       }
     >
       {detail.isPending ? (
@@ -175,6 +260,21 @@ function DeploymentsPage() {
       key: 'version',
       label: 'Version',
       render: (d) => <span className="font-mono text-xs">{d.version}</span>,
+    },
+    {
+      key: 'trafficPercent',
+      label: 'Traffic',
+      numeric: true,
+      width: 'w-24',
+      render: (d) =>
+        d.trafficPercent > 0 ? (
+          <Pill
+            label={`${d.trafficPercent}%`}
+            color={d.trafficPercent === 100 ? 'var(--status-good)' : 'var(--status-warning)'}
+          />
+        ) : (
+          <span className="text-xs text-muted-foreground">—</span>
+        ),
     },
     {
       key: 'durationMs',

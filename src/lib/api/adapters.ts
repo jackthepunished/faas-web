@@ -98,6 +98,7 @@ export function toDeployment(deployment: ApiDeployment, slugById: Map<string, st
     author: '',
     createdAt: Date.parse(deployment.created_at) || 0,
     durationMs: 0,
+    trafficPercent: deployment.traffic_percent ?? 0,
   };
 }
 

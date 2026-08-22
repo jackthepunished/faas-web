@@ -483,6 +483,27 @@ route('GET', '/v1/deployments', ({ query }) => ({
   items: db.deployments.slice(0, Number(query.get('limit') ?? 50)),
   next_before: null,
 }));
+route('PATCH', '/v1/deployments/{id}/traffic', ({ params, body }) => {
+  const dep = db.deployments.find((d) => d.id === params.id);
+  if (!dep) throw new Problem(404, 'deployment_not_found');
+  if (db.account.plan === 'free' || db.account.plan === 'hobby')
+    throw new Problem(
+      403,
+      'plan_traffic_split_not_allowed',
+      'Moving traffic between deployments needs Pro or Scale.'
+    );
+  const percent = Number(body.traffic_percent);
+  if (!Number.isFinite(percent) || percent < 0 || percent > 100)
+    throw new Problem(422, 'invalid_traffic_percent', 'traffic_percent must be between 0 and 100.');
+
+  // Zero-siblings, exactly as the spec describes it: this row takes the
+  // weight and every other live row for the app drops to nothing.
+  for (const other of db.deployments)
+    if (other.app_id === dep.app_id && other.id !== dep.id) other.traffic_percent = 0;
+  dep.traffic_percent = percent;
+  return dep;
+});
+
 route('GET', '/v1/deployments/{id}', ({ params }) => {
   const d = db.deployments.find((x) => x.id === params.id);
   if (!d) throw new Problem(404, 'deployment_not_found');
