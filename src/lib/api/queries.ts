@@ -1056,3 +1056,49 @@ export function useSetDeploymentTraffic() {
     },
   });
 }
+
+/* ------------------------------------------------------------------ *
+ * GitHub install. Both operations are cookie-session only — not API-key —
+ * and both re-run an anti-takeover check server-side before answering.
+ * ------------------------------------------------------------------ */
+
+export type InstallableRepo = components['schemas']['RepoResponse'];
+
+/**
+ * The repos the account's GitHub App installation can see.
+ *
+ * A mutation rather than a query: it is a POST, it reaches out to
+ * api.github.com, and it can fail in ways worth retrying by hand
+ * (`github_unreachable`, `githubd_not_ready`) rather than automatically.
+ */
+export function useInstallableRepos() {
+  return useMutation({
+    mutationFn: (installationId: number) =>
+      unwrap(
+        api.POST('/v1/install/repos/list', {
+          body: { installation_id: installationId, repo_full_name: '' },
+        })
+      ),
+  });
+}
+
+/**
+ * Persist the (account, app, installation, repo, branch) binding.
+ *
+ * Slug travels in the body rather than being closed over, because the create
+ * wizard binds an app that does not exist yet when the hook is called.
+ */
+export function useBindAppInstall() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      slug,
+      ...body
+    }: { slug: string } & components['schemas']['InstallBindRequest']) =>
+      unwrap(api.POST('/v1/apps/{slug}/install/bind', { params: { path: { slug } }, body })),
+    onSuccess: (_data, { slug }) => {
+      void qc.invalidateQueries({ queryKey: keys.apps });
+      void qc.invalidateQueries({ queryKey: keys.app(slug) });
+    },
+  });
+}

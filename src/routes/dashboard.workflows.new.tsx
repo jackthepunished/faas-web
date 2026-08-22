@@ -7,10 +7,11 @@ import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/components/ui/toast';
 import { BuildLog } from '@/components/dashboard/build-log';
 import { PageHeader, Panel } from '@/components/dashboard/primitives';
+import { RepoPicker, type RepoChoice } from '@/components/dashboard/repo-picker';
 import { type Runtime } from '@/lib/mock-data';
 import { errorMessage } from '@/lib/api/errors';
 import { useData } from '@/lib/store';
-import { useDeployFromRefFor, useUpdateAppFor } from '@/lib/api/queries';
+import { useBindAppInstall, useDeployFromRefFor, useUpdateAppFor } from '@/lib/api/queries';
 import { cn } from '@/lib/utils';
 import { pageHead } from '@/lib/seo';
 
@@ -74,9 +75,13 @@ function NewFunctionPage() {
   const [source, setSource] = useState('git');
   const [repo, setRepo] = useState('');
   const [ref, setRef] = useState('main');
+  // Set when the repository came from the installation's own list, which is
+  // the only case where there is an installation id to bind.
+  const [choice, setChoice] = useState<RepoChoice | null>(null);
   const [name, setName] = useState('');
   const deployFromRef = useDeployFromRefFor();
   const updateApp = useUpdateAppFor();
+  const bindInstall = useBindAppInstall();
   const [appType, setAppType] = useState<'function' | 'app'>('function');
   const [runtime, setRuntime] = useState<Runtime>('node22');
   const [memoryMb, setMemoryMb] = useState(512);
@@ -112,6 +117,17 @@ function NewFunctionPage() {
                 const followUps: Promise<unknown>[] = [];
                 if (!scaleToZero)
                   followUps.push(updateApp.mutateAsync({ slug: created.id, min_instances: 1 }));
+                // Binding is what makes later pushes deploy on their own; the
+                // source-ref build below only covers this first one.
+                if (source === 'git' && choice)
+                  followUps.push(
+                    bindInstall.mutateAsync({
+                      slug: created.id,
+                      installation_id: choice.installationId,
+                      repo_full_name: choice.repo,
+                      production_branch: choice.branch,
+                    })
+                  );
                 if (source === 'git' && repo.includes('/'))
                   followUps.push(
                     deployFromRef.mutateAsync({
@@ -275,31 +291,48 @@ function NewFunctionPage() {
             </div>
 
             {source === 'git' && (
-              <div className="grid gap-3 sm:grid-cols-[1fr_auto]">
-                <label className="flex flex-col gap-1.5">
-                  <span className="label-mono text-muted-foreground">Repository</span>
-                  <input
-                    value={repo}
-                    onChange={(e) => setRepo(e.target.value)}
-                    placeholder="owner/repo"
-                    spellCheck={false}
-                    className="h-10 rounded-lg border border-border bg-card px-3 font-mono text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand/25"
-                  />
-                </label>
-                <label className="flex flex-col gap-1.5 sm:w-40">
-                  <span className="label-mono text-muted-foreground">Ref</span>
-                  <input
-                    value={ref}
-                    onChange={(e) => setRef(e.target.value)}
-                    placeholder="main"
-                    spellCheck={false}
-                    className="h-10 rounded-lg border border-border bg-card px-3 font-mono text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand/25"
-                  />
-                </label>
-                <p className="text-xs text-muted-foreground sm:col-span-2">
-                  The repository has to be reachable by the GitHub installation from{' '}
-                  <span className="font-mono">gregale connect</span>.
-                </p>
+              <div className="flex flex-col gap-3">
+                <RepoPicker
+                  value={choice}
+                  onChange={(next) => {
+                    setChoice(next);
+                    setRepo(next?.repo ?? '');
+                    setRef(next?.branch ?? 'main');
+                  }}
+                />
+
+                {/* Typing the name still works — the picker can only list what
+                    an installation can see, and a public repo needs neither. */}
+                <details className="group">
+                  <summary className="w-fit cursor-pointer list-none text-xs text-muted-foreground transition-colors hover:text-foreground">
+                    Or name a repository yourself
+                  </summary>
+                  <div className="mt-3 grid gap-3 sm:grid-cols-[1fr_auto]">
+                    <label className="flex flex-col gap-1.5">
+                      <span className="label-mono text-muted-foreground">Repository</span>
+                      <input
+                        value={repo}
+                        onChange={(e) => {
+                          setRepo(e.target.value);
+                          setChoice(null);
+                        }}
+                        placeholder="owner/repo"
+                        spellCheck={false}
+                        className="h-10 rounded-lg border border-border bg-card px-3 font-mono text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand/25"
+                      />
+                    </label>
+                    <label className="flex flex-col gap-1.5 sm:w-40">
+                      <span className="label-mono text-muted-foreground">Ref</span>
+                      <input
+                        value={ref}
+                        onChange={(e) => setRef(e.target.value)}
+                        placeholder="main"
+                        spellCheck={false}
+                        className="h-10 rounded-lg border border-border bg-card px-3 font-mono text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand/25"
+                      />
+                    </label>
+                  </div>
+                </details>
               </div>
             )}
 

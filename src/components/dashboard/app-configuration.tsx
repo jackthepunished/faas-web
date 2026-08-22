@@ -5,7 +5,15 @@ import { Switch } from '@/components/ui/switch';
 import { useConfirm } from '@/components/ui/confirm';
 import { useToast } from '@/components/ui/toast';
 import { errorMessage } from '@/lib/api/errors';
-import { useApp, useDeleteApp, useRenameApp, useUpdateApp, type App } from '@/lib/api/queries';
+import {
+  useApp,
+  useBindAppInstall,
+  useDeleteApp,
+  useRenameApp,
+  useUpdateApp,
+  type App,
+} from '@/lib/api/queries';
+import { RepoPicker, type RepoChoice } from './repo-picker';
 import { ErrorState, LoadingState, Panel, UnreachableState, queryPhase } from './primitives';
 
 /**
@@ -379,6 +387,63 @@ function DangerZone({ app }: { app: App }) {
   );
 }
 
+/**
+ * Bind the app to a repository in the account's GitHub installation.
+ *
+ * The panel can set a binding but not show the current one: the API has a
+ * POST to persist the (installation, repo, branch) row and no GET to read it
+ * back. Rather than print a plausible repository name from somewhere else,
+ * the panel says what it does and does not know.
+ */
+function RepositoryPanel({ app }: { app: App }) {
+  const { toast } = useToast();
+  const bind = useBindAppInstall();
+  const [choice, setChoice] = useState<RepoChoice | null>(null);
+
+  return (
+    <Panel
+      title="Connected repository"
+      description="Pushes to the production branch build and deploy this app. The API does not report the current binding, so this sets one rather than showing it."
+    >
+      <div className="flex flex-col gap-4">
+        <RepoPicker value={choice} onChange={setChoice} />
+        <div className="flex justify-end">
+          <Button
+            size="sm"
+            disabled={!choice || bind.isPending}
+            onClick={() => {
+              if (!choice) return;
+              void bind
+                .mutateAsync({
+                  slug: app.slug,
+                  installation_id: choice.installationId,
+                  repo_full_name: choice.repo,
+                  production_branch: choice.branch,
+                })
+                .then((res) =>
+                  toast({
+                    kind: 'success',
+                    title: 'Repository connected',
+                    description: `${res.repo_full_name} — pushes to ${res.production_branch} now deploy ${app.slug}.`,
+                  })
+                )
+                .catch((err: unknown) =>
+                  toast({
+                    kind: 'error',
+                    title: 'Could not connect the repository',
+                    description: errorMessage(err),
+                  })
+                );
+            }}
+          >
+            {bind.isPending ? 'Connecting…' : 'Connect repository'}
+          </Button>
+        </div>
+      </div>
+    </Panel>
+  );
+}
+
 export function AppConfiguration({ slug }: { slug: string }) {
   const { data, isPending, error, refetch } = useApp(slug);
   const phase = queryPhase({ error, loading: isPending });
@@ -405,6 +470,7 @@ export function AppConfiguration({ slug }: { slug: string }) {
       </Panel>
       {/* Keyed on the id so a rename or a fresh read reseeds the draft. */}
       <ConfigForm key={`${data.id}:${data.slug}`} app={data} />
+      <RepositoryPanel key={`repo:${data.slug}`} app={data} />
       <RenamePanel key={`rename:${data.slug}`} app={data} />
       <DangerZone app={data} />
     </div>
