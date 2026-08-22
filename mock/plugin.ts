@@ -118,6 +118,64 @@ function app(slug: string) {
   return found;
 }
 
+/**
+ * The install endpoints' refusals, on demand.
+ *
+ * Four documented failures the console has to render and no ordinary fixture
+ * would ever produce: MOCK_GITHUB=unlinked | forged | unreachable | notready.
+ */
+function githubFailure() {
+  switch (process.env.MOCK_GITHUB) {
+    case 'unlinked':
+      throw new Problem(
+        403,
+        'github_login_required',
+        'Finish signing in with GitHub before binding a repository.'
+      );
+    case 'forged':
+      throw new Problem(
+        403,
+        'forged',
+        'This installation belongs to a different GitHub account than the one you signed in with.'
+      );
+    case 'unreachable':
+      throw new Problem(
+        502,
+        'github_unreachable',
+        'Could not reach api.github.com. Retry in a minute.'
+      );
+    case 'notready':
+      throw new Problem(
+        503,
+        'githubd_not_ready',
+        'The GitHub integration is not wired on this host.'
+      );
+  }
+}
+
+route('POST', '/v1/install/repos/list', ({ body }) => {
+  githubFailure();
+  if (!body.installation_id)
+    throw new Problem(400, 'invalid_request', 'installation_id is required.');
+  return db.repos;
+});
+
+route('POST', '/v1/apps/{slug}/install/bind', ({ params, body }) => {
+  const a = app(params.slug);
+  githubFailure();
+  const repo = String(body.repo_full_name ?? '');
+  if (!body.installation_id || !repo)
+    throw new Problem(400, 'invalid_request', 'installation_id and repo_full_name are required.');
+  const known = db.repos.find((r) => r.full_name === repo);
+  const binding = {
+    binding_id: db.id(),
+    repo_full_name: repo,
+    production_branch: String(body.production_branch || known?.default_branch || 'main'),
+  };
+  db.installBindings.set(a.slug, binding);
+  return binding;
+});
+
 route('GET', '/v1/apps', () => db.apps);
 route('GET', '/v1/apps/metrics', ({ query }) => {
   const range = query.get('range') ?? '24h';

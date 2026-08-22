@@ -65,6 +65,27 @@ export const account: S['AccountResponse'] = {
   github_install_id: '48213377',
 };
 
+/**
+ * What the account's GitHub App installation can see.
+ *
+ * `RepoResponse` is what `POST /v1/install/repos/list` answers with; the
+ * bindings map stands in for a table the API has no read endpoint for.
+ */
+export const repos: S['RepoResponse'][] = [
+  { id: 101, full_name: 'acme-corp/api-gateway', default_branch: 'main', private: true },
+  { id: 102, full_name: 'acme-corp/image-resize', default_branch: 'main', private: true },
+  { id: 103, full_name: 'acme-corp/webhook-router', default_branch: 'main', private: false },
+  { id: 104, full_name: 'acme-corp/nightly-etl', default_branch: 'trunk', private: true },
+  { id: 105, full_name: 'acme-corp/docs', default_branch: 'main', private: false },
+  { id: 106, full_name: 'acme-corp/infra', default_branch: 'main', private: true },
+];
+
+/** app slug -> the repo and branch it deploys from. */
+export const installBindings = new Map<
+  string,
+  { binding_id: string; repo_full_name: string; production_branch: string }
+>();
+
 // --- Apps --------------------------------------------------------------------
 
 const APP_SEEDS = [
@@ -965,6 +986,10 @@ if (EMPTY) {
     list.length = 0;
   }
   for (const map of [secrets, env, upstreams, alerts, webhooks]) map.clear();
+  // A first sign-in has not run `gregale connect` yet, so there is no
+  // installation and nothing to list — the repo picker's most common state.
+  account.github_install_id = null;
+  repos.length = 0;
   account.app_count = 0;
   account.usage_gb_hours = 0;
   Object.assign(usage, {
