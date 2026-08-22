@@ -13,7 +13,9 @@ import reactHooks from 'eslint-plugin-react-hooks';
  * produced noise in this codebase is off rather than merely downgraded.
  */
 export default tseslint.config(
-  { ignores: ['dist', 'src/routeTree.gen.ts', 'src/lib/api/schema.d.ts'] },
+  // `.claude/worktrees/` holds whole checkouts of this repo; linting them
+  // reports every copy's warnings alongside the working tree's.
+  { ignores: ['dist', '.claude', 'src/routeTree.gen.ts', 'src/lib/api/schema.d.ts'] },
   {
     files: ['**/*.{ts,tsx}'],
     extends: [js.configs.recommended, ...tseslint.configs.recommended],
