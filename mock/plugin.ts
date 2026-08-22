@@ -448,9 +448,40 @@ route('GET', '/v1/apps/{slug}/queues/dead_letter', ({ params }) =>
 
 // --- Logs (SSE) ---------------------------------------------------------------
 
+route('GET', '/v1/apps/{slug}/instances', ({ params }) => {
+  const a = app(params.slug);
+  return db.instances.filter((i) => i.app_id === a.id);
+});
+
 route('GET', '/v1/apps/{slug}/logs', ({ params, query, req, res }) => {
   const a = app(params.slug);
   const grep = query.get('grep')?.toLowerCase() ?? '';
+  const level = query.get('level') ?? '';
+  const archive = query.get('archive') === '1';
+
+  // Both archive gates answer before the stream opens, so they are ordinary
+  // problem+json rather than SSE frames.
+  if (archive) {
+    const retention = db.ARCHIVE_RETENTION_DAYS[db.account.plan] ?? 0;
+    if (retention === 0)
+      throw new Problem(
+        402,
+        'plan_log_archive_not_allowed',
+        'The free plan does not include log archive read-back; upgrade to Hobby or above to query historical logs from object storage.'
+      );
+    const instance = query.get('instance') ?? '';
+    const date = query.get('date') ?? '';
+    if (!instance || !date)
+      throw new Problem(400, 'rule_invalid', 'archive=1 requires instance and date.');
+    const ageDays = Math.floor((Date.now() - Date.parse(`${date}T00:00:00Z`)) / 86_400_000);
+    if (ageDays < 0 || ageDays > retention)
+      throw new Problem(
+        403,
+        'log_archive_retention_exceeded',
+        `?date=${date} is outside the per-plan window of ${retention} days.`
+      );
+  }
+
   res.writeHead(200, {
     'Content-Type': 'text/event-stream',
     'Cache-Control': 'no-cache',
@@ -459,17 +490,63 @@ route('GET', '/v1/apps/{slug}/logs', ({ params, query, req, res }) => {
   res.write(': mock log stream\n\n');
 
   const send = (event: string, data: string) => res.write(`event: ${event}\ndata: ${data}\n\n`);
+
+  // The API validates `level` against a closed enum and short-circuits with an
+  // SSE error frame rather than an HTTP status, because the stream has already
+  // begun. The console renders that code.
+  if (level && !['info', 'warn', 'error'].includes(level)) {
+    send('error', 'invalid_level');
+    res.end();
+    return undefined;
+  }
+
   // A parked app has nothing to say; the stream ends the way the real one does.
   if (a.status === 'parked') {
-    send('log', `${new Date().toISOString()} INFO  ${a.slug} instance parked — no live output`);
+    send(
+      'log',
+      JSON.stringify({
+        ts: new Date().toISOString(),
+        level: 'info',
+        instance_id: '',
+        msg: 'instance parked — no live output',
+      })
+    );
     send('end', '');
     res.end();
     return undefined;
   }
+
+  // Archive replays a stored day and ends with a reason; the SSE shape is the
+  // same as live so one decoder handles both.
+  if (archive) {
+    const instance = query.get('instance')!;
+    const date = query.get('date')!;
+    const known = db.instances.some((i) => i.id === instance && i.app_id === a.id);
+    if (!known) {
+      send('end', 'archive_missing');
+      res.end();
+      return undefined;
+    }
+    const frames = db
+      .archivedDay(instance, date)
+      .filter(
+        (f) => (!grep || f.msg.toLowerCase().includes(grep)) && (!level || f.level === level)
+      );
+    for (const frame of frames) send('log', JSON.stringify(frame));
+    // Older days in this fixture were only partially shipped, which is the
+    // case the degraded reason exists for.
+    const ageDays = Math.floor((Date.now() - Date.parse(`${date}T00:00:00Z`)) / 86_400_000);
+    send('end', ageDays > 3 ? 'archive_degraded' : 'archive_complete');
+    res.end();
+    return undefined;
+  }
+
   let timer: NodeJS.Timeout | undefined;
   const tick = () => {
-    const line = db.logLine(a);
-    if (!grep || line.toLowerCase().includes(grep)) send('log', line);
+    const frame = db.logFrame(a);
+    const matchesGrep = !grep || frame.msg.toLowerCase().includes(grep);
+    const matchesLevel = !level || frame.level === level;
+    if (matchesGrep && matchesLevel) send('log', JSON.stringify(frame));
     timer = setTimeout(tick, 250 + Math.random() * 900);
   };
   tick();
@@ -494,6 +571,71 @@ route('GET', '/v1/builds/{id}', ({ params }) => {
   if (!b) throw new Problem(404, 'build_not_found');
   return b;
 });
+route('GET', '/v1/deployments/{id}/logs', ({ params, query, req, res }) => {
+  const dep = db.deployments.find((d) => d.id === params.id);
+  if (!dep) throw new Problem(404, 'deployment_not_found');
+  const build = db.builds.find((b) => b.deployment_id === dep.id);
+  const app = db.apps.find((a) => a.id === dep.app_id);
+
+  res.writeHead(200, {
+    'Content-Type': 'text/event-stream',
+    'Cache-Control': 'no-cache',
+    Connection: 'keep-alive',
+  });
+  res.write(': mock build log\n\n');
+  const send = (event: string, data: string) => res.write(`event: ${event}\ndata: ${data}\n\n`);
+
+  const lines = db.buildLog(
+    app?.slug ?? 'app',
+    build?.status ?? dep.status,
+    dep.image_digest,
+    build?.failure_class
+  );
+  const limit = Number(query.get('limit') ?? 0);
+  const burst = limit > 0 ? lines.slice(-limit) : lines;
+  for (const frame of burst) send('log', JSON.stringify(frame));
+
+  // A finished build has nothing more to say; a running one keeps going and
+  // ends when it lands, exactly like the real stream.
+  if ((build?.status ?? dep.status) !== 'running' && dep.status !== 'building') {
+    send('end', '');
+    res.end();
+    return undefined;
+  }
+  let step = 0;
+  let timer: NodeJS.Timeout | undefined;
+  const tick = () => {
+    step += 1;
+    send(
+      'log',
+      JSON.stringify({
+        ts: new Date().toISOString(),
+        level: 'info',
+        instance_id: '',
+        msg: `#${8 + step} building layer ${step}/4…`,
+      })
+    );
+    if (step >= 4) {
+      send(
+        'log',
+        JSON.stringify({
+          ts: new Date().toISOString(),
+          level: 'info',
+          instance_id: '',
+          msg: 'build succeeded',
+        })
+      );
+      send('end', '');
+      res.end();
+      return;
+    }
+    timer = setTimeout(tick, 1200);
+  };
+  timer = setTimeout(tick, 1200);
+  req.on('close', () => clearTimeout(timer));
+  return undefined;
+});
+
 route('GET', '/v1/builds/{id}/sbom', ({ params, res }) => {
   const b = db.builds.find((x) => x.id === params.id);
   if (!b) throw new Problem(404, 'build_not_found');

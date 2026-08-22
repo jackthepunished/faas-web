@@ -923,17 +923,47 @@ const LOG_PATHS = [
   '/webhooks/stripe',
   '/invoke',
 ];
-/** One plausible access-log line, as a running handler would print it. */
-export function logLine(app: App): string {
-  const ts = new Date().toISOString().replace('T', ' ').slice(0, 23);
-  const roll = rand();
+
+/** Per-plan archive retention, in days. Free has no archive at all. */
+export const ARCHIVE_RETENTION_DAYS: Record<string, number> = {
+  free: 0,
+  hobby: 7,
+  pro: 30,
+  scale: 90,
+};
+
+export interface LogFrame {
+  ts: string;
+  level: 'info' | 'warn' | 'error';
+  instance_id: string;
+  msg: string;
+}
+
+/**
+ * One structured frame, the way the spec describes the stream: a level, the
+ * instance that emitted it, and a message. The earlier fixture sent a plain
+ * text line, which meant the console had nothing to colour or filter on.
+ */
+export function logFrame(app: App): LogFrame {
+  const instance = instances.find((i) => i.app_id === app.id)?.id ?? id();
+  // An app the fleet considers failing says so in its output, which is also
+  // what makes the error view worth looking at in the mock.
+  const failing = app.status === 'error';
+  const roll = rand() * (failing ? 0.35 : 1);
+  const base = { ts: new Date().toISOString(), instance_id: instance };
+
   if (roll < 0.06)
-    return `${ts} WARN  ${app.slug} upstream postgres slow query 412ms stmt=select_orders`;
+    return { ...base, level: 'warn', msg: `upstream postgres slow query 412ms stmt=select_orders` };
   if (roll < 0.09)
-    return `${ts} ERROR ${app.slug} handler panic: nil pointer dereference (recovered)`;
-  if (roll < 0.12) return `${ts} INFO  ${app.slug} wake cold snapshot=restore 214ms`;
+    return { ...base, level: 'error', msg: 'handler panic: nil pointer dereference (recovered)' };
+  if (roll < 0.12) return { ...base, level: 'info', msg: 'wake cold snapshot=restore 214ms' };
+
   const status = rand() < 0.94 ? 200 : pick([201, 204, 400, 404, 500]);
-  return `${ts} INFO  ${app.slug} ${pick(['GET', 'GET', 'POST', 'PUT'])} ${pick(LOG_PATHS)} ${status} ${int(3, 240)}ms`;
+  return {
+    ...base,
+    level: status >= 500 ? 'error' : status >= 400 ? 'warn' : 'info',
+    msg: `${pick(['GET', 'GET', 'POST', 'PUT'])} ${pick(LOG_PATHS)} ${status} ${int(3, 240)}ms`,
+  };
 }
 
 /* --- Empty workspace --------------------------------------------------------
@@ -976,4 +1006,90 @@ if (EMPTY) {
     used_ingress_gb: 0,
     cold_boots: 0,
   });
+}
+
+/**
+ * A day of archived lines for one instance, replayed from "S3".
+ *
+ * Seeded off the instance and the date so the same day always reads the same
+ * way — an archive that changed between two reads would be a strange thing to
+ * design against.
+ */
+export function archivedDay(instance: string, date: string): LogFrame[] {
+  let h = 0;
+  for (const ch of `${instance}:${date}`) h = (h * 31 + ch.charCodeAt(0)) | 0;
+  const next = () => {
+    h = (h * 1103515245 + 12345) & 0x7fffffff;
+    return h / 0x7fffffff;
+  };
+  const count = 25 + Math.floor(next() * 60);
+  return Array.from({ length: count }, (_, i) => {
+    const roll = next();
+    const minute = Math.floor((i / count) * 1440);
+    const ts = `${date}T${String(Math.floor(minute / 60)).padStart(2, '0')}:${String(minute % 60).padStart(2, '0')}:00.000Z`;
+    if (roll < 0.05)
+      return {
+        ts,
+        level: 'error' as const,
+        instance_id: instance,
+        msg: 'handler returned 500 after 10s',
+      };
+    if (roll < 0.12)
+      return {
+        ts,
+        level: 'warn' as const,
+        instance_id: instance,
+        msg: 'upstream postgres slow query 512ms',
+      };
+    return {
+      ts,
+      level: 'info' as const,
+      instance_id: instance,
+      msg: `${roll < 0.5 ? 'GET' : 'POST'} ${LOG_PATHS[Math.floor(next() * LOG_PATHS.length)]} 200 ${Math.floor(next() * 200) + 5}ms`,
+    };
+  });
+}
+
+/**
+ * A build's output, in the shape the log decoder already understands.
+ *
+ * A failed build ends on the reason it failed, because that is the question a
+ * failed build actually raises and the console could not answer it.
+ */
+export function buildLog(
+  slug: string,
+  status: string,
+  digest: string,
+  failureClass?: string
+): LogFrame[] {
+  const at = (i: number) => new Date(NOW - (40 - i) * 1000).toISOString();
+  const frames: LogFrame[] = [
+    { ts: at(0), level: 'info', instance_id: '', msg: `#1 resolving source for ${slug}` },
+    { ts: at(1), level: 'info', instance_id: '', msg: '#2 detected runtime from manifest' },
+    { ts: at(2), level: 'info', instance_id: '', msg: '#3 restoring dependency cache' },
+    { ts: at(3), level: 'info', instance_id: '', msg: '#4 installing dependencies' },
+    { ts: at(4), level: 'info', instance_id: '', msg: '#5 running build' },
+  ];
+  if (status === 'failed') {
+    // The reason has to agree with the failure class on the row beside it.
+    const reason: Record<string, [string, string]> = {
+      oom: ['fatal: out of memory while bundling', '#5 killed (OOM, 2048 MB)'],
+      timeout: ['still running after 600s', '#5 cancelled: build timeout'],
+      infra: ['builder lost connection to the registry', '#5 aborted: infrastructure error'],
+      user_error: ['error: cannot find module "./config"', '#5 exited with code 1'],
+    };
+    const [detail, exit] = reason[failureClass ?? 'user_error'] ?? reason.user_error;
+    frames.push(
+      { ts: at(5), level: 'error', instance_id: '', msg: detail },
+      { ts: at(6), level: 'error', instance_id: '', msg: exit },
+      { ts: at(7), level: 'error', instance_id: '', msg: 'build failed' }
+    );
+    return frames;
+  }
+  frames.push(
+    { ts: at(5), level: 'info', instance_id: '', msg: '#6 exporting layers' },
+    { ts: at(6), level: 'info', instance_id: '', msg: `#7 wrote ${digest.slice(0, 19)}…` },
+    { ts: at(7), level: 'info', instance_id: '', msg: 'build succeeded' }
+  );
+  return frames;
 }

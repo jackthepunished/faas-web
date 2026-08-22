@@ -1031,3 +1031,12 @@ export function useThrottleSuggestions(slug: string, range: MetricsRange, enable
     enabled: enabled && Boolean(slug),
   });
 }
+
+/** Instances of one app — the archive reads a single instance's day. */
+export function useAppInstances(slug: string) {
+  return useQuery({
+    queryKey: ['apps', slug, 'instances'],
+    queryFn: () => unwrap(api.GET('/v1/apps/{slug}/instances', { params: { path: { slug } } })),
+    enabled: Boolean(slug),
+  });
+}
