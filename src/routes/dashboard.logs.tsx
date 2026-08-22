@@ -1,11 +1,25 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createFileRoute } from '@tanstack/react-router';
-import { ArrowDown, Check, Copy, Download, Pause, Play, Search, Xmark } from 'iconoir-react';
+import { Link } from '@tanstack/react-router';
+import {
+  ArrowDown,
+  ArrowRight,
+  Check,
+  Copy,
+  Download,
+  Pause,
+  Play,
+  Search,
+  Xmark,
+} from 'iconoir-react';
 import { Button } from '@/components/ui/button';
 import { EmptyState, LevelTag, PageHeader } from '@/components/dashboard/primitives';
 import { Pill } from '@/components/dashboard/resource-table';
 import { AppScope, AppSelect, useSelectedApp } from '@/components/dashboard/app-select';
 import { LOG_LEVELS, MAX_LINES, useLogStream, type LogLevelFilter } from '@/lib/api/logs';
+import { useAppInstances } from '@/lib/api/queries';
+import { errorMessage } from '@/lib/api/errors';
+import { useAuth } from '@/lib/auth';
 import { cn } from '@/lib/utils';
 import { consoleHead } from '@/lib/seo';
 
@@ -25,6 +39,18 @@ const STATUS_LABEL: Record<string, { label: string; color?: string }> = {
 
 const WRAP_KEY = 'gregale.logs.wrap';
 
+/** Per-plan archive retention, in days. Free has no archive read-back at all. */
+const RETENTION_DAYS: Record<string, number> = { free: 0, hobby: 7, pro: 30, scale: 90 };
+
+const ARCHIVE_REASON: Record<string, string> = {
+  archive_complete: 'That is the whole day.',
+  archive_missing: 'Nothing was archived for this instance on this date.',
+  archive_degraded: 'Partial — some of this day was never shipped to the archive.',
+};
+
+const isoDay = (offsetDays = 0) =>
+  new Date(Date.now() - offsetDays * 86_400_000).toISOString().slice(0, 10);
+
 /**
  * The live log view, without the page chrome around it.
  *
@@ -35,11 +61,31 @@ export function LogsBody({ slug }: { slug: string }) {
   const [grepInput, setGrepInput] = useState('');
   const [grep, setGrep] = useState('');
   const [level, setLevel] = useState<LogLevelFilter | ''>('');
+  const [mode, setMode] = useState<'live' | 'archive'>('live');
+  const [instance, setInstance] = useState('');
+  const [date, setDate] = useState(() => isoDay(1));
   const [wrap, setWrap] = useState(() => localStorage.getItem(WRAP_KEY) !== '0');
   const [copied, setCopied] = useState(false);
 
-  const source = useMemo(() => ({ kind: 'live' as const, slug, grep, level }), [slug, grep, level]);
-  const { lines, status, reason, truncated, clear } = useLogStream(source, connected);
+  const { account } = useAuth();
+  const retention = RETENTION_DAYS[account?.plan ?? 'free'] ?? 0;
+  const archiveAllowed = retention > 0;
+
+  const instances = useAppInstances(mode === 'archive' ? slug : '');
+  const chosenInstance = instance || instances.data?.[0]?.id || '';
+
+  const source = useMemo(
+    () =>
+      mode === 'archive'
+        ? { kind: 'archive' as const, slug, instance: chosenInstance, date, grep, level }
+        : { kind: 'live' as const, slug, grep, level },
+    [mode, slug, chosenInstance, date, grep, level]
+  );
+  // An archive read is a one-shot fetch, so the pause switch does not apply.
+  const { lines, status, reason, error, truncated, clear } = useLogStream(
+    source,
+    mode === 'archive' ? true : connected
+  );
 
   const viewportRef = useRef<HTMLDivElement>(null);
   const [atBottom, setAtBottom] = useState(true);
@@ -101,6 +147,29 @@ export function LogsBody({ slug }: { slug: string }) {
   return (
     <div className="flex flex-col gap-4">
       <div className="flex flex-wrap items-center gap-3">
+        <div
+          role="group"
+          aria-label="Source"
+          className="flex rounded-md border border-border p-0.5"
+        >
+          {(['live', 'archive'] as const).map((m) => (
+            <button
+              key={m}
+              type="button"
+              aria-pressed={mode === m}
+              onClick={() => setMode(m)}
+              className={cn(
+                'rounded px-2.5 py-1 text-xs capitalize transition-colors',
+                mode === m
+                  ? 'bg-muted text-foreground'
+                  : 'text-muted-foreground hover:text-foreground'
+              )}
+            >
+              {m}
+            </button>
+          ))}
+        </div>
+
         <form
           className="relative flex min-w-56 flex-1 items-center sm:max-w-xs"
           onSubmit={(e) => {
@@ -140,15 +209,50 @@ export function LogsBody({ slug }: { slug: string }) {
           ))}
         </div>
 
-        <Button
-          size="sm"
-          variant="outline"
-          className="gap-1.5"
-          onClick={() => setConnected((c) => !c)}
-        >
-          {connected ? <Pause className="h-3.5 w-3.5" /> : <Play className="h-3.5 w-3.5" />}
-          {connected ? 'Pause' : 'Resume'}
-        </Button>
+        {mode === 'live' ? (
+          <Button
+            size="sm"
+            variant="outline"
+            className="gap-1.5"
+            onClick={() => setConnected((c) => !c)}
+          >
+            {connected ? <Pause className="h-3.5 w-3.5" /> : <Play className="h-3.5 w-3.5" />}
+            {connected ? 'Pause' : 'Resume'}
+          </Button>
+        ) : (
+          <>
+            <label className="flex items-center gap-2">
+              <span className="label-mono text-muted-foreground">Instance</span>
+              <select
+                value={chosenInstance}
+                onChange={(e) => setInstance(e.target.value)}
+                aria-label="Instance to read"
+                className="h-9 max-w-44 rounded-md border border-border bg-card px-2.5 font-mono text-xs outline-none focus:border-brand/50"
+              >
+                {(instances.data ?? []).length === 0 && <option value="">No instances</option>}
+                {(instances.data ?? []).map((i) => (
+                  <option key={i.id} value={i.id}>
+                    {i.id.slice(0, 12)}… · {i.state}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="flex items-center gap-2">
+              <span className="label-mono text-muted-foreground">Date</span>
+              <input
+                type="date"
+                value={date}
+                // Bounded by the plan's window, so the retention refusal is
+                // usually prevented rather than reported.
+                min={isoDay(retention)}
+                max={isoDay(0)}
+                onChange={(e) => setDate(e.target.value)}
+                aria-label="Archive date"
+                className="h-9 rounded-md border border-border bg-card px-2.5 text-sm outline-none focus:border-brand/50"
+              />
+            </label>
+          </>
+        )}
 
         <Pill label={badge.label} color={badge.color} />
 
@@ -214,6 +318,11 @@ export function LogsBody({ slug }: { slug: string }) {
           The stream stopped: <span className="font-mono">{reason}</span>
         </p>
       )}
+      {mode === 'archive' && lines.length > 0 && reason && (
+        <p className="text-xs text-muted-foreground">
+          {lines.length} lines from {date}. {ARCHIVE_REASON[reason] ?? reason}
+        </p>
+      )}
       {truncated && (
         <p className="text-xs text-muted-foreground">
           Showing the last {MAX_LINES.toLocaleString()} lines. Earlier output has scrolled out of
@@ -221,12 +330,33 @@ export function LogsBody({ slug }: { slug: string }) {
         </p>
       )}
 
-      {lines.length === 0 ? (
+      {mode === 'archive' && !archiveAllowed ? (
+        <div className="rounded-xl border border-border bg-card p-6">
+          <p className="text-sm font-medium">Log archive is not on the free plan</p>
+          <p className="mt-1.5 max-w-lg text-sm leading-relaxed text-muted-foreground">
+            Live output is always available. Reading a past day back from object storage needs Hobby
+            or above, which also sets how far back you can go — 7 days on Hobby, 30 on Pro, 90 on
+            Scale.
+          </p>
+          <Link
+            to="/dashboard/plans"
+            className="mt-3 inline-flex items-center gap-1.5 text-sm font-medium text-brand hover:underline"
+          >
+            Compare plans
+            <ArrowRight className="h-3.5 w-3.5" />
+          </Link>
+        </div>
+      ) : lines.length === 0 ? (
         <EmptyState
           message={
-            connected
-              ? 'Waiting for output. A parked app produces nothing until it wakes.'
-              : 'Paused. Resume to stream logs.'
+            mode === 'archive'
+              ? status === 'connecting'
+                ? 'Reading the archive…'
+                : (reason && ARCHIVE_REASON[reason]) ||
+                  (error ? errorMessage(error) : 'Nothing archived for this instance and date.')
+              : connected
+                ? 'Waiting for output. A parked app produces nothing until it wakes.'
+                : 'Paused. Resume to stream logs.'
           }
         />
       ) : (

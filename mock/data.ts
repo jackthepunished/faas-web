@@ -924,6 +924,14 @@ const LOG_PATHS = [
   '/invoke',
 ];
 
+/** Per-plan archive retention, in days. Free has no archive at all. */
+export const ARCHIVE_RETENTION_DAYS: Record<string, number> = {
+  free: 0,
+  hobby: 7,
+  pro: 30,
+  scale: 90,
+};
+
 export interface LogFrame {
   ts: string;
   level: 'info' | 'warn' | 'error';
@@ -997,5 +1005,47 @@ if (EMPTY) {
     used_egress_gb: 0,
     used_ingress_gb: 0,
     cold_boots: 0,
+  });
+}
+
+/**
+ * A day of archived lines for one instance, replayed from "S3".
+ *
+ * Seeded off the instance and the date so the same day always reads the same
+ * way — an archive that changed between two reads would be a strange thing to
+ * design against.
+ */
+export function archivedDay(instance: string, date: string): LogFrame[] {
+  let h = 0;
+  for (const ch of `${instance}:${date}`) h = (h * 31 + ch.charCodeAt(0)) | 0;
+  const next = () => {
+    h = (h * 1103515245 + 12345) & 0x7fffffff;
+    return h / 0x7fffffff;
+  };
+  const count = 25 + Math.floor(next() * 60);
+  return Array.from({ length: count }, (_, i) => {
+    const roll = next();
+    const minute = Math.floor((i / count) * 1440);
+    const ts = `${date}T${String(Math.floor(minute / 60)).padStart(2, '0')}:${String(minute % 60).padStart(2, '0')}:00.000Z`;
+    if (roll < 0.05)
+      return {
+        ts,
+        level: 'error' as const,
+        instance_id: instance,
+        msg: 'handler returned 500 after 10s',
+      };
+    if (roll < 0.12)
+      return {
+        ts,
+        level: 'warn' as const,
+        instance_id: instance,
+        msg: 'upstream postgres slow query 512ms',
+      };
+    return {
+      ts,
+      level: 'info' as const,
+      instance_id: instance,
+      msg: `${roll < 0.5 ? 'GET' : 'POST'} ${LOG_PATHS[Math.floor(next() * LOG_PATHS.length)]} 200 ${Math.floor(next() * 200) + 5}ms`,
+    };
   });
 }

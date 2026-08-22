@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { LogLevel } from '@/lib/mock-data';
+import { ApiError, toApiError } from './errors';
 
 /**
  * The console's log streams, over Server-Sent Events.
@@ -164,6 +165,8 @@ interface StreamState {
   key: string;
   lines: LogLine[];
   status: StreamStatus;
+  /** The archive's refusal, when there is one — 402 and 403 both land here. */
+  error?: unknown;
   /** `archive_complete`, `archive_missing`, `archive_degraded`, or an error code. */
   reason?: string;
   /** True once the ring buffer has dropped a line, so the UI can say so. */
@@ -180,15 +183,73 @@ const EMPTY: StreamState = { key: '', lines: [], status: 'idle', truncated: fals
  * can stop on a line and still read it. Keying on it — which this hook used to
  * do — emptied the screen the moment you pressed Pause.
  */
+/**
+ * Read a finished archive over `fetch` rather than `EventSource`.
+ *
+ * The archive is a bounded response, not a held-open stream, and both of its
+ * refusals are HTTP: 402 when the plan has no archive, 403 when the date falls
+ * outside the retention window. `EventSource` exposes neither — its `onerror`
+ * cannot tell a 402 from a dropped connection — so the one mode that has real
+ * status codes to report is the one that does not use it.
+ */
+async function fetchArchive(url: string, signal: AbortSignal) {
+  const res = await fetch(url, { credentials: 'include', signal });
+  if (!res.ok) throw await toApiError(res);
+
+  const body = await res.text();
+  const lines: LogLine[] = [];
+  let reason: string | undefined;
+  let seq = 0;
+
+  // SSE framing, read whole: blank-line-separated records of `event:`/`data:`.
+  for (const frame of body.split('\n\n')) {
+    let event = 'message';
+    const data: string[] = [];
+    for (const raw of frame.split('\n')) {
+      if (raw.startsWith('event:')) event = raw.slice(6).trim();
+      else if (raw.startsWith('data:')) data.push(raw.slice(5).replace(/^ /, ''));
+    }
+    if (!data.length && event === 'message') continue;
+    const payload = data.join('\n');
+    if (event === 'log') lines.push(parseFrame(payload, `a${seq++}`, Date.now()));
+    else if (event === 'end') reason = payload.trim() || undefined;
+  }
+  return { lines, reason };
+}
+
 export function useLogStream(source: StreamSource, connected = true) {
   const [state, setState] = useState<StreamState>(EMPTY);
   const counter = useRef(0);
 
   const enabled = ready(source);
+  const isArchive = source.kind === 'archive';
   const { url, key } = enabled ? describe(source) : { url: '', key: '' };
 
   useEffect(() => {
     if (!key || !connected) return;
+
+    if (isArchive) {
+      const controller = new AbortController();
+      // No "connecting" set here: the read below already reports it whenever
+      // the state's key differs from the subscription's, and setting it
+      // synchronously in an effect only costs a render.
+      void fetchArchive(url, controller.signal)
+        .then(({ lines, reason }) =>
+          setState({ key, lines, status: 'ended', reason, truncated: false })
+        )
+        .catch((err: unknown) => {
+          if (controller.signal.aborted) return;
+          setState({
+            key,
+            lines: [],
+            status: 'error',
+            reason: err instanceof ApiError ? err.code : undefined,
+            error: err,
+            truncated: false,
+          });
+        });
+      return () => controller.abort();
+    }
 
     const source = new EventSource(url, { withCredentials: true });
 
@@ -240,7 +301,7 @@ export function useLogStream(source: StreamSource, connected = true) {
     };
 
     return () => source.close();
-  }, [key, url, connected]);
+  }, [key, url, connected, isArchive]);
 
   const clear = useCallback(() => {
     setState((prev) => ({ ...prev, lines: [], truncated: false }));
@@ -260,6 +321,7 @@ export function useLogStream(source: StreamSource, connected = true) {
     // Paused is a state of the viewer, not of the last connection.
     status: connected ? state.status : ('paused' as StreamStatus),
     reason: state.reason,
+    error: state.error,
     truncated: state.truncated,
     clear,
   };

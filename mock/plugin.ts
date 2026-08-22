@@ -448,10 +448,39 @@ route('GET', '/v1/apps/{slug}/queues/dead_letter', ({ params }) =>
 
 // --- Logs (SSE) ---------------------------------------------------------------
 
+route('GET', '/v1/apps/{slug}/instances', ({ params }) => {
+  const a = app(params.slug);
+  return db.instances.filter((i) => i.app_id === a.id);
+});
+
 route('GET', '/v1/apps/{slug}/logs', ({ params, query, req, res }) => {
   const a = app(params.slug);
   const grep = query.get('grep')?.toLowerCase() ?? '';
   const level = query.get('level') ?? '';
+  const archive = query.get('archive') === '1';
+
+  // Both archive gates answer before the stream opens, so they are ordinary
+  // problem+json rather than SSE frames.
+  if (archive) {
+    const retention = db.ARCHIVE_RETENTION_DAYS[db.account.plan] ?? 0;
+    if (retention === 0)
+      throw new Problem(
+        402,
+        'plan_log_archive_not_allowed',
+        'The free plan does not include log archive read-back; upgrade to Hobby or above to query historical logs from object storage.'
+      );
+    const instance = query.get('instance') ?? '';
+    const date = query.get('date') ?? '';
+    if (!instance || !date)
+      throw new Problem(400, 'rule_invalid', 'archive=1 requires instance and date.');
+    const ageDays = Math.floor((Date.now() - Date.parse(`${date}T00:00:00Z`)) / 86_400_000);
+    if (ageDays < 0 || ageDays > retention)
+      throw new Problem(
+        403,
+        'log_archive_retention_exceeded',
+        `?date=${date} is outside the per-plan window of ${retention} days.`
+      );
+  }
 
   res.writeHead(200, {
     'Content-Type': 'text/event-stream',
@@ -483,6 +512,31 @@ route('GET', '/v1/apps/{slug}/logs', ({ params, query, req, res }) => {
       })
     );
     send('end', '');
+    res.end();
+    return undefined;
+  }
+
+  // Archive replays a stored day and ends with a reason; the SSE shape is the
+  // same as live so one decoder handles both.
+  if (archive) {
+    const instance = query.get('instance')!;
+    const date = query.get('date')!;
+    const known = db.instances.some((i) => i.id === instance && i.app_id === a.id);
+    if (!known) {
+      send('end', 'archive_missing');
+      res.end();
+      return undefined;
+    }
+    const frames = db
+      .archivedDay(instance, date)
+      .filter(
+        (f) => (!grep || f.msg.toLowerCase().includes(grep)) && (!level || f.level === level)
+      );
+    for (const frame of frames) send('log', JSON.stringify(frame));
+    // Older days in this fixture were only partially shipped, which is the
+    // case the degraded reason exists for.
+    const ageDays = Math.floor((Date.now() - Date.parse(`${date}T00:00:00Z`)) / 86_400_000);
+    send('end', ageDays > 3 ? 'archive_degraded' : 'archive_complete');
     res.end();
     return undefined;
   }
