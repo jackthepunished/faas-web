@@ -291,7 +291,83 @@ route('GET', '/v1/apps/{slug}/upstreams', ({ params }) => {
   const upstreams = listOf(db.upstreams, params.slug);
   return { upstreams, quota_max: 16, count: upstreams.length };
 });
+route('PUT', '/v1/apps/{slug}/upstreams', ({ params, body }) => {
+  app(params.slug);
+  const host = String(body.host ?? '').trim();
+  if (!body.kind || !host || !body.port)
+    throw new Problem(400, 'missing_field', 'kind, host, and port are required.');
+  const list = listOf(db.upstreams, params.slug);
+  const up: (typeof list)[number] = {
+    id: db.id(),
+    source: 'explicit',
+    kind: body.kind as (typeof list)[number]['kind'],
+    host_redacted_hash: db.id().slice(0, 16),
+    host_last4: host.slice(-4),
+    port: Number(body.port),
+    scope: body.scope ? String(body.scope) : undefined,
+    created_at: db.iso(0),
+    last_seen_at: db.iso(0),
+  };
+  list.push(up);
+  db.upstreams.set(params.slug, list);
+  return status(201, up);
+});
+route('DELETE', '/v1/apps/{slug}/upstreams/{id}', ({ params }) => {
+  const list = listOf(db.upstreams, params.slug);
+  const i = list.findIndex((u) => u.id === params.id);
+  if (i < 0) throw new Problem(404, 'upstream_not_found');
+  list.splice(i, 1);
+  return NO_CONTENT;
+});
 route('GET', '/v1/apps/{slug}/alerts', ({ params }) => listOf(db.alerts, params.slug));
+route('POST', '/v1/apps/{slug}/alerts', ({ params, body }) => {
+  const a = app(params.slug);
+  if (!body.name || !body.metric || !body.webhook_url)
+    throw new Problem(400, 'missing_field', 'name, metric, and webhook_url are required.');
+  const list = listOf(db.alerts, params.slug);
+  const rule: (typeof list)[number] = {
+    id: db.id(),
+    app_id: a.id,
+    name: String(body.name),
+    enabled: body.enabled !== false,
+    metric: body.metric as (typeof list)[number]['metric'],
+    comparison: (body.comparison ?? 'gt') as (typeof list)[number]['comparison'],
+    threshold: Number(body.threshold ?? 0),
+    window_spec: (body.window_spec ?? '15m') as (typeof list)[number]['window_spec'],
+    webhook_url: String(body.webhook_url),
+    webhook_secret_sealed_masked: '***',
+    cooldown_minutes: Number(body.cooldown_minutes ?? 30),
+    state: 'ok',
+    created_at: db.iso(0),
+    updated_at: db.iso(0),
+  };
+  list.push(rule);
+  db.alerts.set(params.slug, list);
+  return status(201, rule);
+});
+route('PATCH', '/v1/apps/{slug}/alerts/{id}', ({ params, body }) => {
+  const rule = listOf(db.alerts, params.slug).find((r) => r.id === params.id);
+  if (!rule) throw new Problem(404, 'alert_rule_not_found');
+  for (const k of [
+    'name',
+    'enabled',
+    'metric',
+    'comparison',
+    'threshold',
+    'window_spec',
+    'webhook_url',
+    'cooldown_minutes',
+  ] as const)
+    if (k in body && body[k] != null) (rule as Record<string, unknown>)[k] = body[k];
+  rule.updated_at = db.iso(0);
+  return rule;
+});
+route('POST', '/v1/apps/{slug}/alerts/{id}/rotate-secret', ({ params }) => {
+  const rule = listOf(db.alerts, params.slug).find((r) => r.id === params.id);
+  if (!rule) throw new Problem(404, 'alert_rule_not_found');
+  rule.updated_at = db.iso(0);
+  return { rotated_at: rule.updated_at, webhook_secret_sealed_masked: '***' };
+});
 route('DELETE', '/v1/apps/{slug}/alerts/{id}', ({ params }) => {
   const list = listOf(db.alerts, params.slug);
   const i = list.findIndex((r) => r.id === params.id);
@@ -300,6 +376,69 @@ route('DELETE', '/v1/apps/{slug}/alerts/{id}', ({ params }) => {
   return NO_CONTENT;
 });
 route('GET', '/v1/apps/{slug}/webhooks', ({ params }) => listOf(db.webhooks, params.slug));
+route('POST', '/v1/apps/{slug}/webhooks', ({ params, body }) => {
+  const a = app(params.slug);
+  const url = String(body.target_url ?? '');
+  if (!/^https:\/\//.test(url))
+    throw new Problem(400, 'invalid_target_url', 'Webhook targets must be https.');
+  if (!body.webhook_secret) throw new Problem(400, 'missing_field', 'webhook_secret is required.');
+  const list = listOf(db.webhooks, params.slug);
+  const hook: (typeof list)[number] = {
+    id: db.id(),
+    app_id: a.id,
+    account_id: db.ACCOUNT_ID,
+    target_url: url,
+    webhook_secret_sealed_masked: '***',
+    event_filter: Array.isArray(body.event_filter) ? (body.event_filter as string[]) : [],
+    retry_policy: (body.retry_policy ?? 'default') as (typeof list)[number]['retry_policy'],
+    enabled: body.enabled !== false,
+    created_at: db.iso(0),
+    updated_at: db.iso(0),
+  };
+  list.push(hook);
+  db.webhooks.set(params.slug, list);
+  db.deliveries.set(hook.id, []);
+  return status(201, hook);
+});
+route('PATCH', '/v1/apps/{slug}/webhooks/{id}', ({ params, body }) => {
+  const hook = listOf(db.webhooks, params.slug).find((w) => w.id === params.id);
+  if (!hook) throw new Problem(404, 'webhook_not_found');
+  for (const k of ['target_url', 'event_filter', 'retry_policy', 'enabled'] as const)
+    if (k in body && body[k] != null) (hook as Record<string, unknown>)[k] = body[k];
+  hook.updated_at = db.iso(0);
+  return hook;
+});
+route('DELETE', '/v1/apps/{slug}/webhooks/{id}', ({ params }) => {
+  const list = listOf(db.webhooks, params.slug);
+  const i = list.findIndex((w) => w.id === params.id);
+  if (i < 0) throw new Problem(404, 'webhook_not_found');
+  list.splice(i, 1);
+  return NO_CONTENT;
+});
+route('POST', '/v1/apps/{slug}/webhooks/{id}/rotate-secret', ({ params }) => {
+  const hook = listOf(db.webhooks, params.slug).find((w) => w.id === params.id);
+  if (!hook) throw new Problem(404, 'webhook_not_found');
+  hook.updated_at = db.iso(0);
+  return { rotated_at: hook.updated_at, webhook_secret_sealed_masked: '***' as const };
+});
+route('GET', '/v1/apps/{slug}/webhooks/{id}/deliveries', ({ params }) => {
+  app(params.slug);
+  return { deliveries: db.deliveries.get(params.id) ?? [] };
+});
+route('POST', '/v1/apps/{slug}/webhooks/{id}/deliveries/{did}/retry', ({ params }) => {
+  const d = (db.deliveries.get(params.id) ?? []).find((x) => x.id === params.did);
+  if (!d) throw new Problem(404, 'delivery_not_found');
+  if (d.status !== 'dead' && d.status !== 'failed')
+    throw new Problem(
+      409,
+      'delivery_not_retryable',
+      'Only a failed or dead delivery can be retried.'
+    );
+  d.status = 'pending';
+  d.next_attempt_at = db.iso(-5_000);
+  d.updated_at = db.iso(0);
+  return { delivery: d };
+});
 
 route('GET', '/v1/apps/{slug}/queues/state', ({ params }) => db.queueState(app(params.slug)));
 route('GET', '/v1/apps/{slug}/queues/peek', ({ params }) => db.queuePeek(app(params.slug)));
@@ -377,6 +516,41 @@ route('DELETE', '/v1/domains/{domain}', ({ params }) => {
 });
 
 route('GET', '/v1/crons', () => db.crons);
+route('POST', '/v1/crons', ({ body }) => {
+  const a = db.apps.find((x) => x.id === body.app_id);
+  if (!a) throw new Problem(404, 'app_not_found', 'No app with that id.');
+  const schedule = String(body.schedule ?? '').trim();
+  if (schedule.split(/\s+/).length !== 5)
+    throw new Problem(
+      400,
+      'invalid_schedule',
+      'A schedule has five fields: minute hour day month weekday.'
+    );
+  const cron = {
+    id: db.id(),
+    app_id: a.id,
+    schedule,
+    path: String(body.path ?? '/'),
+    enabled: body.enabled !== false,
+    created_at: db.iso(0),
+    last_fired_at: null,
+  };
+  db.crons.push(cron);
+  db.cronRuns.set(cron.id, []);
+  return status(201, cron);
+});
+route('PATCH', '/v1/crons/{id}', ({ params, body }) => {
+  const c = db.crons.find((x) => x.id === params.id);
+  if (!c) throw new Problem(404, 'cron_not_found');
+  if (typeof body.schedule === 'string') c.schedule = body.schedule;
+  if (typeof body.path === 'string') c.path = body.path;
+  if (typeof body.enabled === 'boolean') c.enabled = body.enabled;
+  return c;
+});
+route('GET', '/v1/crons/{id}/runs', ({ params }) => {
+  if (!db.crons.some((x) => x.id === params.id)) throw new Problem(404, 'cron_not_found');
+  return { runs: db.cronRuns.get(params.id) ?? [] };
+});
 route('DELETE', '/v1/crons/{id}', ({ params }) => {
   const i = db.crons.findIndex((c) => c.id === params.id);
   if (i < 0) throw new Problem(404, 'cron_not_found');
@@ -483,6 +657,52 @@ route('GET', '/v1/billing/portal', () => db.billingPortal);
 route('GET', '/v1/orgs', () => ({ orgs: db.orgs }));
 route('GET', '/v1/orgs/{slug}/members', () => ({ members: db.members }));
 route('GET', '/v1/orgs/{slug}/invitations', () => ({ invitations: db.invitations }));
+route('POST', '/v1/orgs/{slug}/members', ({ params, body }) => {
+  const org = db.orgs.find((o) => o.slug === params.slug);
+  if (!org) throw new Problem(404, 'org_not_found');
+  const email = String(body.email ?? '')
+    .trim()
+    .toLowerCase();
+  if (!email.includes('@'))
+    throw new Problem(400, 'invalid_email', 'That does not look like an email address.');
+  if (db.members.some((m) => m.email === email))
+    throw new Problem(409, 'already_member', `${email} is already a member.`);
+  const inv: (typeof db.invitations)[number] = {
+    id: db.id(),
+    org_id: org.id,
+    org_slug: org.slug,
+    email,
+    role: (body.role ?? 'developer') as (typeof db.invitations)[number]['role'],
+    status: 'pending',
+    expires_at: db.iso(-7 * 24 * 3_600_000),
+    created_at: db.iso(0),
+  };
+  db.invitations.unshift(inv);
+  // The plaintext token is returned exactly once, like a minted API key.
+  return status(201, { ...inv, token: `inv_${db.id()}` });
+});
+route('PATCH', '/v1/orgs/{slug}/members/{user_id}', ({ params, body }) => {
+  const m = db.members.find((x) => x.account_id === params.user_id);
+  if (!m) throw new Problem(404, 'member_not_found');
+  if (m.role === 'owner')
+    throw new Problem(409, 'cannot_change_owner_role', 'Transfer ownership instead.');
+  m.role = body.role as typeof m.role;
+  return m;
+});
+route('DELETE', '/v1/orgs/{slug}/members/{user_id}', ({ params }) => {
+  const i = db.members.findIndex((x) => x.account_id === params.user_id);
+  if (i < 0) throw new Problem(404, 'member_not_found');
+  if (db.members[i].role === 'owner')
+    throw new Problem(409, 'cannot_remove_owner', 'Transfer ownership first.');
+  db.members.splice(i, 1);
+  return NO_CONTENT;
+});
+route('DELETE', '/v1/orgs/{slug}/invitations/{token}', ({ params }) => {
+  const inv = db.invitations.find((x) => x.id === params.token);
+  if (!inv) throw new Problem(404, 'invitation_not_found');
+  inv.status = 'revoked';
+  return NO_CONTENT;
+});
 
 // --- Plumbing ------------------------------------------------------------------
 
