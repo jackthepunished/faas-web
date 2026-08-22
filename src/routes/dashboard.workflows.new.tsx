@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router';
-import { ArrowLeft, ArrowRight, Check, Github, Package, Upload } from 'iconoir-react';
+import { ArrowLeft, ArrowRight, Check, Github, Package } from 'iconoir-react';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/components/ui/toast';
@@ -10,6 +10,7 @@ import { PageHeader, Panel } from '@/components/dashboard/primitives';
 import { type Runtime } from '@/lib/mock-data';
 import { errorMessage } from '@/lib/api/errors';
 import { useData } from '@/lib/store';
+import { useDeployFromRefFor, useUpdateAppFor } from '@/lib/api/queries';
 import { cn } from '@/lib/utils';
 import { pageHead } from '@/lib/seo';
 
@@ -21,26 +22,27 @@ export const Route = createFileRoute('/dashboard/workflows/new')({
 const EASE: [number, number, number, number] = [0.16, 1, 0.3, 1];
 const STEPS = ['Source', 'Configure', 'Review'] as const;
 
+/**
+ * Two sources, both real. The earlier list offered a template and an upload
+ * alongside Git, and all three were decoration: the choice was collected,
+ * shown on the review screen, and never sent anywhere. Now Git means a
+ * source-ref deploy fires the moment the app exists, and Empty means exactly
+ * that — an app waiting for its first `gregale deploy`.
+ */
 const SOURCES = [
   {
     id: 'git',
-    name: 'Import from Git',
-    desc: 'Connect a repository and deploy on every push.',
+    name: 'Deploy from Git',
+    desc: 'Build the ref right after the app is created.',
     icon: Github,
   },
   {
-    id: 'template',
-    name: 'Start from a template',
-    desc: 'A working handler you can edit after deploy.',
+    id: 'empty',
+    name: 'Create empty',
+    desc: 'Set up the app now and deploy it from the CLI or CI later.',
     icon: Package,
   },
-  {
-    id: 'upload',
-    name: 'Upload a bundle',
-    desc: 'Ship a prebuilt archive straight to metal.',
-    icon: Upload,
-  },
-];
+] as const;
 
 /** The set `apid` accepts on `POST /v1/apps`; anything else is a 400. */
 const RUNTIMES: { id: Runtime; label: string }[] = [
@@ -70,8 +72,11 @@ function NewFunctionPage() {
   const [createdUrl, setCreatedUrl] = useState<string | null>(null);
   const [step, setStep] = useState(0);
   const [source, setSource] = useState('git');
-  const [repo, setRepo] = useState('acme-corp/checkout-service');
-  const [name, setName] = useState('checkout-service');
+  const [repo, setRepo] = useState('');
+  const [ref, setRef] = useState('main');
+  const [name, setName] = useState('');
+  const deployFromRef = useDeployFromRefFor();
+  const updateApp = useUpdateAppFor();
   const [appType, setAppType] = useState<'function' | 'app'>('function');
   const [runtime, setRuntime] = useState<Runtime>('node22');
   const [memoryMb, setMemoryMb] = useState(512);
@@ -100,15 +105,44 @@ function NewFunctionPage() {
             // most often 409 on a slug already in use, or 403 when the plan's
             // app limit is reached.
             void addWorkflow({ name, runtime, memoryMb, type: appType })
-              .then((created) => {
+              .then(async (created) => {
+                // What the wizard promised, now actually done: a Git source
+                // kicks off the first build, and "scale to zero" off pins one
+                // instance resident. Both used to be shown and discarded.
+                const followUps: Promise<unknown>[] = [];
+                if (!scaleToZero)
+                  followUps.push(updateApp.mutateAsync({ slug: created.id, min_instances: 1 }));
+                if (source === 'git' && repo.includes('/'))
+                  followUps.push(
+                    deployFromRef.mutateAsync({
+                      slug: created.id,
+                      repo: repo.trim(),
+                      ref: ref.trim() || 'main',
+                      format: 'tarball',
+                    })
+                  );
+                const results = await Promise.allSettled(followUps);
+                const failed = results.find((r) => r.status === 'rejected') as
+                  PromiseRejectedResult | undefined;
                 setCreatedId(created.id);
                 setCreatedUrl(created.url);
                 setDeployed(true);
-                toast({
-                  kind: 'success',
-                  title: 'App created',
-                  description: `${name} is ready. Push a deployment to serve traffic.`,
-                });
+                if (failed) {
+                  toast({
+                    kind: 'error',
+                    title: 'App created, but not every step landed',
+                    description: errorMessage(failed.reason),
+                  });
+                } else {
+                  toast({
+                    kind: 'success',
+                    title: 'App created',
+                    description:
+                      source === 'git' && repo.includes('/')
+                        ? `${repo.trim()}@${ref.trim() || 'main'} is building. It goes live when the build succeeds.`
+                        : `${name} is ready. Deploy it with gregale deploy when you are.`,
+                  });
+                }
               })
               .catch((err: unknown) => {
                 setDeploying(false);
@@ -241,18 +275,41 @@ function NewFunctionPage() {
             </div>
 
             {source === 'git' && (
-              <label className="flex flex-col gap-1.5">
-                <span className="label-mono text-muted-foreground">Repository</span>
-                <input
-                  value={repo}
-                  onChange={(e) => setRepo(e.target.value)}
-                  className="h-10 rounded-lg border border-border bg-card px-3 font-mono text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand/25"
-                />
-              </label>
+              <div className="grid gap-3 sm:grid-cols-[1fr_auto]">
+                <label className="flex flex-col gap-1.5">
+                  <span className="label-mono text-muted-foreground">Repository</span>
+                  <input
+                    value={repo}
+                    onChange={(e) => setRepo(e.target.value)}
+                    placeholder="owner/repo"
+                    spellCheck={false}
+                    className="h-10 rounded-lg border border-border bg-card px-3 font-mono text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand/25"
+                  />
+                </label>
+                <label className="flex flex-col gap-1.5 sm:w-40">
+                  <span className="label-mono text-muted-foreground">Ref</span>
+                  <input
+                    value={ref}
+                    onChange={(e) => setRef(e.target.value)}
+                    placeholder="main"
+                    spellCheck={false}
+                    className="h-10 rounded-lg border border-border bg-card px-3 font-mono text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand/25"
+                  />
+                </label>
+                <p className="text-xs text-muted-foreground sm:col-span-2">
+                  The repository has to be reachable by the GitHub installation from{' '}
+                  <span className="font-mono">gregale connect</span>.
+                </p>
+              </div>
             )}
 
             <div className="flex justify-end">
-              <Button variant="cta" onClick={() => setStep(1)} className="h-10 gap-2 rounded-lg">
+              <Button
+                variant="cta"
+                disabled={source === 'git' && !repo.includes('/')}
+                onClick={() => setStep(1)}
+                className="h-10 gap-2 rounded-lg"
+              >
                 Continue
                 <ArrowRight className="h-4 w-4" />
               </Button>
@@ -399,12 +456,14 @@ function NewFunctionPage() {
                   ['Name', name],
                   ['Type', APP_TYPES.find((t) => t.id === appType)?.label ?? ''],
                   [
-                    'Source',
-                    source === 'git' ? repo : (SOURCES.find((s) => s.id === source)?.name ?? ''),
+                    'First deploy',
+                    source === 'git'
+                      ? `${repo}@${ref || 'main'}, right after create`
+                      : 'Later, from the CLI',
                   ],
                   ['Runtime', runtime],
                   ['Memory', `${memoryMb} MB`],
-                  ['Scale to zero', scaleToZero ? 'Enabled' : 'Disabled'],
+                  ['Scale to zero', scaleToZero ? 'Parks when idle' : 'One instance kept resident'],
                   // Assigned by the API on create, so it is not known until then.
                   ['Endpoint', createdUrl ?? 'Assigned on create'],
                 ].map(([label, value]) => (

@@ -26,6 +26,18 @@ export const Route = createFileRoute('/dashboard/keys')({
  * Rotation is not deletion: the old key keeps working for a grace window
  * (`/v1/account/keys/grace_window_days`) so a deploy mid-rotation does not fail.
  */
+const SCOPES = [
+  'admin',
+  'deploy:write',
+  'apps:read',
+  'secrets:read',
+  'secrets:write',
+  'env:read',
+  'env:write',
+  'usage:read',
+] as const;
+type Scope = (typeof SCOPES)[number];
+
 interface KeyRow {
   id: string;
   label: string;
@@ -89,6 +101,10 @@ function KeysPage() {
   const rotateKey = useRotateApiKey();
 
   const [label, setLabel] = useState('');
+  // Admin is the whole account; the others are the least a CI job or an
+  // exporter needs. A key minted with nothing selected gets the server's
+  // default, which is admin — so the picker defaults to something narrower.
+  const [scopes, setScopes] = useState<Scope[]>(['apps:read', 'deploy:write']);
   const [plaintext, setPlaintext] = useState<string | null>(null);
 
   const rows = useMemo<KeyRow[]>(
@@ -222,7 +238,7 @@ function KeysPage() {
             e.preventDefault();
             if (createKey.isPending) return;
             void createKey
-              .mutateAsync({ label: label.trim() || undefined })
+              .mutateAsync({ label: label.trim() || undefined, scopes })
               .then((result) => {
                 setLabel('');
                 // `plaintext` on create; the rotate response calls the same
@@ -247,7 +263,53 @@ function KeysPage() {
               className="h-10 rounded-lg border border-border bg-background px-3 text-sm outline-none focus:border-brand"
             />
           </label>
-          <Button type="submit" size="sm" className="gap-1.5" disabled={createKey.isPending}>
+          <fieldset className="flex basis-full flex-col gap-1.5">
+            <legend className="label-mono text-muted-foreground">Scopes</legend>
+            <div className="flex flex-wrap gap-1.5 pt-1.5">
+              {SCOPES.map((scope) => {
+                const on = scopes.includes(scope);
+                return (
+                  <button
+                    key={scope}
+                    type="button"
+                    aria-pressed={on}
+                    onClick={() =>
+                      setScopes((prev) =>
+                        // admin implies the rest; picking it clears the narrower ones
+                        scope === 'admin'
+                          ? on
+                            ? []
+                            : ['admin']
+                          : (on ? prev.filter((x) => x !== scope) : [...prev, scope]).filter(
+                              (x) => x !== 'admin'
+                            )
+                      )
+                    }
+                    className={`h-8 rounded-md border px-2.5 font-mono text-xs transition-colors ${
+                      on
+                        ? 'border-brand bg-brand/10 text-foreground'
+                        : 'border-border text-muted-foreground hover:text-foreground'
+                    }`}
+                  >
+                    {scope}
+                  </button>
+                );
+              })}
+            </div>
+            <span className="text-xs text-muted-foreground">
+              {scopes.includes('admin')
+                ? 'Admin can do everything this account can, including minting more keys.'
+                : scopes.length === 0
+                  ? 'Pick at least one scope.'
+                  : 'Least privilege: a CI job needs deploy:write and apps:read, nothing more.'}
+            </span>
+          </fieldset>
+          <Button
+            type="submit"
+            size="sm"
+            className="gap-1.5"
+            disabled={createKey.isPending || scopes.length === 0}
+          >
             <Plus className="h-3.5 w-3.5" />
             {createKey.isPending ? 'Creating…' : 'Create key'}
           </Button>
