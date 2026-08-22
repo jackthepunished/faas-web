@@ -923,17 +923,39 @@ const LOG_PATHS = [
   '/webhooks/stripe',
   '/invoke',
 ];
-/** One plausible access-log line, as a running handler would print it. */
-export function logLine(app: App): string {
-  const ts = new Date().toISOString().replace('T', ' ').slice(0, 23);
-  const roll = rand();
+
+export interface LogFrame {
+  ts: string;
+  level: 'info' | 'warn' | 'error';
+  instance_id: string;
+  msg: string;
+}
+
+/**
+ * One structured frame, the way the spec describes the stream: a level, the
+ * instance that emitted it, and a message. The earlier fixture sent a plain
+ * text line, which meant the console had nothing to colour or filter on.
+ */
+export function logFrame(app: App): LogFrame {
+  const instance = instances.find((i) => i.app_id === app.id)?.id ?? id();
+  // An app the fleet considers failing says so in its output, which is also
+  // what makes the error view worth looking at in the mock.
+  const failing = app.status === 'error';
+  const roll = rand() * (failing ? 0.35 : 1);
+  const base = { ts: new Date().toISOString(), instance_id: instance };
+
   if (roll < 0.06)
-    return `${ts} WARN  ${app.slug} upstream postgres slow query 412ms stmt=select_orders`;
+    return { ...base, level: 'warn', msg: `upstream postgres slow query 412ms stmt=select_orders` };
   if (roll < 0.09)
-    return `${ts} ERROR ${app.slug} handler panic: nil pointer dereference (recovered)`;
-  if (roll < 0.12) return `${ts} INFO  ${app.slug} wake cold snapshot=restore 214ms`;
+    return { ...base, level: 'error', msg: 'handler panic: nil pointer dereference (recovered)' };
+  if (roll < 0.12) return { ...base, level: 'info', msg: 'wake cold snapshot=restore 214ms' };
+
   const status = rand() < 0.94 ? 200 : pick([201, 204, 400, 404, 500]);
-  return `${ts} INFO  ${app.slug} ${pick(['GET', 'GET', 'POST', 'PUT'])} ${pick(LOG_PATHS)} ${status} ${int(3, 240)}ms`;
+  return {
+    ...base,
+    level: status >= 500 ? 'error' : status >= 400 ? 'warn' : 'info',
+    msg: `${pick(['GET', 'GET', 'POST', 'PUT'])} ${pick(LOG_PATHS)} ${status} ${int(3, 240)}ms`,
+  };
 }
 
 /* --- Empty workspace --------------------------------------------------------

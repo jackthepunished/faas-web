@@ -451,6 +451,8 @@ route('GET', '/v1/apps/{slug}/queues/dead_letter', ({ params }) =>
 route('GET', '/v1/apps/{slug}/logs', ({ params, query, req, res }) => {
   const a = app(params.slug);
   const grep = query.get('grep')?.toLowerCase() ?? '';
+  const level = query.get('level') ?? '';
+
   res.writeHead(200, {
     'Content-Type': 'text/event-stream',
     'Cache-Control': 'no-cache',
@@ -459,17 +461,38 @@ route('GET', '/v1/apps/{slug}/logs', ({ params, query, req, res }) => {
   res.write(': mock log stream\n\n');
 
   const send = (event: string, data: string) => res.write(`event: ${event}\ndata: ${data}\n\n`);
+
+  // The API validates `level` against a closed enum and short-circuits with an
+  // SSE error frame rather than an HTTP status, because the stream has already
+  // begun. The console renders that code.
+  if (level && !['info', 'warn', 'error'].includes(level)) {
+    send('error', 'invalid_level');
+    res.end();
+    return undefined;
+  }
+
   // A parked app has nothing to say; the stream ends the way the real one does.
   if (a.status === 'parked') {
-    send('log', `${new Date().toISOString()} INFO  ${a.slug} instance parked — no live output`);
+    send(
+      'log',
+      JSON.stringify({
+        ts: new Date().toISOString(),
+        level: 'info',
+        instance_id: '',
+        msg: 'instance parked — no live output',
+      })
+    );
     send('end', '');
     res.end();
     return undefined;
   }
+
   let timer: NodeJS.Timeout | undefined;
   const tick = () => {
-    const line = db.logLine(a);
-    if (!grep || line.toLowerCase().includes(grep)) send('log', line);
+    const frame = db.logFrame(a);
+    const matchesGrep = !grep || frame.msg.toLowerCase().includes(grep);
+    const matchesLevel = !level || frame.level === level;
+    if (matchesGrep && matchesLevel) send('log', JSON.stringify(frame));
     timer = setTimeout(tick, 250 + Math.random() * 900);
   };
   tick();
