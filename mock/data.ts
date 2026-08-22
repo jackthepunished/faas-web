@@ -1049,3 +1049,47 @@ export function archivedDay(instance: string, date: string): LogFrame[] {
     };
   });
 }
+
+/**
+ * A build's output, in the shape the log decoder already understands.
+ *
+ * A failed build ends on the reason it failed, because that is the question a
+ * failed build actually raises and the console could not answer it.
+ */
+export function buildLog(
+  slug: string,
+  status: string,
+  digest: string,
+  failureClass?: string
+): LogFrame[] {
+  const at = (i: number) => new Date(NOW - (40 - i) * 1000).toISOString();
+  const frames: LogFrame[] = [
+    { ts: at(0), level: 'info', instance_id: '', msg: `#1 resolving source for ${slug}` },
+    { ts: at(1), level: 'info', instance_id: '', msg: '#2 detected runtime from manifest' },
+    { ts: at(2), level: 'info', instance_id: '', msg: '#3 restoring dependency cache' },
+    { ts: at(3), level: 'info', instance_id: '', msg: '#4 installing dependencies' },
+    { ts: at(4), level: 'info', instance_id: '', msg: '#5 running build' },
+  ];
+  if (status === 'failed') {
+    // The reason has to agree with the failure class on the row beside it.
+    const reason: Record<string, [string, string]> = {
+      oom: ['fatal: out of memory while bundling', '#5 killed (OOM, 2048 MB)'],
+      timeout: ['still running after 600s', '#5 cancelled: build timeout'],
+      infra: ['builder lost connection to the registry', '#5 aborted: infrastructure error'],
+      user_error: ['error: cannot find module "./config"', '#5 exited with code 1'],
+    };
+    const [detail, exit] = reason[failureClass ?? 'user_error'] ?? reason.user_error;
+    frames.push(
+      { ts: at(5), level: 'error', instance_id: '', msg: detail },
+      { ts: at(6), level: 'error', instance_id: '', msg: exit },
+      { ts: at(7), level: 'error', instance_id: '', msg: 'build failed' }
+    );
+    return frames;
+  }
+  frames.push(
+    { ts: at(5), level: 'info', instance_id: '', msg: '#6 exporting layers' },
+    { ts: at(6), level: 'info', instance_id: '', msg: `#7 wrote ${digest.slice(0, 19)}…` },
+    { ts: at(7), level: 'info', instance_id: '', msg: 'build succeeded' }
+  );
+  return frames;
+}

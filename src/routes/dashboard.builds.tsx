@@ -8,6 +8,8 @@ import { Modal } from '@/components/ui/modal';
 import { useToast } from '@/components/ui/toast';
 import { errorMessage } from '@/lib/api/errors';
 import { useBuilds, useFetchBuildSbom } from '@/lib/api/queries';
+import { useLogStream } from '@/lib/api/logs';
+import { LogView } from '@/components/dashboard/log-view';
 import { formatRelative } from '@/lib/mock-data';
 import { consoleHead } from '@/lib/seo';
 
@@ -26,6 +28,8 @@ export const Route = createFileRoute('/dashboard/builds')({
  */
 interface BuildRow {
   id: string;
+  /** The build log is served per deployment, so the row carries it. */
+  deploymentId: string;
   kind: string;
   status: string;
   failureClass: string;
@@ -67,6 +71,13 @@ function formatWhen(value: string | undefined): string {
 function BuildDrawer({ build, onClose }: { build: BuildRow | null; onClose: () => void }) {
   const { toast } = useToast();
   const sbom = useFetchBuildSbom();
+  // The build's own output, from the second SSE endpoint. A failed build's
+  // reason lives here and nowhere else the console could reach.
+  const source = useMemo(
+    () => ({ kind: 'build' as const, deploymentId: build?.deploymentId ?? '' }),
+    [build?.deploymentId]
+  );
+  const { lines, status } = useLogStream(source, build !== null);
 
   const download = () => {
     if (!build) return;
@@ -93,6 +104,8 @@ function BuildDrawer({ build, onClose }: { build: BuildRow | null; onClose: () =
       onClose={onClose}
       title={build ? `Build ${build.id.slice(0, 12)}` : ''}
       description={build ? `${build.kind} · ${build.status}` : undefined}
+      width="max-w-2xl"
+
       footer={
         build?.status === 'succeeded' ? (
           <Button
@@ -109,21 +122,34 @@ function BuildDrawer({ build, onClose }: { build: BuildRow | null; onClose: () =
       }
     >
       {build && (
-        <dl className="grid gap-x-6 gap-y-3 sm:grid-cols-2">
-          {[
-            ['Status', build.status],
-            ['Source', build.kind],
-            ['Failure class', build.failureClass || '—'],
-            ['Source size', `${(build.sourceBytes / 1e6).toFixed(1)} MB`],
-            ['Duration', build.duration ? `${build.duration}s` : '—'],
-            ['Enqueued', formatRelative(Date.parse(build.enqueuedAt))],
-          ].map(([k, v]) => (
-            <div key={k} className="flex min-w-0 flex-col gap-0.5">
-              <dt className="label-mono text-muted-foreground">{k}</dt>
-              <dd className="truncate font-mono text-xs">{v}</dd>
-            </div>
-          ))}
-        </dl>
+        <div className="flex flex-col gap-5">
+          <dl className="grid gap-x-6 gap-y-3 sm:grid-cols-2">
+            {[
+              ['Status', build.status],
+              ['Source', build.kind],
+              ['Failure class', build.failureClass || '—'],
+              ['Source size', `${(build.sourceBytes / 1e6).toFixed(1)} MB`],
+              ['Duration', build.duration ? `${build.duration}s` : '—'],
+              ['Enqueued', formatRelative(Date.parse(build.enqueuedAt))],
+            ].map(([k, v]) => (
+              <div key={k} className="flex min-w-0 flex-col gap-0.5">
+                <dt className="label-mono text-muted-foreground">{k}</dt>
+                <dd className="truncate font-mono text-xs">{v}</dd>
+              </div>
+            ))}
+          </dl>
+
+          <div>
+            <p className="label-mono mb-2 text-muted-foreground">Output</p>
+            {lines.length === 0 ? (
+              <p className="text-sm text-muted-foreground">
+                {status === 'connecting' ? 'Reading the build log…' : 'No build output was kept.'}
+              </p>
+            ) : (
+              <LogView lines={lines} className="max-h-64" />
+            )}
+          </div>
+        </div>
       )}
     </Modal>
   );
@@ -137,6 +163,7 @@ function BuildsPage() {
     () =>
       (data?.items ?? []).map((b) => ({
         id: b.id,
+        deploymentId: b.deployment_id,
         kind: b.kind,
         status: b.status,
         failureClass: b.failure_class ?? '',

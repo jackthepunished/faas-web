@@ -571,6 +571,71 @@ route('GET', '/v1/builds/{id}', ({ params }) => {
   if (!b) throw new Problem(404, 'build_not_found');
   return b;
 });
+route('GET', '/v1/deployments/{id}/logs', ({ params, query, req, res }) => {
+  const dep = db.deployments.find((d) => d.id === params.id);
+  if (!dep) throw new Problem(404, 'deployment_not_found');
+  const build = db.builds.find((b) => b.deployment_id === dep.id);
+  const app = db.apps.find((a) => a.id === dep.app_id);
+
+  res.writeHead(200, {
+    'Content-Type': 'text/event-stream',
+    'Cache-Control': 'no-cache',
+    Connection: 'keep-alive',
+  });
+  res.write(': mock build log\n\n');
+  const send = (event: string, data: string) => res.write(`event: ${event}\ndata: ${data}\n\n`);
+
+  const lines = db.buildLog(
+    app?.slug ?? 'app',
+    build?.status ?? dep.status,
+    dep.image_digest,
+    build?.failure_class
+  );
+  const limit = Number(query.get('limit') ?? 0);
+  const burst = limit > 0 ? lines.slice(-limit) : lines;
+  for (const frame of burst) send('log', JSON.stringify(frame));
+
+  // A finished build has nothing more to say; a running one keeps going and
+  // ends when it lands, exactly like the real stream.
+  if ((build?.status ?? dep.status) !== 'running' && dep.status !== 'building') {
+    send('end', '');
+    res.end();
+    return undefined;
+  }
+  let step = 0;
+  let timer: NodeJS.Timeout | undefined;
+  const tick = () => {
+    step += 1;
+    send(
+      'log',
+      JSON.stringify({
+        ts: new Date().toISOString(),
+        level: 'info',
+        instance_id: '',
+        msg: `#${8 + step} building layer ${step}/4…`,
+      })
+    );
+    if (step >= 4) {
+      send(
+        'log',
+        JSON.stringify({
+          ts: new Date().toISOString(),
+          level: 'info',
+          instance_id: '',
+          msg: 'build succeeded',
+        })
+      );
+      send('end', '');
+      res.end();
+      return;
+    }
+    timer = setTimeout(tick, 1200);
+  };
+  timer = setTimeout(tick, 1200);
+  req.on('close', () => clearTimeout(timer));
+  return undefined;
+});
+
 route('GET', '/v1/builds/{id}/sbom', ({ params, res }) => {
   const b = db.builds.find((x) => x.id === params.id);
   if (!b) throw new Problem(404, 'build_not_found');
