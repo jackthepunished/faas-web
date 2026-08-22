@@ -73,6 +73,8 @@ export interface Deployment {
   author: string;
   createdAt: number;
   durationMs: number;
+  /** Share of live traffic. The row serving 100 is the one in production. */
+  trafficPercent: number;
 }
 
 export type LogLevel = 'info' | 'warn' | 'error' | 'debug';
@@ -237,93 +239,6 @@ export function getWorkflow(id: string) {
 export function getProject(id: string) {
   return PROJECTS.find((p) => p.id === id);
 }
-
-const COMMIT_MESSAGES = [
-  'Cache resized variants in the bucket',
-  'Drop the retry loop on 4xx',
-  'Bump runtime to go1.23',
-  'Add structured logging for cold starts',
-  'Reduce snapshot size by trimming layers',
-  'Fix off-by-one in pagination cursor',
-  'Wire secrets through the boot manifest',
-  'Tighten the egress allowlist',
-  'Parallelize the warehouse upsert',
-  'Handle empty payloads without panicking',
-];
-
-const AUTHORS = ['e.cintas', 'k.poyraz', 'm.aydin', 'dependabot'];
-
-export const DEPLOYMENTS: Deployment[] = (() => {
-  const rand = mulberry32(90210);
-  const out: Deployment[] = [];
-  WORKFLOWS.forEach((fn) => {
-    const count = 3 + Math.floor(rand() * 4);
-    for (let i = 0; i < count; i++) {
-      const failed = rand() < 0.12;
-      out.push({
-        id: `dep_${fn.id}_${i}`,
-        workflowId: fn.id,
-        version: `v0.${8 + (i % 3)}.${count - i}`,
-        state: fn.state === 'deploying' && i === 0 ? 'building' : failed ? 'failed' : 'succeeded',
-        commit: Math.floor(rand() * 0xfffffff)
-          .toString(16)
-          .padStart(7, '0')
-          .slice(0, 7),
-        message: COMMIT_MESSAGES[Math.floor(rand() * COMMIT_MESSAGES.length)],
-        author: AUTHORS[Math.floor(rand() * AUTHORS.length)],
-        createdAt: fn.lastDeployedAt - i * (rand() * 3 * DAY),
-        durationMs: Math.round(14_000 + rand() * 50_000),
-      });
-    }
-  });
-  return out.sort((a, b) => b.createdAt - a.createdAt);
-})();
-
-const LOG_MESSAGES: Record<LogLevel, string[]> = {
-  info: [
-    'request completed',
-    'snapshot restored from warm pool',
-    'response written to client',
-    'cache hit for object key',
-  ],
-  debug: ['resolving component bindings', 'boot manifest applied', 'vsock channel opened'],
-  warn: [
-    'cold start exceeded target budget',
-    'retrying upstream after 502',
-    'payload approaching size limit',
-  ],
-  error: [
-    'upstream timeout after 30s',
-    'connection refused by warehouse',
-    'unhandled rejection in handler',
-  ],
-};
-
-export const LOGS: LogEntry[] = (() => {
-  const rand = mulberry32(5150);
-  const out: LogEntry[] = [];
-  for (let i = 0; i < 240; i++) {
-    const fn = WORKFLOWS[Math.floor(rand() * WORKFLOWS.length)];
-    const roll = rand();
-    const level: LogLevel =
-      roll > 0.93 ? 'error' : roll > 0.82 ? 'warn' : roll > 0.24 ? 'info' : 'debug';
-    const pool = LOG_MESSAGES[level];
-    out.push({
-      id: `log_${i}`,
-      ts: NOW - Math.round(rand() * 6 * HOUR),
-      level,
-      workflowId: fn.id,
-      requestId: Math.floor(rand() * 0xffffffffff)
-        .toString(16)
-        .padStart(12, '0')
-        .slice(0, 12),
-      message: pool[Math.floor(rand() * pool.length)],
-      durationMs: Math.round(4 + rand() * 900),
-      statusCode: level === 'error' ? 500 : level === 'warn' ? 429 : 200,
-    });
-  }
-  return out.sort((a, b) => b.ts - a.ts);
-})();
 
 export type RangeKey = '24h' | '7d' | '30d';
 
