@@ -33,7 +33,7 @@ const STATE_COLOR: Record<string, string> = {
   running: 'var(--status-good)',
   ready: 'var(--status-good)',
   waking: 'var(--status-warning)',
-  parked: 'var(--status-neutral)',
+  parked: 'var(--chart-muted)',
   failed: 'var(--status-critical)',
 };
 

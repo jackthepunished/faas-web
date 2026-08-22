@@ -32,7 +32,7 @@ interface BuildRow {
 const STATUS_COLOR: Record<string, string> = {
   succeeded: 'var(--status-good)',
   running: 'var(--status-warning)',
-  queued: 'var(--status-neutral)',
+  queued: 'var(--chart-muted)',
   failed: 'var(--status-critical)',
 };
 

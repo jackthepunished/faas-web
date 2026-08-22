@@ -41,10 +41,10 @@ interface InvocationRow {
 const STATE_COLOR: Record<string, string> = {
   completed: 'var(--status-good)',
   dispatching: 'var(--status-warning)',
-  pending: 'var(--status-neutral)',
+  pending: 'var(--chart-muted)',
   failed: 'var(--status-critical)',
   dead_letter: 'var(--status-critical)',
-  cancelled: 'var(--status-neutral)',
+  cancelled: 'var(--chart-muted)',
 };
 
 function formatWhen(value: string | undefined): string {

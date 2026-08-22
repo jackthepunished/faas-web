@@ -97,7 +97,7 @@ function EdgeRulesPage() {
       render: (r) => (
         <Pill
           label={r.enabled ? 'enabled' : 'disabled'}
-          color={r.enabled ? 'var(--status-good)' : 'var(--status-neutral)'}
+          color={r.enabled ? 'var(--status-good)' : 'var(--chart-muted)'}
         />
       ),
     },
