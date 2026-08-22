@@ -489,6 +489,79 @@ route('GET', '/v1/deployments/{id}', ({ params }) => {
   return d;
 });
 route('GET', '/v1/builds', () => ({ items: db.builds }));
+route('GET', '/v1/builds/{id}', ({ params }) => {
+  const b = db.builds.find((x) => x.id === params.id);
+  if (!b) throw new Problem(404, 'build_not_found');
+  return b;
+});
+route('GET', '/v1/builds/{id}/sbom', ({ params, res }) => {
+  const b = db.builds.find((x) => x.id === params.id);
+  if (!b) throw new Problem(404, 'build_not_found');
+  if (b.status !== 'succeeded')
+    throw new Problem(409, 'sbom_not_ready', 'The SBOM is produced when the build succeeds.');
+  res.setHeader('Content-Type', 'application/vnd.cyclonedx+json');
+  return {
+    bomFormat: 'CycloneDX',
+    specVersion: '1.5',
+    serialNumber: `urn:uuid:${b.id.slice(0, 8)}-0000-4000-8000-${b.id.slice(8, 20)}`,
+    version: 1,
+    metadata: {
+      timestamp: b.finished_at,
+      component: { type: 'application', name: 'app', version: b.id.slice(0, 7) },
+    },
+    components: [
+      { type: 'library', name: 'express', version: '4.19.2', purl: 'pkg:npm/express@4.19.2' },
+      { type: 'library', name: 'pg', version: '8.11.3', purl: 'pkg:npm/pg@8.11.3' },
+      { type: 'library', name: 'ioredis', version: '5.3.2', purl: 'pkg:npm/ioredis@5.3.2' },
+    ],
+  };
+});
+route('GET', '/v1/deployments/{id}/scan', ({ params }) => {
+  const d = db.deployments.find((x) => x.id === params.id);
+  if (!d) throw new Problem(404, 'deployment_not_found');
+  if (d.status === 'building')
+    return {
+      status: 'pending',
+      severity_counts: { critical: 0, high: 0, medium: 0, low: 0, unknown: 0 },
+      vulnerabilities: [],
+    };
+  const failing = d.status === 'failed';
+  const vulns = [
+    {
+      id: 'CVE-2024-27980',
+      severity: 'HIGH',
+      package: 'node',
+      version: '24.1.0',
+      fixed_in: '24.1.1',
+      paths: ['/usr/local/bin/node'],
+    },
+    {
+      id: 'CVE-2023-45857',
+      severity: 'MEDIUM',
+      package: 'axios',
+      version: '1.5.1',
+      fixed_in: '1.6.0',
+      paths: ['/app/node_modules/axios'],
+    },
+    {
+      id: 'GHSA-9wv6-86v2-598j',
+      severity: 'LOW',
+      package: 'path-to-regexp',
+      version: '6.2.1',
+      fixed_in: '6.3.0',
+    },
+  ].slice(0, failing ? 3 : 2);
+  const counts = { critical: 0, high: 0, medium: 0, low: 0, unknown: 0 };
+  for (const v of vulns) counts[v.severity.toLowerCase() as keyof typeof counts]++;
+  return {
+    status: 'complete',
+    scanned_at: d.created_at,
+    scanner_version: 'grype 0.79.3',
+    image_digest: d.image_digest,
+    severity_counts: counts,
+    vulnerabilities: vulns,
+  };
+});
 
 route('GET', '/v1/domains', () => db.domains);
 route('POST', '/v1/domains', ({ body }) => {

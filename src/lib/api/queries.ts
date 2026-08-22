@@ -917,3 +917,47 @@ export function useRevokeInvitation(org: string) {
     onSuccess: () => qc.invalidateQueries({ queryKey: orgKey(org, 'invitations') }),
   });
 }
+
+/**
+ * Slug-in-variables variants for the create wizard, which does not know the
+ * app's slug until `POST /v1/apps` has answered — too late to have called a
+ * slug-bound hook at render.
+ */
+export function useDeployFromRefFor() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      slug,
+      ...body
+    }: { slug: string } & components['schemas']['SourceRefDeployRequest']) =>
+      unwrap(
+        api.POST('/v1/apps/{slug}/deployments/source-ref', { params: { path: { slug } }, body })
+      ),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: keys.apps });
+      void qc.invalidateQueries({ queryKey: keys.deployments });
+    },
+  });
+}
+
+export function useUpdateAppFor() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ slug, ...body }: { slug: string } & components['schemas']['UpdateAppRequest']) =>
+      unwrap(api.PATCH('/v1/apps/{slug}', { params: { path: { slug } }, body })),
+    onSuccess: () => qc.invalidateQueries({ queryKey: keys.apps }),
+  });
+}
+
+/**
+ * The SBOM as a one-shot read, for a download button. A mutation rather than
+ * a query for the same reason the billing portal is: it runs on a click,
+ * not on render, and nothing should cache a file the browser is about to
+ * hand to the user.
+ */
+export function useFetchBuildSbom() {
+  return useMutation({
+    mutationFn: (id: string) =>
+      unwrap(api.GET('/v1/builds/{id}/sbom', { params: { path: { id } } })),
+  });
+}

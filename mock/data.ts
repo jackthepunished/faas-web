@@ -550,6 +550,8 @@ export const invocations: S['Invocation'][] = Array.from({ length: 40 }, (_, i) 
     state,
     method: 'POST',
     path: pick(['/invoke', '/run', '/reconcile', '/resize']),
+    payload: { event: pick(['order.created', 'image.uploaded', 'user.signup']), id: hex(8) },
+    result: state === 'completed' ? { ok: true, took_ms: int(40, 2200) } : null,
     created_at: iso(created),
     completed_at:
       state === 'completed' || state === 'failed' ? iso(created - int(120, 4000)) : null,
