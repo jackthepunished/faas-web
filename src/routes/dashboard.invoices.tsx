@@ -35,8 +35,8 @@ interface InvoiceRow {
 const STATUS_COLOR: Record<string, string> = {
   paid: 'var(--status-good)',
   open: 'var(--status-warning)',
-  draft: 'var(--status-neutral)',
-  void: 'var(--status-neutral)',
+  draft: 'var(--chart-muted)',
+  void: 'var(--chart-muted)',
   uncollectible: 'var(--status-critical)',
 };
 

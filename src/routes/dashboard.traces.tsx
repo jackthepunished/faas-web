@@ -1,10 +1,12 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { createFileRoute } from '@tanstack/react-router';
 import { Refresh } from 'iconoir-react';
 import { PageHeader } from '@/components/dashboard/primitives';
 import { Pill, ResourceTable, type Column } from '@/components/dashboard/resource-table';
 import { useToast } from '@/components/ui/toast';
-import { useApps, useInvocations, useReplayInvocation } from '@/lib/api/queries';
+import { useConfirm } from '@/components/ui/confirm';
+import { useApps, useInvocation, useInvocations, useReplayInvocation } from '@/lib/api/queries';
+import { Modal } from '@/components/ui/modal';
 import { slugIndex } from '@/lib/api/adapters';
 import { errorMessage } from '@/lib/api/errors';
 import { formatRelative } from '@/lib/mock-data';
@@ -40,10 +42,10 @@ interface InvocationRow {
 const STATE_COLOR: Record<string, string> = {
   completed: 'var(--status-good)',
   dispatching: 'var(--status-warning)',
-  pending: 'var(--status-neutral)',
+  pending: 'var(--chart-muted)',
   failed: 'var(--status-critical)',
   dead_letter: 'var(--status-critical)',
-  cancelled: 'var(--status-neutral)',
+  cancelled: 'var(--chart-muted)',
 };
 
 function formatWhen(value: string | undefined): string {
@@ -52,11 +54,86 @@ function formatWhen(value: string | undefined): string {
   return Number.isNaN(ms) ? '—' : formatRelative(ms);
 }
 
+function Json({ value }: { value: unknown }) {
+  return (
+    <pre className="max-h-56 overflow-auto rounded-md border border-border bg-background p-3 font-mono text-xs leading-relaxed">
+      {JSON.stringify(value, null, 2)}
+    </pre>
+  );
+}
+
+/**
+ * One invocation in full. The list shows state and route; what was sent,
+ * what came back, and why it failed were unreachable from the console —
+ * `useInvocation` had no caller.
+ */
+function InvocationDrawer({ id, onClose }: { id: string | null; onClose: () => void }) {
+  const q = useInvocation(id ?? '');
+  const inv = q.data;
+  return (
+    <Modal
+      open={id !== null}
+      onClose={onClose}
+      title={inv ? `${inv.method ?? ''} ${inv.path ?? ''}`.trim() || 'Invocation' : 'Invocation'}
+      description={id ?? undefined}
+      width="max-w-2xl"
+    >
+      {q.isPending ? (
+        <p className="text-sm text-muted-foreground">Loading…</p>
+      ) : q.error || !inv ? (
+        <p className="text-sm text-muted-foreground">{errorMessage(q.error)}</p>
+      ) : (
+        <div className="flex flex-col gap-4">
+          <dl className="grid gap-x-6 gap-y-3 sm:grid-cols-3">
+            {[
+              ['State', inv.state],
+              ['Source', inv.source],
+              ['Attempts', String(inv.attempts ?? 1)],
+              ['Created', formatRelative(Date.parse(inv.created_at))],
+              ['Completed', inv.completed_at ? formatRelative(Date.parse(inv.completed_at)) : '—'],
+              ['Instance', inv.instance_id ?? '—'],
+            ].map(([k, v]) => (
+              <div key={k} className="flex min-w-0 flex-col gap-0.5">
+                <dt className="label-mono text-muted-foreground">{k}</dt>
+                <dd className="truncate font-mono text-xs">{v}</dd>
+              </div>
+            ))}
+          </dl>
+          {inv.last_error && (
+            <p
+              className="rounded-md border px-3 py-2 font-mono text-xs"
+              style={{
+                borderColor: 'color-mix(in oklab, var(--status-critical) 35%, transparent)',
+              }}
+            >
+              {inv.last_error}
+            </p>
+          )}
+          {inv.payload && (
+            <div>
+              <p className="label-mono mb-1.5 text-muted-foreground">Payload</p>
+              <Json value={inv.payload} />
+            </div>
+          )}
+          {inv.result && (
+            <div>
+              <p className="label-mono mb-1.5 text-muted-foreground">Result</p>
+              <Json value={inv.result} />
+            </div>
+          )}
+        </div>
+      )}
+    </Modal>
+  );
+}
+
 function InvocationsPage() {
   const { toast } = useToast();
+  const confirm = useConfirm();
   const { data, isPending, error, refetch } = useInvocations();
   const { data: apps } = useApps();
   const replay = useReplayInvocation();
+  const [selected, setSelected] = useState<string | null>(null);
 
   const rows = useMemo<InvocationRow[]>(() => {
     const bySlug = slugIndex(apps ?? []);
@@ -124,7 +201,16 @@ function InvocationsPage() {
         <button
           type="button"
           aria-label={`Replay invocation ${i.id}`}
-          onClick={() => {
+          onClick={async () => {
+            if (
+              !(await confirm({
+                title: 'Replay this invocation?',
+                description:
+                  'It is re-issued to the app with the same payload. If the handler is not idempotent, that work happens twice.',
+                confirmLabel: 'Replay',
+              }))
+            )
+              return;
             void replay
               .mutateAsync(i.id)
               .then(() => toast({ kind: 'success', title: 'Replayed' }))
@@ -157,7 +243,10 @@ function InvocationsPage() {
         loading={isPending}
         error={error}
         onRetry={() => void refetch()}
+        onRowClick={(i) => setSelected(i.id)}
       />
+
+      <InvocationDrawer id={selected} onClose={() => setSelected(null)} />
     </div>
   );
 }

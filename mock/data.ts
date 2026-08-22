@@ -137,6 +137,17 @@ export const apps: App[] = APP_SEEDS.map((a, i) => ({
 }));
 
 export const appBySlug = (slug: string) => apps.find((a) => a.slug === slug);
+
+/** The per-app maps are keyed by slug, so a rename has to move them too. */
+export function renameApp(app: App, next: string) {
+  for (const map of [secrets, env, upstreams, alerts, webhooks] as Map<string, unknown>[]) {
+    const held = map.get(app.slug);
+    map.delete(app.slug);
+    if (held !== undefined) map.set(next, held);
+  }
+  app.slug = next;
+  app.url = `https://${next}.gregale.app`;
+}
 export const slugById = (appId: string) => apps.find((a) => a.id === appId)?.slug ?? appId;
 
 // --- Deployments & builds ----------------------------------------------------
@@ -539,6 +550,8 @@ export const invocations: S['Invocation'][] = Array.from({ length: 40 }, (_, i) 
     state,
     method: 'POST',
     path: pick(['/invoke', '/run', '/reconcile', '/resize']),
+    payload: { event: pick(['order.created', 'image.uploaded', 'user.signup']), id: hex(8) },
+    result: state === 'completed' ? { ok: true, took_ms: int(40, 2200) } : null,
     created_at: iso(created),
     completed_at:
       state === 'completed' || state === 'failed' ? iso(created - int(120, 4000)) : null,
@@ -780,6 +793,79 @@ export const queueDeadLetter = (app: App): S['QueueDeadLetterResponse'] => ({
     })
   ),
 });
+
+// --- Cron runs & webhook deliveries ------------------------------------------
+
+export const cronRuns = new Map<string, S['CronRun'][]>(
+  crons.map((c) => [
+    c.id,
+    Array.from({ length: c.enabled ? int(6, 12) : 2 }, (_, i) => {
+      const outcome = pick([
+        'success',
+        'success',
+        'success',
+        'success',
+        'failed',
+        'timeout',
+      ] as const);
+      const started = (i + 1) * 6 * H + int(0, H);
+      const dur = outcome === 'timeout' ? 30_000 : int(400, 9_000);
+      return {
+        id: id(),
+        started_at: iso(started),
+        completed_at: iso(started - dur),
+        duration_ms: dur,
+        outcome,
+        attempts: outcome === 'failed' ? int(2, 3) : 1,
+        instance_id: id(),
+        error:
+          outcome === 'failed'
+            ? pick(['handler returned 500', 'upstream postgres: connection refused'])
+            : outcome === 'timeout'
+              ? 'no response within 30s'
+              : null,
+      };
+    }),
+  ])
+);
+
+export const deliveries = new Map<string, S['AppWebhookDeliveryResponse'][]>(
+  [...webhooks.entries()].flatMap(([slug, hooks]) =>
+    hooks.map((w) => [
+      w.id,
+      Array.from({ length: int(4, 9) }, (_, i) => {
+        const status = pick([
+          'succeeded',
+          'succeeded',
+          'succeeded',
+          'failed',
+          'dead',
+          'pending',
+        ] as const);
+        const created = (i + 1) * 3 * H + int(0, H);
+        return {
+          id: id(),
+          webhook_id: w.id,
+          app_id: appBySlug(slug)?.id ?? '',
+          account_id: ACCOUNT_ID,
+          event: pick(w.event_filter.length ? w.event_filter : ['build.succeeded']),
+          payload: { app: slug, deployment_id: id() },
+          attempt: status === 'dead' ? 7 : status === 'failed' ? int(1, 4) : 1,
+          status,
+          last_error:
+            status === 'failed' || status === 'dead'
+              ? pick(['HTTP 503', 'timeout after 10s', 'HTTP 401'])
+              : undefined,
+          last_response_code: status === 'succeeded' ? 200 : status === 'failed' ? 503 : undefined,
+          next_attempt_at: iso(-int(1, 30) * 60_000),
+          delivered_at: status === 'succeeded' ? iso(created - 800) : undefined,
+          created_at: iso(created),
+          updated_at: iso(created - 800),
+        };
+      }),
+    ])
+  )
+);
 
 // --- Logs --------------------------------------------------------------------
 

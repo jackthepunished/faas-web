@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { PageHeader, Panel } from '@/components/dashboard/primitives';
 import { Pill, ResourceTable, type Column } from '@/components/dashboard/resource-table';
 import { useToast } from '@/components/ui/toast';
+import { useConfirm } from '@/components/ui/confirm';
 import { useAddDomain, useApps, useDeleteDomain, useDomains } from '@/lib/api/queries';
 import { slugIndex } from '@/lib/api/adapters';
 import { errorMessage } from '@/lib/api/errors';
@@ -40,6 +41,7 @@ function formatDate(value: string | null | undefined): string {
 
 function DomainsPage() {
   const { toast } = useToast();
+  const confirm = useConfirm();
   const { data, isPending, error, refetch } = useDomains();
   const { data: apps } = useApps();
   const addDomain = useAddDomain();
@@ -109,7 +111,17 @@ function DomainsPage() {
         <button
           type="button"
           aria-label={`Remove ${d.domain}`}
-          onClick={() => {
+          onClick={async () => {
+            if (
+              !(await confirm({
+                title: `Remove ${d.domain}?`,
+                description:
+                  'Traffic to this hostname stops routing here immediately. The DNS record can stay.',
+                confirmLabel: 'Remove domain',
+                destructive: true,
+              }))
+            )
+              return;
             void deleteDomain
               .mutateAsync(d.domain)
               .then(() => toast({ kind: 'success', title: `Removed ${d.domain}` }))

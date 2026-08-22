@@ -181,6 +181,62 @@ export function useParkApp() {
   });
 }
 
+/** Partial update of an app's runtime settings — `PATCH /v1/apps/{slug}`. */
+export function useUpdateApp(slug: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: components['schemas']['UpdateAppRequest']) =>
+      unwrap(api.PATCH('/v1/apps/{slug}', { params: { path: { slug } }, body })),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: keys.apps });
+      void qc.invalidateQueries({ queryKey: keys.app(slug) });
+    },
+  });
+}
+
+/** Changes the slug, which is also the subdomain — `POST /v1/apps/{slug}/rename`. */
+export function useRenameApp(slug: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (newSlug: string) =>
+      unwrap(
+        api.POST('/v1/apps/{slug}/rename', {
+          params: { path: { slug } },
+          body: { new_slug: newSlug },
+        })
+      ),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: keys.apps });
+      void qc.invalidateQueries({ queryKey: keys.deployments });
+    },
+  });
+}
+
+/**
+ * A new deployment from a Git ref — `POST /v1/apps/{slug}/deployments/source-ref`.
+ *
+ * The only deploy the console can start on its own: the other constructor
+ * wants an image reference, which means a registry the browser has no
+ * business holding credentials for.
+ */
+export function useDeployFromRef(slug: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: components['schemas']['SourceRefDeployRequest']) =>
+      unwrap(
+        api.POST('/v1/apps/{slug}/deployments/source-ref', {
+          params: { path: { slug } },
+          body,
+        })
+      ),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: keys.apps });
+      void qc.invalidateQueries({ queryKey: keys.app(slug) });
+      void qc.invalidateQueries({ queryKey: keys.deployments });
+    },
+  });
+}
+
 export function useRollback() {
   const qc = useQueryClient();
   return useMutation({
@@ -683,5 +739,225 @@ export function useRevokeAllSessions() {
     mutationFn: () =>
       unwrap(api.POST('/v1/auth/sessions/revoke_all', { body: { csrf_token: csrfToken() } })),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['auth', 'sessions'] }),
+  });
+}
+
+/* ------------------------------------------------------------------ *
+ * Writes the console could not make before. Each list page could delete
+ * and nothing else; the API has had create and update the whole time.
+ * ------------------------------------------------------------------ */
+
+export function useCreateCron() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: components['schemas']['CreateCronRequest']) =>
+      unwrap(api.POST('/v1/crons', { body })),
+    onSuccess: () => qc.invalidateQueries({ queryKey: keys.crons }),
+  });
+}
+
+export function useUpdateCron() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, ...body }: { id: string } & components['schemas']['UpdateCronRequest']) =>
+      unwrap(api.PATCH('/v1/crons/{id}', { params: { path: { id } }, body })),
+    onSuccess: () => qc.invalidateQueries({ queryKey: keys.crons }),
+  });
+}
+
+export function useCreateAlert(slug: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: components['schemas']['CreateAlertRuleRequest']) =>
+      unwrap(api.POST('/v1/apps/{slug}/alerts', { params: { path: { slug } }, body })),
+    onSuccess: () => qc.invalidateQueries({ queryKey: keys.appAlerts(slug) }),
+  });
+}
+
+export function useUpdateAlert(slug: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      id,
+      ...body
+    }: { id: string } & components['schemas']['UpdateAlertRuleRequest']) =>
+      unwrap(api.PATCH('/v1/apps/{slug}/alerts/{id}', { params: { path: { slug, id } }, body })),
+    onSuccess: () => qc.invalidateQueries({ queryKey: keys.appAlerts(slug) }),
+  });
+}
+
+export function useRotateAlertSecret(slug: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) =>
+      unwrap(
+        api.POST('/v1/apps/{slug}/alerts/{id}/rotate-secret', {
+          params: { path: { slug, id } },
+        })
+      ),
+    onSuccess: () => qc.invalidateQueries({ queryKey: keys.appAlerts(slug) }),
+  });
+}
+
+const webhookKey = (slug: string) => ['apps', slug, 'webhooks'] as const;
+
+export function useCreateWebhook(slug: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: components['schemas']['CreateAppWebhookRequest']) =>
+      unwrap(api.POST('/v1/apps/{slug}/webhooks', { params: { path: { slug } }, body })),
+    onSuccess: () => qc.invalidateQueries({ queryKey: webhookKey(slug) }),
+  });
+}
+
+export function useUpdateWebhook(slug: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      id,
+      ...body
+    }: { id: string } & components['schemas']['UpdateAppWebhookRequest']) =>
+      unwrap(api.PATCH('/v1/apps/{slug}/webhooks/{id}', { params: { path: { slug, id } }, body })),
+    onSuccess: () => qc.invalidateQueries({ queryKey: webhookKey(slug) }),
+  });
+}
+
+export function useDeleteWebhook(slug: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) =>
+      unwrap(api.DELETE('/v1/apps/{slug}/webhooks/{id}', { params: { path: { slug, id } } })),
+    onSuccess: () => qc.invalidateQueries({ queryKey: webhookKey(slug) }),
+  });
+}
+
+export function useRotateWebhookSecret(slug: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) =>
+      unwrap(
+        api.POST('/v1/apps/{slug}/webhooks/{id}/rotate-secret', {
+          params: { path: { slug, id } },
+        })
+      ),
+    onSuccess: () => qc.invalidateQueries({ queryKey: webhookKey(slug) }),
+  });
+}
+
+const upstreamKey = (slug: string) => ['apps', slug, 'upstreams'] as const;
+
+export function useAddUpstream(slug: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: components['schemas']['PutDataUpstreamRequest']) =>
+      unwrap(api.PUT('/v1/apps/{slug}/upstreams', { params: { path: { slug } }, body })),
+    onSuccess: () => qc.invalidateQueries({ queryKey: upstreamKey(slug) }),
+  });
+}
+
+export function useDeleteUpstream(slug: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) =>
+      unwrap(api.DELETE('/v1/apps/{slug}/upstreams/{id}', { params: { path: { slug, id } } })),
+    onSuccess: () => qc.invalidateQueries({ queryKey: upstreamKey(slug) }),
+  });
+}
+
+const orgKey = (slug: string, what: 'members' | 'invitations') => ['orgs', slug, what] as const;
+
+export function useInviteMember(org: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: components['schemas']['InviteMemberRequest']) =>
+      unwrap(api.POST('/v1/orgs/{slug}/members', { params: { path: { slug: org } }, body })),
+    onSuccess: () => qc.invalidateQueries({ queryKey: orgKey(org, 'invitations') }),
+  });
+}
+
+export function useChangeMemberRole(org: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      userId,
+      role,
+    }: { userId: string } & components['schemas']['ChangeMemberRoleRequest']) =>
+      unwrap(
+        api.PATCH('/v1/orgs/{slug}/members/{user_id}', {
+          params: { path: { slug: org, user_id: userId } },
+          body: { role },
+        })
+      ),
+    onSuccess: () => qc.invalidateQueries({ queryKey: orgKey(org, 'members') }),
+  });
+}
+
+export function useRemoveMember(org: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (userId: string) =>
+      unwrap(
+        api.DELETE('/v1/orgs/{slug}/members/{user_id}', {
+          params: { path: { slug: org, user_id: userId } },
+        })
+      ),
+    onSuccess: () => qc.invalidateQueries({ queryKey: orgKey(org, 'members') }),
+  });
+}
+
+export function useRevokeInvitation(org: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (token: string) =>
+      unwrap(
+        api.DELETE('/v1/orgs/{slug}/invitations/{token}', {
+          params: { path: { slug: org, token } },
+        })
+      ),
+    onSuccess: () => qc.invalidateQueries({ queryKey: orgKey(org, 'invitations') }),
+  });
+}
+
+/**
+ * Slug-in-variables variants for the create wizard, which does not know the
+ * app's slug until `POST /v1/apps` has answered — too late to have called a
+ * slug-bound hook at render.
+ */
+export function useDeployFromRefFor() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      slug,
+      ...body
+    }: { slug: string } & components['schemas']['SourceRefDeployRequest']) =>
+      unwrap(
+        api.POST('/v1/apps/{slug}/deployments/source-ref', { params: { path: { slug } }, body })
+      ),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: keys.apps });
+      void qc.invalidateQueries({ queryKey: keys.deployments });
+    },
+  });
+}
+
+export function useUpdateAppFor() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ slug, ...body }: { slug: string } & components['schemas']['UpdateAppRequest']) =>
+      unwrap(api.PATCH('/v1/apps/{slug}', { params: { path: { slug } }, body })),
+    onSuccess: () => qc.invalidateQueries({ queryKey: keys.apps }),
+  });
+}
+
+/**
+ * The SBOM as a one-shot read, for a download button. A mutation rather than
+ * a query for the same reason the billing portal is: it runs on a click,
+ * not on render, and nothing should cache a file the browser is about to
+ * hand to the user.
+ */
+export function useFetchBuildSbom() {
+  return useMutation({
+    mutationFn: (id: string) =>
+      unwrap(api.GET('/v1/builds/{id}/sbom', { params: { path: { id } } })),
   });
 }

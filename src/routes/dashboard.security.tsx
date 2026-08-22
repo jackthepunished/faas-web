@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { PageHeader, Panel } from '@/components/dashboard/primitives';
 import { Pill, ResourceTable, type Column } from '@/components/dashboard/resource-table';
 import { useToast } from '@/components/ui/toast';
+import { useConfirm } from '@/components/ui/confirm';
 import { useRevokeAllSessions, useRevokeSession, useSessions } from '@/lib/api/queries';
 import { errorMessage } from '@/lib/api/errors';
 import { formatRelative } from '@/lib/mock-data';
@@ -43,6 +44,7 @@ function formatWhen(value: string | undefined): string {
 
 function SecurityPage() {
   const { toast } = useToast();
+  const confirm = useConfirm();
   const { data, isPending, error, refetch } = useSessions();
   const revoke = useRevokeSession();
   const revokeAll = useRevokeAllSessions();
@@ -105,7 +107,16 @@ function SecurityPage() {
         s.current ? null : (
           <button
             type="button"
-            onClick={() => {
+            onClick={async () => {
+              if (
+                !(await confirm({
+                  title: 'Revoke this session?',
+                  description: 'That browser is signed out on its next request.',
+                  confirmLabel: 'Revoke session',
+                  destructive: true,
+                }))
+              )
+                return;
               void revoke
                 .mutateAsync(s.id)
                 .then(() => toast({ kind: 'success', title: 'Session revoked' }))
@@ -136,7 +147,17 @@ function SecurityPage() {
             variant="outline"
             className="gap-1.5"
             disabled={revokeAll.isPending}
-            onClick={() => {
+            onClick={async () => {
+              if (
+                !(await confirm({
+                  title: 'Sign out everywhere?',
+                  description:
+                    'Every other browser and CLI session ends. This one stays signed in.',
+                  confirmLabel: 'Sign out everywhere',
+                  destructive: true,
+                }))
+              )
+                return;
               void revokeAll
                 .mutateAsync()
                 .then((result) =>

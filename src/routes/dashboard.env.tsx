@@ -6,6 +6,7 @@ import { PageHeader, Panel } from '@/components/dashboard/primitives';
 import { ResourceTable, type Column } from '@/components/dashboard/resource-table';
 import { AppScope, AppSelect, useSelectedApp } from '@/components/dashboard/app-select';
 import { useToast } from '@/components/ui/toast';
+import { useConfirm } from '@/components/ui/confirm';
 import { useAppEnv, useDeleteEnv, useSetEnv } from '@/lib/api/queries';
 import { errorMessage } from '@/lib/api/errors';
 import { formatRelative } from '@/lib/mock-data';
@@ -49,6 +50,7 @@ function formatWhen(value: string | undefined): string {
  */
 export function EnvBody({ slug }: { slug: string }) {
   const { toast } = useToast();
+  const confirm = useConfirm();
   const { data, isPending, error, refetch } = useAppEnv(slug);
   const setEnv = useSetEnv(slug);
   const deleteEnv = useDeleteEnv(slug);
@@ -95,7 +97,16 @@ export function EnvBody({ slug }: { slug: string }) {
         <button
           type="button"
           aria-label={`Delete variable ${v.key}`}
-          onClick={() => {
+          onClick={async () => {
+            if (
+              !(await confirm({
+                title: `Delete ${v.key}?`,
+                description: 'The next boot of this app starts without it.',
+                confirmLabel: 'Delete variable',
+                destructive: true,
+              }))
+            )
+              return;
             void deleteEnv
               .mutateAsync(v.key)
               .then(() => toast({ kind: 'success', title: `Deleted ${v.key}` }))

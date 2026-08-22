@@ -1,8 +1,13 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { createFileRoute } from '@tanstack/react-router';
 import { PageHeader } from '@/components/dashboard/primitives';
 import { Pill, ResourceTable, type Column } from '@/components/dashboard/resource-table';
-import { useBuilds } from '@/lib/api/queries';
+import { Download } from 'iconoir-react';
+import { Button } from '@/components/ui/button';
+import { Modal } from '@/components/ui/modal';
+import { useToast } from '@/components/ui/toast';
+import { errorMessage } from '@/lib/api/errors';
+import { useBuilds, useFetchBuildSbom } from '@/lib/api/queries';
 import { formatRelative } from '@/lib/mock-data';
 import { consoleHead } from '@/lib/seo';
 
@@ -32,7 +37,7 @@ interface BuildRow {
 const STATUS_COLOR: Record<string, string> = {
   succeeded: 'var(--status-good)',
   running: 'var(--status-warning)',
-  queued: 'var(--status-neutral)',
+  queued: 'var(--chart-muted)',
   failed: 'var(--status-critical)',
 };
 
@@ -54,8 +59,79 @@ function formatWhen(value: string | undefined): string {
   return Number.isNaN(ms) ? '—' : formatRelative(ms);
 }
 
+/**
+ * One build, with its SBOM as a download. `useBuildSbom` existed and had no
+ * caller; the SBOM is the one artefact a security review asks for and it was
+ * only reachable through the API.
+ */
+function BuildDrawer({ build, onClose }: { build: BuildRow | null; onClose: () => void }) {
+  const { toast } = useToast();
+  const sbom = useFetchBuildSbom();
+
+  const download = () => {
+    if (!build) return;
+    void sbom
+      .mutateAsync(build.id)
+      .then((data) => {
+        // Hand the JSON to the browser as a file; nothing here has to parse it.
+        const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `sbom-${build.id.slice(0, 12)}.cdx.json`;
+        a.click();
+        URL.revokeObjectURL(url);
+      })
+      .catch((err: unknown) =>
+        toast({ kind: 'error', title: 'No SBOM for this build', description: errorMessage(err) })
+      );
+  };
+
+  return (
+    <Modal
+      open={build !== null}
+      onClose={onClose}
+      title={build ? `Build ${build.id.slice(0, 12)}` : ''}
+      description={build ? `${build.kind} · ${build.status}` : undefined}
+      footer={
+        build?.status === 'succeeded' ? (
+          <Button
+            size="sm"
+            variant="outline"
+            className="gap-1.5"
+            disabled={sbom.isPending}
+            onClick={download}
+          >
+            <Download className="h-3.5 w-3.5" />
+            {sbom.isPending ? 'Preparing…' : 'Download SBOM'}
+          </Button>
+        ) : undefined
+      }
+    >
+      {build && (
+        <dl className="grid gap-x-6 gap-y-3 sm:grid-cols-2">
+          {[
+            ['Status', build.status],
+            ['Source', build.kind],
+            ['Failure class', build.failureClass || '—'],
+            ['Source size', `${(build.sourceBytes / 1e6).toFixed(1)} MB`],
+            ['Duration', build.duration ? `${build.duration}s` : '—'],
+            ['Enqueued', formatRelative(Date.parse(build.enqueuedAt))],
+          ].map(([k, v]) => (
+            <div key={k} className="flex min-w-0 flex-col gap-0.5">
+              <dt className="label-mono text-muted-foreground">{k}</dt>
+              <dd className="truncate font-mono text-xs">{v}</dd>
+            </div>
+          ))}
+        </dl>
+      )}
+    </Modal>
+  );
+}
+
 function BuildsPage() {
   const { data, isPending, error, refetch } = useBuilds();
+  const [selected, setSelected] = useState<BuildRow | null>(null);
 
   const rows = useMemo<BuildRow[]>(
     () =>
@@ -141,7 +217,10 @@ function BuildsPage() {
         loading={isPending}
         error={error}
         onRetry={() => void refetch()}
+        onRowClick={(b) => setSelected(b)}
       />
+
+      <BuildDrawer build={selected} onClose={() => setSelected(null)} />
     </div>
   );
 }
