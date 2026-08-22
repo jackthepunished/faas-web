@@ -720,8 +720,10 @@ route('POST', '/v1/apps/{slug}/edge-rules', ({ params, body }) => {
       `Free plans allow ${FREE_GEO_QUOTA} geo rules per app.`
     );
 
-  // Priority is the evaluation order, so two rules cannot claim the same slot
-  // for the same host and path.
+  // The API documents `edge_rule_conflict` for "duplicate or overlapping rule
+  // state" without saying what overlaps. A same-priority, same-host, same-path
+  // pair is the clearest case and is what this mock rejects, so the console's
+  // 409 branch has something to render — the real predicate may be broader.
   if (
     onApp.some(
       (r) =>

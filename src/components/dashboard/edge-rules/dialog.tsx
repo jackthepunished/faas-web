@@ -31,6 +31,30 @@ import { KINDS, KIND_ORDER, type ActionMap, type Kind } from './kinds';
 
 const METHODS = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'HEAD', 'OPTIONS'] as const;
 
+/**
+ * The match grammar, as the spec documents it: host is a glob where `*` is
+ * any host and `*.example.com` is any subdomain (253 chars, the DNS limit);
+ * path is a glob whose trailing `*` matches everything beneath (2048).
+ * `match_host` is required on create — it is in the request's `required` list
+ * — so the form defaults it to `*` rather than letting empty mean anything.
+ */
+const HOST_GLOB = /^(\*|(\*\.)?[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)*)$/i;
+
+function validateMatch(m: Match): Record<string, string> {
+  const errors: Record<string, string> = {};
+  const host = m.match_host.trim();
+  const path = m.match_path.trim();
+  if (!host) errors.match_host = 'Required. Use * to match any host.';
+  else if (host.length > 253) errors.match_host = 'Hosts are at most 253 characters.';
+  else if (!HOST_GLOB.test(host))
+    errors.match_host = 'A hostname, or a glob like * or *.example.com.';
+  if (!path.startsWith('/')) errors.match_path = 'Paths start with /.';
+  else if (path.length > 2048) errors.match_path = 'Paths are at most 2048 characters.';
+  else if (path.includes('*') && !path.endsWith('*'))
+    errors.match_path = 'Only a trailing * is allowed — it matches everything beneath.';
+  return errors;
+}
+
 interface Match {
   match_host: string;
   match_path: string;
@@ -67,7 +91,7 @@ export function EdgeRuleDialog({
 
   const [kind, setKind] = useState<Kind | null>(null);
   const [match, setMatch] = useState<Match>({
-    match_host: '',
+    match_host: '*',
     match_path: '/*',
     match_methods: [],
     priority: nextPriority,
@@ -97,7 +121,7 @@ export function EdgeRuleDialog({
     } else {
       setKind(null);
       setMatch({
-        match_host: '',
+        match_host: '*',
         match_path: '/*',
         match_methods: [],
         priority: nextPriority,
@@ -122,8 +146,9 @@ export function EdgeRuleDialog({
 
   const submit = () => {
     if (!kind || !def || !action) return;
-    // The kind's own rules first; the server's are the backstop, not the plan.
-    const local = def.validate(action as never);
+    // The match block and then the kind's own rules; the server is the
+    // backstop, not the plan.
+    const local = { ...validateMatch(match), ...def.validate(action as never) };
     if (Object.keys(local).length) {
       setFieldErrors(local);
       return;
@@ -144,7 +169,7 @@ export function EdgeRuleDialog({
       toast({
         kind: 'success',
         title: `Rule ${verb}`,
-        description: `${def.label} on ${match.match_host || 'any host'}`,
+        description: `${def.label} on ${match.match_host}`,
       });
       onClose();
     };
@@ -292,7 +317,7 @@ export function EdgeRuleDialog({
             <div className="grid gap-4 sm:grid-cols-2">
               <TextField
                 label="Host"
-                hint="Empty matches any host on the account."
+                hint="A hostname, or a glob: * for any, *.example.com for subdomains."
                 error={fieldErrors.match_host}
                 value={match.match_host}
                 onChange={(match_host) => setMatch({ ...match, match_host })}
@@ -300,7 +325,7 @@ export function EdgeRuleDialog({
               />
               <TextField
                 label="Path"
-                hint="A prefix, or a pattern ending in *."
+                hint="A path. A trailing * matches everything beneath it."
                 error={fieldErrors.match_path}
                 value={match.match_path}
                 onChange={(match_path) => setMatch({ ...match, match_path })}
