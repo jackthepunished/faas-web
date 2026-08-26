@@ -35,6 +35,7 @@ import type { components } from './api/schema';
 const SESSION_KEY = 'gregale.session';
 const ONBOARDED_KEY = 'gregale.onboarded';
 const WORKSPACE_KEY = 'gregale.workspace';
+const OAUTH_PENDING_KEY = 'gregale.oauth-pending';
 export const DEFAULT_WORKSPACE = 'acme-corp';
 
 /** The server's floor: NIST-style length rule, no complexity theatre. */
@@ -88,6 +89,39 @@ export function readSession(): User | null {
     return typeof parsed?.email === 'string' ? userFor(parsed.email) : null;
   } catch {
     return null;
+  }
+}
+
+/**
+ * OAuth returns through a full-page provider redirect. The server can restore
+ * the HttpOnly session cookie, but it cannot write the client-only session
+ * hint used by the synchronous route guards. Keep a marker in sessionStorage
+ * so the first page after the callback knows to hydrate `/v1/account`.
+ */
+export function markOAuthPending() {
+  if (typeof window === 'undefined') return;
+  try {
+    window.sessionStorage.setItem(OAUTH_PENDING_KEY, 'true');
+  } catch {
+    // Private browsing modes may deny storage; the OAuth flow still proceeds.
+  }
+}
+
+export function hasOAuthPending(): boolean {
+  if (typeof window === 'undefined') return false;
+  try {
+    return window.sessionStorage.getItem(OAUTH_PENDING_KEY) === 'true';
+  } catch {
+    return false;
+  }
+}
+
+export function clearOAuthPending() {
+  if (typeof window === 'undefined') return;
+  try {
+    window.sessionStorage.removeItem(OAUTH_PENDING_KEY);
+  } catch {
+    // Best effort only; a denied storage area cannot affect the session.
   }
 }
 
@@ -181,7 +215,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [account, setAccount] = useState<Account | null>(null);
   const [apiReachable, setReachable] = useState(true);
   // Only the boot check blocks; later refreshes happen behind the current UI.
-  const [loading, setLoading] = useState<boolean>(() => readSession() !== null);
+  const [loading, setLoading] = useState<boolean>(
+    () => readSession() !== null || hasOAuthPending()
+  );
 
   const setSession = useCallback((next: User | null) => {
     writeSession(next);
@@ -221,7 +257,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (checked.current) return;
     checked.current = true;
-    if (!readSession()) {
+    const sessionHint = readSession();
+    const oauthPending = hasOAuthPending();
+    if (!sessionHint && !oauthPending) {
       setLoading(false);
       return;
     }
@@ -231,6 +269,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         // else — the box is down, the network dropped — should not sign the
         // user out, but the shell needs to know so it can say so once.
         if (!(err instanceof ApiError && err.isAuth)) setReachable(false);
+        if (oauthPending && err instanceof ApiError && err.isAuth) clearOAuthPending();
       })
       .finally(() => setLoading(false));
   }, [refreshAccount]);

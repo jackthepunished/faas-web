@@ -1,6 +1,42 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }],
+  "framework": "vite",
+  "buildCommand": "npm run build",
+  "outputDirectory": "dist",
+  "routes": [
+    {
+      "src": "^/v1(?:/(.*))?$",
+      "methods": ["GET", "HEAD", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+      "dest": "https://api.gregale.dev/v1/$1"
+    },
+    {
+      "src": "^/auth(?:/(.*))?$",
+      "methods": ["GET", "HEAD", "POST", "OPTIONS"],
+      "dest": "https://api.gregale.dev/auth/$1"
+    },
+    {
+      "src": "^/login$",
+      "methods": ["POST"],
+      "dest": "https://api.gregale.dev/login"
+    },
+    {
+      "src": "^/signup$",
+      "methods": ["POST"],
+      "dest": "https://api.gregale.dev/signup"
+    },
+    {
+      "src": "^/login/forgot$",
+      "methods": ["POST"],
+      "dest": "https://api.gregale.dev/login/forgot"
+    },
+    {
+      "src": "^/logout$",
+      "methods": ["POST"],
+      "dest": "https://api.gregale.dev/logout"
+    },
+    { "handle": "filesystem" },
+    { "src": "^(?:/(.*))?$", "dest": "/index.html" }
+  ],
   "headers": [
     {
       "source": "/assets/(.*)",
