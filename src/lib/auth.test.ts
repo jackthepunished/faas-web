@@ -1,9 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import {
   clearWorkspace,
+  clearOAuthPending,
   DEFAULT_WORKSPACE,
   hasOnboarded,
+  hasOAuthPending,
   isValidEmail,
+  markOAuthPending,
   markOnboarded,
   readSession,
   readWorkspace,
@@ -42,6 +45,16 @@ describe('session storage', () => {
     window.localStorage.setItem('gregale.session', '{not json');
     expect(() => readSession()).not.toThrow();
     expect(readSession()).toBeNull();
+  });
+});
+
+describe('OAuth handoff marker', () => {
+  it('round-trips the callback marker through session storage', () => {
+    expect(hasOAuthPending()).toBe(false);
+    markOAuthPending();
+    expect(hasOAuthPending()).toBe(true);
+    clearOAuthPending();
+    expect(hasOAuthPending()).toBe(false);
   });
 });
 

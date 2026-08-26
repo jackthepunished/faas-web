@@ -13,7 +13,13 @@ import {
 } from 'iconoir-react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/toast';
-import { hasOnboarded, isValidEmail, MIN_PASSWORD_LENGTH, useAuth } from '@/lib/auth';
+import {
+  hasOnboarded,
+  isValidEmail,
+  markOAuthPending,
+  MIN_PASSWORD_LENGTH,
+  useAuth,
+} from '@/lib/auth';
 import { ApiError, errorMessage } from '@/lib/api/errors';
 
 /**
@@ -76,6 +82,7 @@ function SsoButton({ label, provider }: { label: string; provider: 'google' | 'g
   return (
     <a
       href={ssoHref(provider)}
+      onClick={markOAuthPending}
       className="flex h-10 flex-1 items-center justify-center gap-2 rounded-lg border border-border bg-card text-sm transition-colors hover:border-border-secondary hover:bg-muted"
     >
       {label}

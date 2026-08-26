@@ -215,6 +215,17 @@ Config for the common hosts is committed:
 - **Vercel** — `vercel.json`, which also sets far-future caching on the
   content-hashed `/assets/*` and `no-cache` on `index.html`.
 
+OAuth uses full-page GETs through `/v1/auth/google` and `/v1/auth/github`,
+including their callback paths. If the API is behind a WAF or bot check, those
+paths must be allowed to reach `api.gregale.dev` without an interactive
+challenge: a Vercel rewrite cannot solve a challenge because it has no browser
+available to complete it. Register these exact provider callback URLs:
+
+```text
+https://gregale.dev/v1/auth/google/callback
+https://gregale.dev/v1/auth/github/callback
+```
+
 Anywhere else, the equivalent one-liner:
 
 ```nginx

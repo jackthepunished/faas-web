@@ -30,6 +30,7 @@ if (!window.localStorage) {
 afterEach(() => {
   cleanup();
   window.localStorage.clear();
+  window.sessionStorage.clear();
 });
 
 // jsdom implements neither, and both are read during render by the sidebar,
