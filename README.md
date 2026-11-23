@@ -33,7 +33,7 @@ API_ORIGIN=http://localhost:8081 npm run dev
 | `npm run api:types`  | Regenerate API types from `api/openapi.yaml`        |
 | `npm run api:pull`   | Re-fetch the spec from upstream, then regenerate    |
 | `npm run docs:pull`  | Re-fetch the vendored docs from upstream            |
-| `npm run og`         | Re-render `public/og.png`, the social preview card  |
+| `npm run og`         | Draw the generated card over `public/og.png` (see og:image) |
 | `npm run lint`       | ESLint                                              |
 | `npm run test`       | Vitest, once                                        |
 | `npm run test:watch` | Vitest in watch mode                                |
@@ -305,10 +305,14 @@ markup, `robots.txt`) works without it.
 
 ### og:image
 
-Wired but inactive: drop a 1200×630 `og.png` into `public/` and it is picked
-up automatically on the next build with `SITE_URL` set. Until then previews
-render as a text-only card. This wants a designed asset rather than a
-generated placeholder.
+`public/og.png` (1200×630) is the end card of the Gregale film: the logo, the
+name and the tagline over the harbour at dawn, rendered without grain from
+[gregale-film](https://github.com/jackthepunished/gregale-film). A build with
+`SITE_URL` set picks it up and writes `og:image` and `twitter:image` for every
+route; without `SITE_URL` previews render as a text-only card.
+
+`npm run og` draws the older generated card and writes it over this file. Run
+it only if you mean to replace the film image.
 
 ## Tests
 
